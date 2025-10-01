@@ -1,8 +1,64 @@
+# Python
 __pycache__/
 *.pyc
-.env
-*.db
-node_modules/
-.next/
-.DS_Store
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+venv/
 
+# Environment variables - CRITICAL: Never commit these!
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+
+# API Keys and Secrets - CRITICAL: Never commit these!
+*secret*
+*SECRET*
+*.key
+*.pem
+!cacert.pem
+*.p12
+*.pfx
+credentials.json
+token.json
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js
+.next/
+out/
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Docker volumes
+postgres_data/

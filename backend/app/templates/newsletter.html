@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pulse Newsletter - {{ date }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #4A90E2;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            margin: 0;
+            color: #4A90E2;
+            font-size: 32px;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            color: #666;
+            font-size: 14px;
+        }
+        .intro {
+            margin-bottom: 30px;
+            font-size: 16px;
+            color: #555;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2C3E50;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #E8E8E8;
+        }
+        .article {
+            margin-bottom: 25px;
+            padding: 15px;
+            background-color: #FAFAFA;
+            border-left: 4px solid #4A90E2;
+            border-radius: 4px;
+        }
+        .article-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2C3E50;
+            margin: 0 0 8px 0;
+        }
+        .article-title a {
+            color: #2C3E50;
+            text-decoration: none;
+        }
+        .article-title a:hover {
+            color: #4A90E2;
+        }
+        .article-meta {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        .article-source {
+            font-weight: 600;
+            color: #666;
+        }
+        .article-lean {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        .lean-left {
+            background-color: #E3F2FD;
+            color: #1976D2;
+        }
+        .lean-center {
+            background-color: #F3E5F5;
+            color: #7B1FA2;
+        }
+        .lean-right {
+            background-color: #FFEBEE;
+            color: #C62828;
+        }
+        .article-summary {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 10px;
+        }
+        .article-stats {
+            font-size: 13px;
+            color: #666;
+            background-color: #FFF9C4;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .article-stats strong {
+            color: #F57C00;
+        }
+        .framework {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+        }
+        .framework-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+        }
+        .framework-description {
+            font-size: 14px;
+            margin-bottom: 15px;
+            opacity: 0.95;
+        }
+        .framework-axis {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+        .framework-axis-bar {
+            flex: 1;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            margin: 0 15px;
+            position: relative;
+        }
+        .framework-related {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #E8E8E8;
+            text-align: center;
+            font-size: 12px;
+            color: #888;
+        }
+        .footer a {
+            color: #4A90E2;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        .unsubscribe {
+            margin-top: 15px;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚡ Pulse</h1>
+            <p>Your Daily News Brief - {{ date }}</p>
+        </div>
+
+        <div class="intro">
+            <p>Hello {{ user_name }},</p>
+            <p>Here's your personalized news digest featuring <strong>{{ article_count }}</strong> articles across your selected topics. We've mapped these stories to <strong>{{ framework_count }}</strong> underlying ethical debates to help you see the bigger picture.</p>
+        </div>
+
+        {% if frameworks %}
+        <div class="section">
+            <div class="section-title">🎯 Key Debates Today</div>
+            {% for framework in frameworks %}
+            <div class="framework">
+                <div class="framework-title">{{ framework.name }}</div>
+                <div class="framework-description">{{ framework.description }}</div>
+                <div class="framework-axis">
+                    <span>{{ framework.left_position }}</span>
+                    <div class="framework-axis-bar"></div>
+                    <span>{{ framework.right_position }}</span>
+                </div>
+                <div class="framework-related">
+                    📰 Related to {{ framework.article_count }} article(s) in your digest
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="section">
+            <div class="section-title">📰 Today's Articles</div>
+            {% for article in articles %}
+            <div class="article">
+                <div class="article-title">
+                    <a href="{{ article.url }}" target="_blank">{{ article.title }}</a>
+                </div>
+                <div class="article-meta">
+                    <span class="article-source">{{ article.source_name }}</span>
+                    {% if article.political_lean %}
+                    <span class="article-lean lean-{{ article.political_lean|lower }}">
+                        {{ article.political_lean }}
+                    </span>
+                    {% endif %}
+                    <span style="margin-left: 8px;">{{ article.published_at }}</span>
+                </div>
+                <div class="article-summary">{{ article.summary }}</div>
+                {% if article.key_stats %}
+                <div class="article-stats">
+                    <strong>📊 Key Stats:</strong> {{ article.key_stats }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="footer">
+            <p>
+                <strong>Pulse News Aggregator</strong><br>
+                Bringing clarity to the news through ethical frameworks
+            </p>
+            <p>
+                <a href="{{ preferences_url }}">Update Preferences</a> ·
+                <a href="{{ website_url }}">Visit Website</a>
+            </p>
+            <p class="unsubscribe">
+                <a href="{{ unsubscribe_url }}">Unsubscribe</a> from this newsletter
+            </p>
+        </div>
+    </div>
+</body>
+</html>

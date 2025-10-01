@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://postgres:password@db:5432/news_db"
 
     # API Keys
-    anthropic_api_key: Optional[str] = None
+    openai_api_key: Optional[str] = None
     resend_api_key: Optional[str] = None
 
     # Email Configuration
@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     from_name: str = "Pulse News"
 
     # AI Configuration
-    ai_model: str = "claude-3-haiku-20240307"  # Cheapest Claude model
+    ai_model: str = "gpt-4o-mini"  # Cheapest GPT-4 model
     max_tokens_per_request: int = 2000
     batch_size: int = 5  # Process 5 articles per API call
 

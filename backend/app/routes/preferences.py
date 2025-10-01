@@ -1,0 +1,275 @@
+"""
+User preferences routes: manage topic subscriptions and notification settings.
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlmodel import Session, select
+from app.database import get_session
+from app.models import User, UserTopicPreference, Topic
+from app.routes.auth import get_current_user
+from pydantic import BaseModel, Field
+from typing import List
+import logging
+
+router = APIRouter(prefix="/preferences", tags=["preferences"])
+logger = logging.getLogger(__name__)
+
+
+# Request/Response Models
+class TopicPreference(BaseModel):
+    topic_id: int
+    priority: int = Field(default=5, ge=1, le=10, description="Priority 1-10 (10 is highest)")
+    is_active: bool = Field(default=True)
+
+
+class UpdatePreferencesRequest(BaseModel):
+    preferences: List[TopicPreference]
+
+
+class TopicInfo(BaseModel):
+    id: int
+    name: str
+    description: Optional[str]
+    priority: int
+    is_active: bool
+
+
+class PreferencesResponse(BaseModel):
+    user_id: int
+    topics: List[TopicInfo]
+
+
+@router.get("", response_model=PreferencesResponse)
+def get_user_preferences(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Get current user's topic preferences.
+
+    Returns all topics with user's priority settings.
+    """
+    # Get user's preferences
+    user_prefs = session.exec(
+        select(UserTopicPreference)
+        .where(UserTopicPreference.user_id == current_user.id)
+    ).all()
+
+    # Create a map of topic_id -> preference
+    prefs_map = {pref.topic_id: pref for pref in user_prefs}
+
+    # Get all available topics
+    all_topics = session.exec(select(Topic)).all()
+
+    topics = []
+    for topic in all_topics:
+        pref = prefs_map.get(topic.id)
+        topics.append({
+            "id": topic.id,
+            "name": topic.name,
+            "description": topic.description,
+            "priority": pref.priority if pref else 5,
+            "is_active": pref.is_active if pref else False
+        })
+
+    return {
+        "user_id": current_user.id,
+        "topics": topics
+    }
+
+
+@router.put("", response_model=PreferencesResponse)
+def update_user_preferences(
+    request: UpdatePreferencesRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Update user's topic preferences.
+
+    - **preferences**: List of topic preferences with priority and active status
+    - Priority: 1-10 (10 is highest priority)
+    - Active: Whether to include this topic in newsletters
+    """
+    # Delete existing preferences
+    existing_prefs = session.exec(
+        select(UserTopicPreference)
+        .where(UserTopicPreference.user_id == current_user.id)
+    ).all()
+
+    for pref in existing_prefs:
+        session.delete(pref)
+
+    # Create new preferences
+    for pref_data in request.preferences:
+        # Verify topic exists
+        topic = session.get(Topic, pref_data.topic_id)
+        if not topic:
+            logger.warning(f"Topic {pref_data.topic_id} not found, skipping")
+            continue
+
+        new_pref = UserTopicPreference(
+            user_id=current_user.id,
+            topic_id=pref_data.topic_id,
+            priority=pref_data.priority,
+            is_active=pref_data.is_active
+        )
+        session.add(new_pref)
+
+    session.commit()
+
+    logger.info(f"Updated preferences for user {current_user.email}")
+
+    # Return updated preferences
+    return get_user_preferences(current_user, session)
+
+
+@router.get("/topics", response_model=List[dict])
+def get_available_topics(
+    session: Session = Depends(get_session)
+):
+    """
+    Get all available topics for subscription.
+
+    Public endpoint - doesn't require authentication.
+    """
+    topics = session.exec(select(Topic)).all()
+
+    return [
+        {
+            "id": topic.id,
+            "name": topic.name,
+            "description": topic.description
+        }
+        for topic in topics
+    ]
+
+
+@router.post("/topics/{topic_id}/subscribe")
+def subscribe_to_topic(
+    topic_id: int,
+    priority: int = Field(default=5, ge=1, le=10),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Subscribe to a specific topic.
+
+    - **topic_id**: ID of the topic to subscribe to
+    - **priority**: Priority level 1-10 (default: 5)
+    """
+    # Verify topic exists
+    topic = session.get(Topic, topic_id)
+    if not topic:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Topic {topic_id} not found"
+        )
+
+    # Check if already subscribed
+    existing_pref = session.exec(
+        select(UserTopicPreference)
+        .where(UserTopicPreference.user_id == current_user.id)
+        .where(UserTopicPreference.topic_id == topic_id)
+    ).first()
+
+    if existing_pref:
+        # Update existing preference
+        existing_pref.is_active = True
+        existing_pref.priority = priority
+        session.add(existing_pref)
+    else:
+        # Create new preference
+        new_pref = UserTopicPreference(
+            user_id=current_user.id,
+            topic_id=topic_id,
+            priority=priority,
+            is_active=True
+        )
+        session.add(new_pref)
+
+    session.commit()
+
+    logger.info(f"User {current_user.email} subscribed to topic {topic.name}")
+
+    return {
+        "message": f"Subscribed to {topic.name}",
+        "topic_id": topic_id,
+        "priority": priority
+    }
+
+
+@router.post("/topics/{topic_id}/unsubscribe")
+def unsubscribe_from_topic(
+    topic_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Unsubscribe from a specific topic.
+
+    - **topic_id**: ID of the topic to unsubscribe from
+    """
+    # Find preference
+    preference = session.exec(
+        select(UserTopicPreference)
+        .where(UserTopicPreference.user_id == current_user.id)
+        .where(UserTopicPreference.topic_id == topic_id)
+    ).first()
+
+    if not preference:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Not subscribed to topic {topic_id}"
+        )
+
+    # Mark as inactive (don't delete, keep history)
+    preference.is_active = False
+    session.add(preference)
+    session.commit()
+
+    topic = session.get(Topic, topic_id)
+    logger.info(f"User {current_user.email} unsubscribed from topic {topic.name if topic else topic_id}")
+
+    return {
+        "message": f"Unsubscribed from topic",
+        "topic_id": topic_id
+    }
+
+
+from typing import Optional
+
+
+@router.get("/newsletter-preview")
+def get_newsletter_preview(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Preview what articles would be in today's newsletter based on current preferences.
+
+    Useful for testing preferences before committing.
+    """
+    from app.services.newsletter_service import _generate_newsletter_for_user
+
+    try:
+        newsletter_data = _generate_newsletter_for_user(current_user, session)
+
+        if not newsletter_data:
+            return {
+                "message": "No articles available for your preferences",
+                "article_count": 0
+            }
+
+        return {
+            "message": "Preview generated",
+            "article_count": len(newsletter_data.get("article_ids", [])),
+            "html_preview": newsletter_data["html"][:500] + "..."  # First 500 chars
+        }
+
+    except Exception as e:
+        logger.error(f"Error generating preview: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate preview"
+        )
