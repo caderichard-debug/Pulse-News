@@ -36,12 +36,11 @@ def test_topics_endpoint():
 
 
 def test_register_validation():
-    """Test user registration validation"""
+    """Test user registration validation (removed 'name' - not in User model)"""
     # Test with invalid email
     response = client.post(
         "/auth/register",
         json={
-            "name": "Test User",
             "email": "invalid-email",
             "password": "password123"
         }
@@ -52,12 +51,11 @@ def test_register_validation():
     response = client.post(
         "/auth/register",
         json={
-            "name": "Test User",
             "email": "test@example.com",
             "password": "short"
         }
     )
-    # Should either fail validation or handle gracefully
+    assert response.status_code == 422  # Should fail validation
 
 
 def test_login_with_invalid_credentials():
@@ -82,3 +80,13 @@ def test_preferences_without_auth():
     """Test preferences endpoint requires authentication"""
     response = client.get("/preferences")
     assert response.status_code == 403
+
+
+def test_articles_analyzed_endpoint():
+    """Test that analyzed articles endpoint is accessible"""
+    response = client.get("/articles/analyzed")
+    assert response.status_code == 200
+    data = response.json()
+    assert "total" in data
+    assert "articles" in data
+    assert isinstance(data["articles"], list)

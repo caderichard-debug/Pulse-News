@@ -2,13 +2,13 @@
 User preferences routes: manage topic subscriptions and notification settings.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select
 from app.database import get_session
 from app.models import User, UserTopicPreference, Topic
 from app.routes.auth import get_current_user
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 import logging
 
 router = APIRouter(prefix="/preferences", tags=["preferences"])
@@ -68,8 +68,8 @@ def get_user_preferences(
             "id": topic.id,
             "name": topic.name,
             "description": topic.description,
-            "priority": pref.priority if pref else 5,
-            "is_active": pref.is_active if pref else False
+            "priority": pref.priority_level if pref else 5,
+            "is_active": pref.include_in_newsletter if pref else False
         })
 
     return {
@@ -111,8 +111,8 @@ def update_user_preferences(
         new_pref = UserTopicPreference(
             user_id=current_user.id,
             topic_id=pref_data.topic_id,
-            priority=pref_data.priority,
-            is_active=pref_data.is_active
+            priority_level=pref_data.priority,
+            include_in_newsletter=pref_data.is_active
         )
         session.add(new_pref)
 
@@ -148,7 +148,7 @@ def get_available_topics(
 @router.post("/topics/{topic_id}/subscribe")
 def subscribe_to_topic(
     topic_id: int,
-    priority: int = Field(default=5, ge=1, le=10),
+    priority: int = Query(default=5, ge=1, le=10),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
@@ -175,8 +175,8 @@ def subscribe_to_topic(
 
     if existing_pref:
         # Update existing preference
-        existing_pref.is_active = True
-        existing_pref.priority = priority
+        existing_pref.include_in_newsletter = True
+        existing_pref.priority_level = priority
         session.add(existing_pref)
     else:
         # Create new preference
@@ -184,7 +184,7 @@ def subscribe_to_topic(
             user_id=current_user.id,
             topic_id=topic_id,
             priority=priority,
-            is_active=True
+            include_in_newsletter=True
         )
         session.add(new_pref)
 
@@ -224,7 +224,7 @@ def unsubscribe_from_topic(
         )
 
     # Mark as inactive (don't delete, keep history)
-    preference.is_active = False
+    preference.include_in_newsletter = False
     session.add(preference)
     session.commit()
 

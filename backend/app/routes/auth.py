@@ -26,7 +26,6 @@ logger = logging.getLogger(__name__)
 
 # Request/Response Models
 class RegisterRequest(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
     email: EmailStr
     password: str = Field(..., min_length=8)
     topic_ids: Optional[List[int]] = Field(default=None, description="Initial topic preferences")
@@ -115,12 +114,10 @@ def register(
 
     # Create user
     user = User(
-        name=request.name,
         email=request.email,
-        password_hash=hash_password(request.password),
+        hashed_password=hash_password(request.password),
         is_active=True,
-        email_verified=False,  # Requires verification
-        created_at=datetime.utcnow()
+        email_verified=False  # Requires verification
     )
 
     session.add(user)
@@ -160,7 +157,6 @@ def register(
         "token_type": "bearer",
         "user": {
             "id": user.id,
-            "name": user.name,
             "email": user.email,
             "email_verified": user.email_verified
         }
@@ -189,7 +185,7 @@ def login(
         )
 
     # Verify password
-    if not verify_password(request.password, user.password_hash):
+    if not verify_password(request.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password"
@@ -217,7 +213,6 @@ def login(
         "token_type": "bearer",
         "user": {
             "id": user.id,
-            "name": user.name,
             "email": user.email,
             "email_verified": user.email_verified
         }
