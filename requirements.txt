@@ -1,0 +1,34 @@
+# Core FastAPI
+fastapi==0.109.0
+uvicorn==0.27.0
+gunicorn==21.2.0
+
+# Database & ORM
+sqlmodel==0.0.16
+alembic==1.13.1
+psycopg2-binary==2.9.9
+
+# Article Scraping & Extraction
+feedparser==6.0.11
+trafilatura==1.6.3
+readability-lxml==0.8.1
+beautifulsoup4==4.12.3
+requests==2.31.0
+
+# AI Integration
+anthropic==0.18.1
+
+# Task Scheduling
+apscheduler==3.10.4
+
+# Email
+resend==0.7.0
+jinja2==3.1.3
+
+# Authentication
+pyjwt==2.8.0
+passlib[bcrypt]==1.7.4
+
+# Configuration & Utils
+python-dotenv==1.0.1
+pydantic-settings==2.1.0
