@@ -70,15 +70,15 @@ def start_scheduler():
     )
     logger.info("✓ Scheduled: Framework updates daily at 2:00 AM")
 
-    # Job 5: Send newsletters daily at 7am
+    # Job 5: Send newsletters daily at 10:20 AM PST
     scheduler.add_job(
         func=newsletter_job,
-        trigger=CronTrigger(hour=settings.newsletter_send_hour, minute=0),
+        trigger=CronTrigger(hour=10, minute=20, timezone='America/Los_Angeles'),
         id='send_newsletters',
         name='Send Newsletters',
         replace_existing=True,
     )
-    logger.info(f"✓ Scheduled: Newsletter sending daily at {settings.newsletter_send_hour}:00 AM")
+    logger.info("✓ Scheduled: Newsletter sending daily at 10:20 AM PST")
 
     # Start the scheduler
     scheduler.start()

@@ -23,6 +23,20 @@ class SubscriptionTier(str, Enum):
     PREMIUM = "premium"
 
 
+class VerificationStatus(str, Enum):
+    VERIFIED = "verified"
+    UNVERIFIED = "unverified"
+    DISPUTED = "disputed"
+    FALSE = "false"
+
+
+class VerificationMethod(str, Enum):
+    CROSS_REFERENCE = "cross_reference"
+    API_CHECK = "api_check"
+    MANUAL = "manual"
+    AI_ANALYSIS = "ai_analysis"
+
+
 # Link Tables (Many-to-Many relationships)
 class SourceTopicLink(SQLModel, table=True):
     __tablename__ = "source_topics"
@@ -164,6 +178,11 @@ class ArticleAnalysis(SQLModel, table=True):
     # Statistics extraction
     key_stats: Optional[str] = Field(default=None)  # JSON string of extracted stats
     stats_verified: Optional[bool] = Field(default=None)
+    stats_verification_status: VerificationStatus = Field(default=VerificationStatus.UNVERIFIED)
+    stats_verification_date: Optional[datetime] = Field(default=None)
+
+    # Context generation
+    has_context: bool = Field(default=False)
 
     # Processing metadata
     processing_cost: Optional[float] = Field(default=None)  # Track API costs
@@ -243,3 +262,73 @@ class Newsletter(SQLModel, table=True):
 
     # Relationships
     user: Optional["User"] = Relationship(back_populates="newsletters")
+
+
+# New Enhancement Tables
+
+class StatisticVerification(SQLModel, table=True):
+    __tablename__ = "statistic_verifications"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    article_id: int = Field(foreign_key="articles.id", index=True)
+
+    # Statistic details
+    statistic_text: str = Field(max_length=500)
+    verification_status: VerificationStatus = Field(default=VerificationStatus.UNVERIFIED)
+    verification_method: Optional[VerificationMethod] = Field(default=None)
+
+    # Verification sources
+    verified_sources: Optional[str] = Field(default=None)  # JSON array of URLs
+    confidence_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+
+    # Metadata
+    verified_at: Optional[datetime] = Field(default=None)
+    verified_by: Optional[str] = Field(default=None, max_length=50)  # ai, human, api
+    notes: Optional[str] = Field(default=None, max_length=1000)
+
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ArticleCluster(SQLModel, table=True):
+    __tablename__ = "article_clusters"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    cluster_hash: str = Field(max_length=64, unique=True, index=True)
+    primary_topic: str = Field(max_length=200, index=True)
+    detected_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Relationships
+    members: List["ArticleClusterMember"] = Relationship(back_populates="cluster")
+
+
+class ArticleClusterMember(SQLModel, table=True):
+    __tablename__ = "article_cluster_members"
+
+    cluster_id: int = Field(foreign_key="article_clusters.id", primary_key=True)
+    article_id: int = Field(foreign_key="articles.id", primary_key=True)
+    similarity_score: float = Field(ge=0.0, le=1.0)
+
+    # Relationships
+    cluster: Optional["ArticleCluster"] = Relationship(back_populates="members")
+
+
+class ArticleContext(SQLModel, table=True):
+    __tablename__ = "article_context"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    article_id: int = Field(foreign_key="articles.id", unique=True, index=True)
+
+    # Context components
+    background: Optional[str] = Field(default=None, max_length=2000)
+    key_players: Optional[str] = Field(default=None)  # JSON array of strings
+    timeline: Optional[str] = Field(default=None)  # JSON array of timeline events
+    significance: Optional[str] = Field(default=None, max_length=1000)
+    next_developments: Optional[str] = Field(default=None, max_length=1000)
+
+    # Sources and quality
+    sources_consulted: Optional[str] = Field(default=None)  # JSON array of URLs
+    context_quality_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+
+    # Metadata
+    generated_at: datetime = Field(default_factory=datetime.utcnow)
+    tokens_used: Optional[int] = Field(default=None)
