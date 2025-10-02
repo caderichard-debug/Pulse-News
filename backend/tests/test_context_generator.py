@@ -21,7 +21,7 @@ import json
 class TestContextGeneration:
     """Test context generation"""
 
-    @patch('app.services.context_generator.openai.ChatCompletion.create')
+    @patch('app.services.context_generator.openai_api.chat.completions.create')
     def test_generate_context_success(self, mock_openai, session: Session):
         """Test successful context generation"""
         source = Source(
@@ -85,7 +85,7 @@ class TestContextGeneration:
         session.refresh(analysis)
         assert analysis.has_context is True
 
-    @patch('app.services.context_generator.openai.ChatCompletion.create')
+    @patch('app.services.context_generator.openai_api.chat.completions.create')
     def test_skip_existing_context(self, mock_openai, session: Session):
         """Test skipping articles that already have context"""
         source = Source(
@@ -130,7 +130,7 @@ class TestContextGeneration:
         assert context.id == existing_context.id
         mock_openai.assert_not_called()
 
-    @patch('app.services.context_generator.openai.ChatCompletion.create')
+    @patch('app.services.context_generator.openai_api.chat.completions.create')
     def test_context_generation_error_handling(self, mock_openai, session: Session):
         """Test error handling in context generation"""
         source = Source(
@@ -303,7 +303,7 @@ class TestFormatContextForNewsletter:
 class TestProcessArticleContexts:
     """Test batch context processing"""
 
-    @patch('app.services.context_generator.openai.ChatCompletion.create')
+    @patch('app.services.context_generator.openai_api.chat.completions.create')
     def test_process_multiple_articles(self, mock_openai, session: Session):
         """Test processing multiple articles"""
         source = Source(
@@ -358,7 +358,7 @@ class TestProcessArticleContexts:
         assert stats["contexts_generated"] == 3
         assert stats["total_tokens"] == 1500  # 500 * 3
 
-    @patch('app.services.context_generator.openai.ChatCompletion.create')
+    @patch('app.services.context_generator.openai_api.chat.completions.create')
     def test_process_respects_limit(self, mock_openai, session: Session):
         """Test that processing respects the limit parameter"""
         source = Source(

@@ -6,7 +6,8 @@ Generates personalized newsletters based on user preferences and sends via email
 from sqlmodel import Session, select
 from app.models import (
     User, Article, ArticleAnalysis, Framework, ArticleFrameworkLink,
-    UserTopicPreference, Newsletter, NewsletterArticle, Topic
+    UserTopicPreference, Newsletter, NewsletterArticle, Topic,
+    StatisticVerification, ArticleContext, ArticleCluster, ArticleClusterMember
 )
 from app.database import engine
 from app.config import settings
@@ -16,6 +17,7 @@ import logging
 from jinja2 import Template, Environment, FileSystemLoader
 import os
 import resend
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -226,10 +228,46 @@ def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict
         "unsubscribe_url": f"https://pulse.news/unsubscribe?token={user.email}"  # TODO: Add real token
     }
 
-    # Add article data
+    # Add article data with enhancements
     for article, analysis in articles_with_analysis:
-        # Get source name
-        source_name = session.get(article.__class__, article.id).source.name if hasattr(article, 'source') else "Unknown"
+        # Get statistics with verification
+        statistics = session.exec(
+            select(StatisticVerification)
+            .where(StatisticVerification.article_id == article.id)
+        ).all()
+
+        # Get context if available
+        context = session.exec(
+            select(ArticleContext)
+            .where(ArticleContext.article_id == article.id)
+        ).first()
+
+        # Get cluster information
+        cluster_member = session.exec(
+            select(ArticleClusterMember, ArticleCluster)
+            .join(ArticleCluster)
+            .where(ArticleClusterMember.article_id == article.id)
+        ).first()
+
+        cluster_info = None
+        if cluster_member:
+            member, cluster = cluster_member
+            # Get other articles in the same cluster
+            other_members = session.exec(
+                select(ArticleClusterMember, Article)
+                .join(Article)
+                .where(ArticleClusterMember.cluster_id == cluster.id)
+                .where(ArticleClusterMember.article_id != article.id)
+            ).all()
+
+            cluster_info = {
+                "topic": cluster.primary_topic,
+                "article_count": len(other_members) + 1,
+                "other_sources": [
+                    {"source": other_article.source.name, "url": other_article.url}
+                    for _, other_article in other_members[:3]  # Limit to 3
+                ]
+            }
 
         template_data["articles"].append({
             "title": article.title,
@@ -238,7 +276,24 @@ def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict
             "political_lean": analysis.political_lean.value if analysis.political_lean else None,
             "published_at": article.published_at.strftime("%b %d") if article.published_at else "",
             "summary": analysis.summary,
-            "key_stats": analysis.key_stats
+            "key_stats": analysis.key_stats,
+            "statistics": [
+                {
+                    "text": stat.statistic_text,
+                    "status": stat.verification_status.value,
+                    "confidence": stat.confidence_score,
+                    "sources": json.loads(stat.verified_sources) if stat.verified_sources else []
+                }
+                for stat in statistics
+            ],
+            "context": {
+                "background": context.background,
+                "key_players": json.loads(context.key_players) if context.key_players else [],
+                "timeline": json.loads(context.timeline) if context.timeline else [],
+                "significance": context.significance,
+                "next_developments": context.next_developments
+            } if context else None,
+            "cluster": cluster_info
         })
 
     # Render template

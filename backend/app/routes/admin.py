@@ -6,7 +6,10 @@ from fastapi import APIRouter, Depends, BackgroundTasks
 from sqlmodel import Session, select, func
 from app.models import Article, Source, Framework, User, ProcessingStatus
 from app.database import get_session
-from app.jobs.tasks import scrape_job, extract_job, analyze_job, framework_job
+from app.jobs.tasks import (
+    scrape_job, extract_job, analyze_job, framework_job,
+    statistics_verification_job, article_clustering_job, context_generation_job
+)
 from app.jobs.scheduler import get_job_status
 from datetime import datetime, timedelta
 from typing import Dict, Any
@@ -155,6 +158,45 @@ def trigger_framework_job(background_tasks: BackgroundTasks) -> Dict[str, str]:
         "status": "triggered",
         "job": "update_frameworks",
         "message": "Framework update job started in background"
+    }
+
+
+@router.post("/jobs/verify-statistics")
+def trigger_statistics_verification_job_endpoint(background_tasks: BackgroundTasks) -> Dict[str, str]:
+    """
+    Manually trigger statistics verification job in the background.
+    """
+    background_tasks.add_task(statistics_verification_job)
+    return {
+        "status": "triggered",
+        "job": "verify_statistics",
+        "message": "Statistics verification job started in background"
+    }
+
+
+@router.post("/jobs/cluster-articles")
+def trigger_clustering_job(background_tasks: BackgroundTasks) -> Dict[str, str]:
+    """
+    Manually trigger article clustering job in the background.
+    """
+    background_tasks.add_task(article_clustering_job)
+    return {
+        "status": "triggered",
+        "job": "cluster_articles",
+        "message": "Article clustering job started in background"
+    }
+
+
+@router.post("/jobs/generate-context")
+def trigger_context_generation_job_endpoint(background_tasks: BackgroundTasks) -> Dict[str, str]:
+    """
+    Manually trigger context generation job in the background.
+    """
+    background_tasks.add_task(context_generation_job)
+    return {
+        "status": "triggered",
+        "job": "generate_context",
+        "message": "Context generation job started in background"
     }
 
 

@@ -237,16 +237,16 @@ def statistics_verification_job(session: Session = None):
         logger.info(
             f"Statistics verification job completed: "
             f"{stats['articles_processed']} articles, "
-            f"{stats['statistics_extracted']} statistics, "
-            f"{stats['statistics_verified']} verified"
+            f"{stats['stats_extracted']} statistics, "
+            f"{stats['stats_verified']} verified"
         )
         logger.info("=" * 60)
 
         return {
             "success": True,
             "articles_processed": stats["articles_processed"],
-            "statistics_extracted": stats["statistics_extracted"],
-            "statistics_verified": stats["statistics_verified"]
+            "statistics_extracted": stats["stats_extracted"],
+            "statistics_verified": stats["stats_verified"]
         }
     except Exception as e:
         logger.error(f"Statistics verification job failed: {e}", exc_info=True)

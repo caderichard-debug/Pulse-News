@@ -11,7 +11,10 @@ from datetime import datetime
 from sqlmodel import Session, select
 from app.models import Article, ArticleAnalysis, ArticleContext
 from app.config import settings
-import openai
+from openai import OpenAI
+
+# Initialize OpenAI client
+openai_api = OpenAI(api_key=settings.openai_api_key) if settings.openai_api_key else None
 
 logger = logging.getLogger(__name__)
 
@@ -86,8 +89,11 @@ def generate_article_context(
         )
 
         # Call OpenAI
-        openai.api_key = settings.openai_api_key
-        response = openai.ChatCompletion.create(
+        if not openai_api:
+            logger.error("OpenAI API not configured")
+            return None
+
+        response = openai_api.chat.completions.create(
             model=settings.ai_model,
             messages=[
                 {

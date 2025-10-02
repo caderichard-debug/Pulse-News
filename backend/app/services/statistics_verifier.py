@@ -14,7 +14,10 @@ from app.models import (
     VerificationStatus, VerificationMethod
 )
 from app.config import settings
-import openai
+from openai import OpenAI
+
+# Initialize OpenAI client
+openai_api = OpenAI(api_key=settings.openai_api_key) if settings.openai_api_key else None
 
 logger = logging.getLogger(__name__)
 
@@ -88,8 +91,11 @@ def extract_statistics_from_article(
         )
 
         # Call OpenAI
-        openai.api_key = settings.openai_api_key
-        response = openai.ChatCompletion.create(
+        if not openai_api:
+            logger.error("OpenAI API not configured")
+            return []
+
+        response = openai_api.chat.completions.create(
             model=settings.ai_model,
             messages=[
                 {"role": "system", "content": "You are a fact-checking assistant that extracts verifiable statistics from news articles."},

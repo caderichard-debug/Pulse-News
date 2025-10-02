@@ -20,7 +20,7 @@ from datetime import datetime
 class TestExtractStatistics:
     """Test statistic extraction from articles"""
 
-    @patch('app.services.statistics_verifier.openai.ChatCompletion.create')
+    @patch('app.services.statistics_verifier.openai_api.chat.completions.create')
     def test_extract_statistics_success(self, mock_openai, session: Session):
         """Test successful statistic extraction"""
         # Create source and article
@@ -79,7 +79,7 @@ class TestExtractStatistics:
         assert verifications[0].verification_status == VerificationStatus.UNVERIFIED
         assert verifications[1].statistic_text == "3.5%"
 
-    @patch('app.services.statistics_verifier.openai.ChatCompletion.create')
+    @patch('app.services.statistics_verifier.openai_api.chat.completions.create')
     def test_extract_no_statistics(self, mock_openai, session: Session):
         """Test article with no statistics"""
         source = Source(
