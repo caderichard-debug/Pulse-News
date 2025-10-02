@@ -31,6 +31,21 @@ class SourceTopicLink(SQLModel, table=True):
     topic_id: int = Field(foreign_key="topics.id", primary_key=True)
 
 
+class ArticleTopicLink(SQLModel, table=True):
+    __tablename__ = "article_topics"
+
+    article_id: int = Field(foreign_key="articles.id", primary_key=True)
+    topic_id: int = Field(foreign_key="topics.id", primary_key=True)
+
+
+class NewsletterArticle(SQLModel, table=True):
+    __tablename__ = "newsletter_articles"
+
+    newsletter_id: int = Field(foreign_key="newsletters.id", primary_key=True)
+    article_id: int = Field(foreign_key="articles.id", primary_key=True)
+    display_order: int = Field(default=0)
+
+
 class ArticleFrameworkLink(SQLModel, table=True):
     __tablename__ = "article_frameworks"
 
@@ -87,6 +102,10 @@ class Topic(SQLModel, table=True):
         back_populates="topics",
         link_model=SourceTopicLink
     )
+    articles: List["Article"] = Relationship(
+        back_populates="topics",
+        link_model=ArticleTopicLink
+    )
 
 
 class Article(SQLModel, table=True):
@@ -123,6 +142,10 @@ class Article(SQLModel, table=True):
     frameworks: List["Framework"] = Relationship(
         back_populates="articles",
         link_model=ArticleFrameworkLink
+    )
+    topics: List["Topic"] = Relationship(
+        back_populates="articles",
+        link_model=ArticleTopicLink
     )
 
 
@@ -161,7 +184,7 @@ class Framework(SQLModel, table=True):
     description: str = Field(max_length=1000)
 
     # Axis definition (the debate spectrum)
-    axis_description: str = Field(max_length=200)  # e.g., "individual freedom êí collective welfare"
+    axis_description: str = Field(max_length=200)  # e.g., "individual freedom ÔøΩÔøΩ collective welfare"
     left_position: str = Field(max_length=200)  # e.g., "Maximize individual autonomy"
     right_position: str = Field(max_length=200)  # e.g., "Prioritize community benefit"
 
@@ -185,6 +208,7 @@ class User(SQLModel, table=True):
     email: str = Field(max_length=255, unique=True, index=True)
     email_verified: bool = Field(default=False)
     hashed_password: str = Field(max_length=255)
+    name: Optional[str] = Field(default=None, max_length=200)
 
     # Subscription
     subscription_tier: SubscriptionTier = Field(default=SubscriptionTier.FREE)
@@ -206,11 +230,12 @@ class Newsletter(SQLModel, table=True):
 
     # Email metadata
     subject: str = Field(max_length=200)
-    sent_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    html_content: str = Field(default="")  # Email HTML content
+    sent_at: Optional[datetime] = Field(default=None, index=True)
 
     # Content references (JSON arrays of IDs)
-    article_ids: str = Field(max_length=500)  # e.g., "[1,2,3,4,5]"
-    framework_ids: str = Field(max_length=500)  # e.g., "[1,2,3]"
+    article_ids: str = Field(max_length=500, default="[]")  # e.g., "[1,2,3,4,5]"
+    framework_ids: str = Field(max_length=500, default="[]")  # e.g., "[1,2,3]"
 
     # Tracking
     email_opened: bool = Field(default=False)

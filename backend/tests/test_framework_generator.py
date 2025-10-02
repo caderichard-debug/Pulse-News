@@ -119,7 +119,7 @@ class TestMapArticlesToFrameworks:
             }
         ]
 
-        count = map_articles_to_frameworks(article_ids=[analyzed_article.id])
+        count = map_articles_to_frameworks(session, article_ids=[analyzed_article.id])
 
         assert count == 1
 
@@ -139,7 +139,7 @@ class TestMapArticlesToFrameworks:
         """Test that mapping fails gracefully without API key"""
         mock_client.is_available.return_value = False
 
-        count = map_articles_to_frameworks()
+        count = map_articles_to_frameworks(session)
 
         assert count == 0
 
@@ -148,7 +148,7 @@ class TestMapArticlesToFrameworks:
         """Test handling when no frameworks exist"""
         mock_client.is_available.return_value = True
 
-        count = map_articles_to_frameworks(article_ids=[analyzed_article.id])
+        count = map_articles_to_frameworks(session, article_ids=[analyzed_article.id])
 
         assert count == 0
         mock_client.map_article_to_frameworks.assert_not_called()
@@ -158,7 +158,7 @@ class TestMapArticlesToFrameworks:
         """Test handling when no articles need mapping"""
         mock_client.is_available.return_value = True
 
-        count = map_articles_to_frameworks()
+        count = map_articles_to_frameworks(session)
 
         assert count == 0
         mock_client.map_article_to_frameworks.assert_not_called()
@@ -171,7 +171,7 @@ class TestMapArticlesToFrameworks:
         """Test that already mapped articles are skipped"""
         mock_client.is_available.return_value = True
 
-        count = map_articles_to_frameworks(limit=10)
+        count = map_articles_to_frameworks(session, limit=10)
 
         assert count == 0
         mock_client.map_article_to_frameworks.assert_not_called()
@@ -220,7 +220,7 @@ class TestMapArticlesToFrameworks:
             }
         ]
 
-        count = map_articles_to_frameworks(article_ids=[analyzed_article.id])
+        count = map_articles_to_frameworks(session, article_ids=[analyzed_article.id])
 
         assert count == 2
 
@@ -248,7 +248,7 @@ class TestMapArticlesToFrameworks:
             }
         ]
 
-        count = map_articles_to_frameworks(article_ids=[analyzed_article.id])
+        count = map_articles_to_frameworks(session, article_ids=[analyzed_article.id])
 
         assert count == 0  # Should skip invalid framework
 
@@ -270,7 +270,7 @@ class TestMapArticlesToFrameworks:
             }
         ]
 
-        count = map_articles_to_frameworks(article_ids=[analyzed_article.id])
+        count = map_articles_to_frameworks(session, article_ids=[analyzed_article.id])
 
         assert count == 1
 
@@ -300,7 +300,7 @@ class TestMapArticlesToFrameworks:
 
         mock_client.is_available.return_value = True
 
-        count = map_articles_to_frameworks(article_ids=[article_no_analysis.id])
+        count = map_articles_to_frameworks(session, article_ids=[article_no_analysis.id])
 
         assert count == 0
 
@@ -356,7 +356,7 @@ class TestDiscoverNewFrameworks:
             }
         ]
 
-        count = discover_new_frameworks(min_articles=50)
+        count = discover_new_frameworks(session, min_articles=50)
 
         assert count == 2
 
@@ -371,17 +371,17 @@ class TestDiscoverNewFrameworks:
         """Test that discovery requires minimum number of articles"""
         mock_client.is_available.return_value = True
 
-        count = discover_new_frameworks(min_articles=50)
+        count = discover_new_frameworks(session, min_articles=50)
 
         assert count == 0
         mock_client.generate_frameworks.assert_not_called()
 
     @patch('app.services.framework_generator.openai_client')
-    def test_no_api_key(self, mock_client):
+    def test_no_api_key(self, mock_client, session: Session):
         """Test that discovery fails gracefully without API key"""
         mock_client.is_available.return_value = False
 
-        count = discover_new_frameworks()
+        count = discover_new_frameworks(session)
 
         assert count == 0
 
@@ -419,7 +419,7 @@ class TestDiscoverNewFrameworks:
         mock_client.is_available.return_value = True
         mock_client.generate_frameworks.return_value = []  # No new frameworks
 
-        count = discover_new_frameworks(min_articles=50)
+        count = discover_new_frameworks(session, min_articles=50)
 
         assert count == 0
 
@@ -463,7 +463,7 @@ class TestDiscoverNewFrameworks:
             }
         ]
 
-        count = discover_new_frameworks(min_articles=50)
+        count = discover_new_frameworks(session, min_articles=50)
 
         assert count == 1
 
@@ -508,7 +508,7 @@ class TestDiscoverNewFrameworks:
 
         mock_client.is_available.return_value = True
 
-        count = discover_new_frameworks(min_articles=50)
+        count = discover_new_frameworks(session, min_articles=50)
 
         # Should fail because no recent articles
         assert count == 0

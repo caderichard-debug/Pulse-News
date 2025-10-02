@@ -113,10 +113,11 @@ class TestExtractArticleContent:
         assert result['word_count'] > 0
         mock_get.assert_called_once()
 
+    @patch('bs4.BeautifulSoup')
+    @patch('app.services.article_extractor.Document')
     @patch('app.services.article_extractor.requests.get')
     @patch('app.services.article_extractor.trafilatura.extract')
-    @patch('app.services.article_extractor.Document')
-    def test_fallback_to_readability(self, mock_document, mock_trafilatura, mock_get, sample_html):
+    def test_fallback_to_readability(self, mock_trafilatura, mock_get, mock_document, mock_bs, sample_html):
         """Test fallback to readability-lxml when trafilatura fails"""
         # Mock HTTP response
         mock_response = Mock()
@@ -127,10 +128,17 @@ class TestExtractArticleContent:
         # Trafilatura returns short content (< 200 chars)
         mock_trafilatura.return_value = "Too short"
 
-        # Mock readability
+        # Mock readability Document and BeautifulSoup
+        # Need >200 chars after BeautifulSoup extracts text
+        long_text = "This is a longer article content that should be extracted successfully from the HTML using readability library as a fallback method when trafilatura fails to extract sufficient content. Adding more text here to ensure we exceed the 200 character minimum requirement for successful extraction."
         mock_doc = Mock()
-        mock_doc.summary.return_value = "<p>This is a longer article content that should be extracted successfully from the HTML using readability library as a fallback method when trafilatura fails to extract sufficient content.</p>"
+        mock_doc.summary.return_value = f"<p>{long_text}</p>"
         mock_document.return_value = mock_doc
+
+        # Mock BeautifulSoup to extract text from HTML
+        mock_soup = Mock()
+        mock_soup.get_text.return_value = long_text
+        mock_bs.return_value = mock_soup
 
         result = extract_article_content("https://testnews.com/article")
 
@@ -159,9 +167,10 @@ class TestExtractArticleContent:
         assert result['success'] is False
         assert result['content'] is None
 
+    @patch('app.services.article_extractor.Document')
     @patch('app.services.article_extractor.requests.get')
     @patch('app.services.article_extractor.trafilatura.extract')
-    def test_extraction_too_short(self, mock_trafilatura, mock_get, sample_html):
+    def test_extraction_too_short(self, mock_trafilatura, mock_get, mock_document, sample_html):
         """Test that very short extractions are rejected"""
         mock_response = Mock()
         mock_response.text = sample_html
@@ -170,6 +179,11 @@ class TestExtractArticleContent:
 
         # Both methods return content < 200 chars
         mock_trafilatura.return_value = "Short"
+
+        # Mock readability also returning short content
+        mock_doc = Mock()
+        mock_doc.summary.return_value = "<p>Short</p>"
+        mock_document.return_value = mock_doc
 
         result = extract_article_content("https://testnews.com/article")
 
@@ -241,7 +255,7 @@ class TestProcessPendingArticles:
             'word_count': 250
         }
 
-        count = process_pending_articles(batch_size=10, delay=0)
+        count = process_pending_articles(session, batch_size=10, delay=0)
 
         assert count == 1
 
@@ -264,7 +278,7 @@ class TestProcessPendingArticles:
             'word_count': 0
         }
 
-        count = process_pending_articles(batch_size=10, delay=0)
+        count = process_pending_articles(session, batch_size=10, delay=0)
 
         assert count == 0
 
@@ -298,7 +312,7 @@ class TestProcessPendingArticles:
             'word_count': 250
         }
 
-        process_pending_articles(batch_size=10, delay=0.5)
+        process_pending_articles(session, batch_size=10, delay=0.5)
 
         # Should sleep 2 times (between 3 articles)
         assert mock_sleep.call_count == 2
@@ -328,7 +342,7 @@ class TestProcessPendingArticles:
         }
 
         # Process with batch_size=5
-        count = process_pending_articles(batch_size=5, delay=0)
+        count = process_pending_articles(session, batch_size=5, delay=0)
 
         # Should only process 5 articles
         assert count == 5
@@ -337,7 +351,7 @@ class TestProcessPendingArticles:
     @patch('app.services.article_extractor.extract_article_content')
     def test_no_pending_articles(self, mock_extract, session: Session):
         """Test handling when no pending articles exist"""
-        count = process_pending_articles(batch_size=10, delay=0)
+        count = process_pending_articles(session, batch_size=10, delay=0)
 
         assert count == 0
         mock_extract.assert_not_called()
@@ -380,7 +394,7 @@ class TestProcessPendingArticles:
             'word_count': 250
         }
 
-        count = process_pending_articles(batch_size=10, delay=0)
+        count = process_pending_articles(session, batch_size=10, delay=0)
 
         # Should only process 1 pending article
         assert count == 1

@@ -89,7 +89,7 @@ class TestAnalyzeArticlesBatch:
         ]
 
         # Run analysis
-        count = analyze_articles_batch(batch_size=5)
+        count = analyze_articles_batch(session, batch_size=5)
 
         # Verify results
         assert count == 1
@@ -111,7 +111,7 @@ class TestAnalyzeArticlesBatch:
         """Test that analysis fails gracefully without API key"""
         mock_client.is_available.return_value = False
 
-        count = analyze_articles_batch(batch_size=5)
+        count = analyze_articles_batch(session, batch_size=5)
 
         assert count == 0
         mock_client.analyze_articles_batch.assert_not_called()
@@ -121,7 +121,7 @@ class TestAnalyzeArticlesBatch:
         """Test analysis when no articles are ready"""
         mock_client.is_available.return_value = True
 
-        count = analyze_articles_batch(batch_size=5)
+        count = analyze_articles_batch(session, batch_size=5)
 
         assert count == 0
         mock_client.analyze_articles_batch.assert_not_called()
@@ -131,7 +131,7 @@ class TestAnalyzeArticlesBatch:
         """Test that already analyzed articles are skipped"""
         mock_client.is_available.return_value = True
 
-        count = analyze_articles_batch(batch_size=5)
+        count = analyze_articles_batch(session, batch_size=5)
 
         assert count == 0
         mock_client.analyze_articles_batch.assert_not_called()
@@ -150,7 +150,7 @@ class TestAnalyzeArticlesBatch:
             }
         ]
 
-        count = analyze_articles_batch(batch_size=5)
+        count = analyze_articles_batch(session, batch_size=5)
 
         assert count == 1
 
@@ -166,7 +166,7 @@ class TestAnalyzeArticlesBatch:
         mock_client.is_available.return_value = True
         mock_client.analyze_articles_batch.return_value = None  # API error
 
-        count = analyze_articles_batch(batch_size=5)
+        count = analyze_articles_batch(session, batch_size=5)
 
         assert count == 0
 
@@ -205,7 +205,7 @@ class TestAnalyzeArticlesBatch:
             for i in range(3)  # Only 3 will be analyzed
         ]
 
-        count = analyze_articles_batch(batch_size=3)
+        count = analyze_articles_batch(session, batch_size=3)
 
         assert count == 3
         # Should only send 3 articles
@@ -228,7 +228,7 @@ class TestAnalyzeArticlesBatch:
             }
         ]
 
-        count = analyze_articles_batch(batch_size=5)
+        count = analyze_articles_batch(session, batch_size=5)
 
         assert count == 1
 

@@ -26,9 +26,12 @@ else:
     logger.warning("RESEND_API_KEY not set - email sending will be disabled")
 
 
-def generate_and_send_newsletters() -> Dict[str, int]:
+def generate_and_send_newsletters(session: Session = None) -> Dict[str, int]:
     """
     Generate and send personalized newsletters to all active users.
+
+    Args:
+        session: Optional database session (for testing). If None, creates new session.
 
     Returns:
         Dict with counts of newsletters generated, sent, and failed
@@ -39,7 +42,8 @@ def generate_and_send_newsletters() -> Dict[str, int]:
 
     stats = {"generated": 0, "sent": 0, "failed": 0}
 
-    with Session(engine) as session:
+    def _generate(session: Session):
+        """Inner function to generate newsletters with provided session"""
         # Get all active users with email verified
         active_users = session.exec(
             select(User)
@@ -110,11 +114,18 @@ def generate_and_send_newsletters() -> Dict[str, int]:
                 session.rollback()
                 continue
 
-    logger.info(
-        f"Newsletter job complete: {stats['generated']} generated, "
-        f"{stats['sent']} sent, {stats['failed']} failed"
-    )
-    return stats
+        logger.info(
+            f"Newsletter job complete: {stats['generated']} generated, "
+            f"{stats['sent']} sent, {stats['failed']} failed"
+        )
+        return stats
+
+    # Use provided session or create new one
+    if session is not None:
+        return _generate(session)
+    else:
+        with Session(engine) as session:
+            return _generate(session)
 
 
 def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict]:
@@ -128,7 +139,7 @@ def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict
     user_preferences = session.exec(
         select(UserTopicPreference)
         .where(UserTopicPreference.user_id == user.id)
-        .where(UserTopicPreference.is_active == True)
+        .where(UserTopicPreference.include_in_newsletter == True)
     ).all()
 
     preferred_topic_ids = [pref.topic_id for pref in user_preferences]

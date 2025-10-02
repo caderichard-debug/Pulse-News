@@ -167,7 +167,7 @@ class TestArticlesRoutes:
         assert data["id"] == analyzed_article.id
         assert data["title"] == "Test Article"
         assert data["word_count"] == 100
-        assert data["processing_status"] == "COMPLETED"
+        assert data["processing_status"] == "completed"  # Enum value is lowercase
         assert "content_preview" in data
         assert data["has_full_content"] is True
         assert "analysis" in data

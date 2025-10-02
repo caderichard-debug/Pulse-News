@@ -75,7 +75,7 @@ import sys, json
 articles = json.load(sys.stdin)
 for i, article in enumerate(articles[:5], 1):
     print(f\"{i}. {article['title'][:60]}...\")
-    print(f\"   Source: {article['source_name']} | Status: {article['processing_status']}\")
+    print(f\"   Source ID: {article['source_id']} | Status: {article['status']}\")
     if article.get('word_count'):
         print(f\"   Words: {article['word_count']}\")
     print()
@@ -101,7 +101,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 curl -s "${API_URL}/admin/scheduler/status" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
-if data['running']:
+if data['status'] == 'running':
     print('  ✅ Scheduler is RUNNING')
 else:
     print('  ❌ Scheduler is STOPPED')
@@ -109,7 +109,7 @@ print(f\"  Total Jobs: {len(data['jobs'])}\")
 print()
 for job in data['jobs']:
     status = '✅' if job else '❌'
-    print(f\"  {status} {job['id']:<20} Next: {job['next_run_time']}\")
+    print(f\"  {status} {job['id']:<20} Next: {job['next_run']}\")
 "
 echo ""
 
