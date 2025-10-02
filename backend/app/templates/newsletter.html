@@ -118,6 +118,84 @@
         .article-stats strong {
             color: #F57C00;
         }
+        .statistics {
+            margin-top: 12px;
+            padding: 10px;
+            background-color: #E3F2FD;
+            border-radius: 4px;
+        }
+        .statistic {
+            margin: 6px 0;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+        }
+        .verified-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        .verified {
+            background-color: #C8E6C9;
+            color: #2E7D32;
+        }
+        .unverified {
+            background-color: #FFE0B2;
+            color: #E65100;
+        }
+        .context-toggle {
+            display: block;
+            margin-top: 10px;
+            padding: 8px 12px;
+            background-color: #E1F5FE;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #0277BD;
+            text-decoration: none;
+            border: 1px solid #B3E5FC;
+        }
+        .context-toggle:hover {
+            background-color: #B3E5FC;
+        }
+        .context-content {
+            margin-top: 10px;
+            padding: 12px;
+            background-color: #F5F5F5;
+            border-radius: 4px;
+            font-size: 13px;
+            border-left: 3px solid #0277BD;
+        }
+        .context-header {
+            font-weight: 600;
+            color: #0277BD;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .context-section {
+            margin-bottom: 10px;
+        }
+        .context-section strong {
+            color: #1976D2;
+        }
+        .cluster-info {
+            margin-top: 12px;
+            padding: 10px;
+            background-color: #F3E5F5;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .cluster-sources {
+            margin-top: 8px;
+        }
+        .cluster-source {
+            display: inline-block;
+            margin-right: 10px;
+            color: #7B1FA2;
+        }
         .framework {
             margin-bottom: 30px;
             padding: 20px;
@@ -149,6 +227,26 @@
             border-radius: 4px;
             margin: 0 15px;
             position: relative;
+        }
+        .framework-indicator {
+            position: absolute;
+            top: -4px;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transform: translateX(-50%);
+        }
+        .framework-gradient {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to right, #FF5252, #FFFFFF, #2196F3);
+            border-radius: 4px;
+            opacity: 0.6;
         }
         .framework-related {
             font-size: 13px;
@@ -184,28 +282,8 @@
 
         <div class="intro">
             <p>Hello {{ user_name }},</p>
-            <p>Here's your personalized news digest featuring <strong>{{ article_count }}</strong> articles across your selected topics. We've mapped these stories to <strong>{{ framework_count }}</strong> underlying ethical debates to help you see the bigger picture.</p>
+            <p>Here's your personalized news digest featuring <strong>{{ article_count }}</strong> articles. Each article includes context about the underlying ethical debates to help you think critically while you read.</p>
         </div>
-
-        {% if frameworks %}
-        <div class="section">
-            <div class="section-title">🎯 Key Debates Today</div>
-            {% for framework in frameworks %}
-            <div class="framework">
-                <div class="framework-title">{{ framework.name }}</div>
-                <div class="framework-description">{{ framework.description }}</div>
-                <div class="framework-axis">
-                    <span>{{ framework.left_position }}</span>
-                    <div class="framework-axis-bar"></div>
-                    <span>{{ framework.right_position }}</span>
-                </div>
-                <div class="framework-related">
-                    📰 Related to {{ framework.article_count }} article(s) in your digest
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
 
         <div class="section">
             <div class="section-title">📰 Today's Articles</div>
@@ -224,10 +302,107 @@
                     <span style="margin-left: 8px;">{{ article.published_at }}</span>
                 </div>
                 <div class="article-summary">{{ article.summary }}</div>
+
+                {% if article.frameworks %}
+                <!-- Ethical Debates Context -->
+                {% for framework in article.frameworks %}
+                <div style="margin-top: 10px; padding: 8px 10px; background-color: #F3E5F5; border-left: 3px solid #7B1FA2; border-radius: 3px; font-size: 12px;">
+                    <div style="font-weight: 600; color: #6A1B9A; margin-bottom: 3px;">⚖️ {{ framework.name }}</div>
+                    <div style="color: #666; font-size: 11px;">{{ framework.explanation }}</div>
+                </div>
+                {% endfor %}
+                {% endif %}
+
                 {% if article.key_stats %}
                 <div class="article-stats">
                     <strong>📊 Key Stats:</strong> {{ article.key_stats }}
                 </div>
+                {% endif %}
+
+                {% if article.statistics %}
+                <div class="statistics">
+                    <strong>🔍 Verified Statistics:</strong>
+                    {% for stat in article.statistics %}
+                    <div class="statistic">
+                        <span>{{ stat.text }}</span>
+                        <span class="verified-badge {{ stat.status }}">
+                            {{ '✓ Verified' if stat.status == 'verified' else '⏳ Unverified' }}
+                        </span>
+                        {% if stat.confidence and stat.status == 'verified' %}
+                        <span style="margin-left: 8px; font-size: 11px; color: #666;">
+                            ({{ (stat.confidence * 100)|int }}% confidence)
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if article.cluster %}
+                <div class="cluster-info">
+                    <strong>🔗 Cross-Source Coverage:</strong>
+                    This story is being covered by {{ article.cluster.article_count }} sources
+                    {% if article.cluster.other_sources %}
+                    <div class="cluster-sources">
+                        Also from:
+                        {% for source in article.cluster.other_sources %}
+                        <a href="{{ source.url }}" class="cluster-source" target="_blank">{{ source.source }}</a>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if article.context %}
+                <!-- Background & Context Section -->
+                <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top: 12px; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 10px 12px; background-color: #E1F5FE; border-radius: 4px 4px 0 0; border: 1px solid #B3E5FC; border-bottom: none;">
+                            <div style="font-size: 14px; font-weight: 600; color: #0277BD;">
+                                📚 Background & Context
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px; background-color: #F5F5F5; border-radius: 0 0 4px 4px; font-size: 13px; border: 1px solid #B3E5FC; border-top: none; border-left: 3px solid #0277BD;">
+                            {% if article.context.background %}
+                            <div style="margin-bottom: 10px;">
+                                <strong style="color: #1976D2;">📖 Background:</strong> {{ article.context.background }}
+                            </div>
+                            {% endif %}
+
+                            {% if article.context.key_players %}
+                            <div style="margin-bottom: 10px;">
+                                <strong style="color: #1976D2;">👥 Key Players:</strong>
+                                {{ article.context.key_players|join(', ') }}
+                            </div>
+                            {% endif %}
+
+                            {% if article.context.timeline %}
+                            <div style="margin-bottom: 10px;">
+                                <strong style="color: #1976D2;">⏱️ Timeline:</strong>
+                                <ul style="margin: 5px 0; padding-left: 20px;">
+                                {% for event in article.context.timeline %}
+                                    <li style="margin-bottom: 3px;"><strong>{{ event.date }}:</strong> {{ event.event }}</li>
+                                {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+
+                            {% if article.context.significance %}
+                            <div style="margin-bottom: 10px;">
+                                <strong style="color: #1976D2;">💡 Why This Matters:</strong> {{ article.context.significance }}
+                            </div>
+                            {% endif %}
+
+                            {% if article.context.next_developments %}
+                            <div style="margin-bottom: 0;">
+                                <strong style="color: #1976D2;">🔮 What's Next:</strong> {{ article.context.next_developments }}
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
                 {% endif %}
             </div>
             {% endfor %}
