@@ -242,6 +242,27 @@ def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict
             .where(ArticleContext.article_id == article.id)
         ).first()
 
+        # Get framework mappings for this article
+        framework_mappings = session.exec(
+            select(ArticleFrameworkLink, Framework)
+            .join(Framework)
+            .where(ArticleFrameworkLink.article_id == article.id)
+            .where(ArticleFrameworkLink.relevance_score >= 0.6)  # Only strong matches
+            .order_by(ArticleFrameworkLink.relevance_score.desc())
+            .limit(2)  # Max 2 frameworks per article
+        ).all()
+
+        frameworks_for_article = []
+        for link, framework in framework_mappings:
+            frameworks_for_article.append({
+                "name": framework.name,
+                "left_position": framework.left_position,
+                "right_position": framework.right_position,
+                "position_on_axis": link.position_on_axis,  # -10 to +10
+                "relevance_score": link.relevance_score,
+                "explanation": link.ai_explanation
+            })
+
         # Get cluster information
         cluster_member = session.exec(
             select(ArticleClusterMember, ArticleCluster)
@@ -277,6 +298,7 @@ def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict
             "published_at": article.published_at.strftime("%b %d") if article.published_at else "",
             "summary": analysis.summary,
             "key_stats": analysis.key_stats,
+            "frameworks": frameworks_for_article,
             "statistics": [
                 {
                     "text": stat.statistic_text,

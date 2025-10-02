@@ -282,31 +282,8 @@
 
         <div class="intro">
             <p>Hello {{ user_name }},</p>
-            <p>Here's your personalized news digest featuring <strong>{{ article_count }}</strong> articles across your selected topics. We've mapped these stories to <strong>{{ framework_count }}</strong> underlying ethical debates to help you see the bigger picture.</p>
+            <p>Here's your personalized news digest featuring <strong>{{ article_count }}</strong> articles. Each article includes context about the underlying ethical debates to help you think critically while you read.</p>
         </div>
-
-        {% if frameworks %}
-        <div class="section">
-            <div class="section-title">🎯 Key Debates Today</div>
-            {% for framework in frameworks %}
-            <div class="framework">
-                <div class="framework-title">{{ framework.name }}</div>
-                <div class="framework-description">{{ framework.description }}</div>
-                <div class="framework-axis">
-                    <span>{{ framework.left_position }}</span>
-                    <div class="framework-axis-bar">
-                        <div class="framework-gradient"></div>
-                        <div class="framework-indicator" style="left: 50%;"></div>
-                    </div>
-                    <span>{{ framework.right_position }}</span>
-                </div>
-                <div class="framework-related">
-                    📰 Related to {{ framework.article_count }} article(s) in your digest
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
 
         <div class="section">
             <div class="section-title">📰 Today's Articles</div>
@@ -325,6 +302,16 @@
                     <span style="margin-left: 8px;">{{ article.published_at }}</span>
                 </div>
                 <div class="article-summary">{{ article.summary }}</div>
+
+                {% if article.frameworks %}
+                <!-- Ethical Debates Context -->
+                {% for framework in article.frameworks %}
+                <div style="margin-top: 10px; padding: 8px 10px; background-color: #F3E5F5; border-left: 3px solid #7B1FA2; border-radius: 3px; font-size: 12px;">
+                    <div style="font-weight: 600; color: #6A1B9A; margin-bottom: 3px;">⚖️ {{ framework.name }}</div>
+                    <div style="color: #666; font-size: 11px;">{{ framework.explanation }}</div>
+                </div>
+                {% endfor %}
+                {% endif %}
 
                 {% if article.key_stats %}
                 <div class="article-stats">
