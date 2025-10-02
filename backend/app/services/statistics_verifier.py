@@ -184,6 +184,8 @@ def verify_statistic_cross_reference(
             verification.verified_sources = json.dumps(matches)
             verification.verified_at = datetime.utcnow()
             verification.confidence_score = min(0.9, 0.6 + (len(matches) * 0.1))
+            session.add(verification)
+            session.commit()
             logger.info(f"Verified statistic '{verification.statistic_text}' via cross-reference")
         else:
             # Not enough matches to verify

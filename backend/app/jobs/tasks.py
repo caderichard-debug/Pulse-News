@@ -209,3 +209,129 @@ def newsletter_job():
     except Exception as e:
         logger.error(f"Newsletter job failed: {e}", exc_info=True)
         return {"success": False, "error": str(e)}
+
+
+def statistics_verification_job(session: Session = None):
+    """
+    Job 6: Extract and verify statistics from articles.
+    Scheduled to run every 6 hours.
+
+    Args:
+        session: Optional session (for testing). If None, creates new session.
+    """
+    try:
+        logger.info("=" * 60)
+        logger.info("Starting scheduled statistics verification job")
+        logger.info("=" * 60)
+
+        from app.services.statistics_verifier import process_pending_verifications
+
+        if session is None:
+            with Session(engine) as session:
+                # Process up to 10 articles per run
+                stats = process_pending_verifications(session, limit=10)
+        else:
+            stats = process_pending_verifications(session, limit=10)
+
+        logger.info("=" * 60)
+        logger.info(
+            f"Statistics verification job completed: "
+            f"{stats['articles_processed']} articles, "
+            f"{stats['statistics_extracted']} statistics, "
+            f"{stats['statistics_verified']} verified"
+        )
+        logger.info("=" * 60)
+
+        return {
+            "success": True,
+            "articles_processed": stats["articles_processed"],
+            "statistics_extracted": stats["statistics_extracted"],
+            "statistics_verified": stats["statistics_verified"]
+        }
+    except Exception as e:
+        logger.error(f"Statistics verification job failed: {e}", exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
+def article_clustering_job(session: Session = None):
+    """
+    Job 7: Cluster similar articles for cross-source comparison.
+    Scheduled to run every 4 hours.
+
+    Args:
+        session: Optional session (for testing). If None, creates new session.
+    """
+    try:
+        logger.info("=" * 60)
+        logger.info("Starting scheduled article clustering job")
+        logger.info("=" * 60)
+
+        from app.services.article_clusterer import process_pending_clustering
+
+        if session is None:
+            with Session(engine) as session:
+                # Process up to 20 articles per run
+                stats = process_pending_clustering(session, limit=20)
+        else:
+            stats = process_pending_clustering(session, limit=20)
+
+        logger.info("=" * 60)
+        logger.info(
+            f"Article clustering job completed: "
+            f"{stats['articles_processed']} articles, "
+            f"{stats['clusters_created']} new clusters, "
+            f"{stats['articles_clustered']} articles clustered"
+        )
+        logger.info("=" * 60)
+
+        return {
+            "success": True,
+            "articles_processed": stats["articles_processed"],
+            "clusters_created": stats["clusters_created"],
+            "articles_clustered": stats["articles_clustered"]
+        }
+    except Exception as e:
+        logger.error(f"Article clustering job failed: {e}", exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
+def context_generation_job(session: Session = None):
+    """
+    Job 8: Generate background context for articles.
+    Scheduled to run every 8 hours.
+
+    Args:
+        session: Optional session (for testing). If None, creates new session.
+    """
+    try:
+        logger.info("=" * 60)
+        logger.info("Starting scheduled context generation job")
+        logger.info("=" * 60)
+
+        from app.services.context_generator import process_article_contexts
+
+        if session is None:
+            with Session(engine) as session:
+                # Process up to 5 articles per run (context generation is expensive)
+                stats = process_article_contexts(session, limit=5)
+        else:
+            stats = process_article_contexts(session, limit=5)
+
+        logger.info("=" * 60)
+        logger.info(
+            f"Context generation job completed: "
+            f"{stats['articles_processed']} articles, "
+            f"{stats['contexts_generated']} contexts, "
+            f"{stats['total_tokens']} tokens used"
+        )
+        logger.info("=" * 60)
+
+        return {
+            "success": True,
+            "articles_processed": stats["articles_processed"],
+            "contexts_generated": stats["contexts_generated"],
+            "tokens_used": stats["total_tokens"]
+        }
+    except Exception as e:
+        logger.error(f"Context generation job failed: {e}", exc_info=True)
+        return {"success": False, "error": str(e)}

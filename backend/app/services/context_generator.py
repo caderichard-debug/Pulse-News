@@ -128,6 +128,7 @@ def generate_article_context(
         # Update analysis to mark that context exists
         analysis.has_context = True
         session.add(analysis)
+        session.commit()
 
         logger.info(f"Generated context for article {article.id}")
         return context

@@ -1,12 +1,21 @@
 """
 APScheduler configuration and job scheduling.
-Sets up 4 separate background jobs with different schedules.
+Sets up 8 separate background jobs with different schedules.
 """
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.triggers.cron import CronTrigger
-from app.jobs.tasks import scrape_job, extract_job, analyze_job, framework_job, newsletter_job
+from app.jobs.tasks import (
+    scrape_job,
+    extract_job,
+    analyze_job,
+    framework_job,
+    newsletter_job,
+    statistics_verification_job,
+    article_clustering_job,
+    context_generation_job
+)
 from app.config import settings
 import logging
 
@@ -25,7 +34,7 @@ def start_scheduler():
         logger.warning("Scheduler is already running")
         return
 
-    logger.info("Initializing APScheduler with 5 jobs...")
+    logger.info("Initializing APScheduler with 8 jobs...")
 
     # Job 1: Scrape RSS feeds every 3 hours
     scheduler.add_job(
@@ -79,6 +88,39 @@ def start_scheduler():
         replace_existing=True,
     )
     logger.info("✓ Scheduled: Newsletter sending daily at 10:20 AM PST")
+
+    # Job 6: Statistics verification every 6 hours
+    scheduler.add_job(
+        func=statistics_verification_job,
+        trigger=IntervalTrigger(hours=6),
+        id='verify_statistics',
+        name='Verify Statistics',
+        replace_existing=True,
+        max_instances=1,
+    )
+    logger.info("✓ Scheduled: Statistics verification every 6 hours")
+
+    # Job 7: Article clustering every 4 hours
+    scheduler.add_job(
+        func=article_clustering_job,
+        trigger=IntervalTrigger(hours=4),
+        id='cluster_articles',
+        name='Cluster Articles',
+        replace_existing=True,
+        max_instances=1,
+    )
+    logger.info("✓ Scheduled: Article clustering every 4 hours")
+
+    # Job 8: Context generation every 8 hours
+    scheduler.add_job(
+        func=context_generation_job,
+        trigger=IntervalTrigger(hours=8),
+        id='generate_context',
+        name='Generate Context',
+        replace_existing=True,
+        max_instances=1,
+    )
+    logger.info("✓ Scheduled: Context generation every 8 hours")
 
     # Start the scheduler
     scheduler.start()
