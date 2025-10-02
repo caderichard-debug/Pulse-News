@@ -9,6 +9,7 @@ from app.models import User
 from app.routes.auth import get_current_user
 from app.config import settings
 from pydantic import BaseModel, EmailStr
+from app.services.newsletter_service import send_test_newsletter
 import resend
 import logging
 
@@ -86,6 +87,35 @@ def send_test_email(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to send email: {str(e)}"
+        )
+
+
+class SendTestNewsletterRequest(BaseModel):
+    to_email: EmailStr
+
+
+@router.post("/send-newsletter")
+def send_test_newsletter_route(
+    request: SendTestNewsletterRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Send a test newsletter to the specified email address.
+    Requires authentication.
+    """
+    if not settings.resend_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Resend API key not configured. Set RESEND_API_KEY in .env file"
+        )
+
+    success = send_test_newsletter(request.to_email)
+    if success:
+        return {"success": True, "message": f"Test newsletter sent to {request.to_email}"}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to send test newsletter to {request.to_email}"
         )
 
 

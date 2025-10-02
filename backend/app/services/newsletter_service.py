@@ -149,22 +149,31 @@ def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict
         all_topics = session.exec(select(Topic)).all()
         preferred_topic_ids = [topic.id for topic in all_topics]
 
-    # Get recent analyzed articles from preferred topics (last 24 hours)
-    yesterday = datetime.utcnow() - timedelta(hours=24)
 
+    # OLD WAY (commented):
+    # yesterday = datetime.utcnow() - timedelta(hours=24)
+    # articles_query = (
+    #     select(Article, ArticleAnalysis)
+    #     .join(ArticleAnalysis)
+    #     .where(Article.scraped_at >= yesterday)
+    #     .where(Article.topics.any(Topic.id.in_(preferred_topic_ids)))
+    #     .order_by(Article.scraped_at.desc())
+    #     .limit(settings.max_articles_per_newsletter)
+    # )
+    # articles_with_analysis = session.exec(articles_query).all()
+
+    # NEW WAY: select random articles with analysis
+    from sqlalchemy import func
     articles_query = (
         select(Article, ArticleAnalysis)
         .join(ArticleAnalysis)
-        .where(Article.scraped_at >= yesterday)
-        .where(Article.topics.any(Topic.id.in_(preferred_topic_ids)))
-        .order_by(Article.scraped_at.desc())
+        .order_by(func.random())
         .limit(settings.max_articles_per_newsletter)
     )
-
     articles_with_analysis = session.exec(articles_query).all()
 
     if not articles_with_analysis:
-        logger.warning(f"No recent articles found for user {user.email}")
+        logger.warning(f"No articles found for user {user.email}")
         return None
 
     # Get frameworks related to these articles
