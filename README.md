@@ -110,28 +110,30 @@ users → newsletters
 
 ## 📊 Project Status
 
-See [SETUP_PROGRESS.md](SETUP_PROGRESS.md) for detailed status.
+✅ **All systems operational** - 127/127 tests passing (100%)
 
-### ✅ Completed (Foundation)
-- [x] Database models (SQLModel)
-- [x] Alembic migrations setup
+### ✅ Completed
+- [x] Database models & migrations
 - [x] Docker configuration
-- [x] Initial data seeding
-- [x] Configuration management
-- [x] FastAPI app structure
+- [x] RSS scraper service
+- [x] Article extraction (trafilatura + readability fallback)
+- [x] APScheduler background jobs
+- [x] Claude AI integration (analysis & framework generation)
+- [x] Newsletter generation & email sending
+- [x] User authentication (JWT)
+- [x] API endpoints (public, protected, admin)
+- [x] Comprehensive test suite (127 tests, 100% passing)
 
 ### 🔄 In Progress
-- [ ] RSS scraper service
-- [ ] Article extraction
-- [ ] APScheduler jobs
-- [ ] Claude AI integration
-- [ ] Framework generation
+- [ ] Frontend UI (Next.js)
+- [ ] Email tracking & analytics
+- [ ] Advanced user preferences
 
 ### 📅 Upcoming
-- [ ] Newsletter builder
-- [ ] Email sending
-- [ ] User authentication
-- [ ] Frontend UI
+- [ ] Framework discovery optimization
+- [ ] Real-time updates
+- [ ] Mobile app
+- [ ] Premium features
 
 ## 🔧 Development
 
@@ -258,11 +260,14 @@ Newsletter includes articles from selected topics + suggested frameworks.
 - No third-party tracking (user controls email tracking)
 - GDPR-compliant (email preference management)
 
-## 📚 API Documentation
+## 📚 Documentation
 
-Once running, visit:
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+- **[Setup Guide](docs/SETUP.md)** - Installation and configuration
+- **[API Reference](docs/API.md)** - Complete API documentation
+- **[Architecture](docs/ARCHITECTURE.md)** - System design and data flow
+- **[Testing Guide](docs/TESTING.md)** - Running and writing tests
+
+Interactive API docs: http://localhost:8000/docs
 
 ## 🤝 Contributing
 
