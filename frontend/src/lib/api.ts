@@ -38,9 +38,9 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...(options.headers as Record<string, string>),
     };
 
     if (this.token) {
@@ -72,7 +72,7 @@ class ApiClient {
     return this.request<{
       access_token: string;
       token_type: string;
-      user: any;
+      user: Record<string, unknown>;
     }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -83,7 +83,7 @@ class ApiClient {
     return this.request<{
       access_token: string;
       token_type: string;
-      user: any;
+      user: Record<string, unknown>;
     }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -91,7 +91,7 @@ class ApiClient {
   }
 
   async getCurrentUser() {
-    return this.request<any>('/auth/me');
+    return this.request<Record<string, unknown>>('/auth/me');
   }
 
   async logout() {

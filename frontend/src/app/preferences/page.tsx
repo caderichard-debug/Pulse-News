@@ -21,14 +21,16 @@ export default function PreferencesPage() {
 
   useEffect(() => {
     loadPreferences();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadPreferences = async () => {
     try {
       const response = await api.getPreferences();
       setPreferences(response.topics);
-    } catch (err: any) {
-      if (err.message.includes('401')) {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '';
+      if (errorMessage.includes('401')) {
         // Not authenticated, redirect to login
         router.push('/login');
       } else {
@@ -68,8 +70,8 @@ export default function PreferencesPage() {
 
       await api.updatePreferences(preferencesData);
       setMessage({ type: 'success', text: 'Preferences saved successfully!' });
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Failed to save preferences' });
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save preferences' });
     } finally {
       setSaving(false);
     }
@@ -116,7 +118,7 @@ export default function PreferencesPage() {
         <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg shadow-lg p-6 mb-6 text-white">
           <h2 className="text-xl font-semibold mb-2">Your Newsletter</h2>
           <p className="text-indigo-100">
-            You're subscribed to <strong>{activeTopics.length}</strong> topics.
+            You&apos;re subscribed to <strong>{activeTopics.length}</strong> topics.
             Your daily digest will include articles from these topics based on
             your priority settings.
           </p>
@@ -230,7 +232,7 @@ export default function PreferencesPage() {
           <p className="text-sm text-blue-800">
             Your personalized newsletter arrives daily at 7 AM with articles from
             your selected topics. Each newsletter also includes our unique
-            "ethical framework" analysis, helping you understand the underlying
+            &quot;ethical framework&quot; analysis, helping you understand the underlying
             debates behind current events.
           </p>
         </div>

@@ -62,8 +62,8 @@ export default function Home() {
               Framework Mapping
             </h3>
             <p className="text-gray-600">
-              Our unique feature: articles mapped to ethical debates like "Privacy
-              vs. Security" to see the bigger picture.
+              Our unique feature: articles mapped to ethical debates like &quot;Privacy
+              vs. Security&quot; to see the bigger picture.
             </p>
           </div>
         </div>
