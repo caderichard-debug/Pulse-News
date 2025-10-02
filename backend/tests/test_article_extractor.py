@@ -113,10 +113,11 @@ class TestExtractArticleContent:
         assert result['word_count'] > 0
         mock_get.assert_called_once()
 
+    @patch('app.services.article_extractor.BeautifulSoup')
+    @patch('app.services.article_extractor.Document')
     @patch('app.services.article_extractor.requests.get')
     @patch('app.services.article_extractor.trafilatura.extract')
-    @patch('app.services.article_extractor.Document')
-    def test_fallback_to_readability(self, mock_document, mock_trafilatura, mock_get, sample_html):
+    def test_fallback_to_readability(self, mock_trafilatura, mock_get, mock_document, mock_bs, sample_html):
         """Test fallback to readability-lxml when trafilatura fails"""
         # Mock HTTP response
         mock_response = Mock()
@@ -127,10 +128,15 @@ class TestExtractArticleContent:
         # Trafilatura returns short content (< 200 chars)
         mock_trafilatura.return_value = "Too short"
 
-        # Mock readability
+        # Mock readability Document and BeautifulSoup
         mock_doc = Mock()
         mock_doc.summary.return_value = "<p>This is a longer article content that should be extracted successfully from the HTML using readability library as a fallback method when trafilatura fails to extract sufficient content.</p>"
         mock_document.return_value = mock_doc
+
+        # Mock BeautifulSoup to extract text from HTML
+        mock_soup = Mock()
+        mock_soup.get_text.return_value = "This is a longer article content that should be extracted successfully from the HTML using readability library as a fallback method when trafilatura fails to extract sufficient content."
+        mock_bs.return_value = mock_soup
 
         result = extract_article_content("https://testnews.com/article")
 

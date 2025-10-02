@@ -60,7 +60,7 @@ def active_user(session: Session, sample_topic: Topic):
     pref = UserTopicPreference(
         user_id=user.id,
         topic_id=sample_topic.id,
-        is_active=True
+        include_in_newsletter=True
     )
     session.add(pref)
     session.commit()
@@ -133,7 +133,7 @@ class TestNewsletterServiceBasics:
         mock_settings.resend_api_key = "test_key"
         mock_generate.return_value = None  # No content
 
-        result = generate_and_send_newsletters()
+        result = generate_and_send_newsletters(session)
 
         # Should attempt to generate for the active user
         assert mock_generate.called
