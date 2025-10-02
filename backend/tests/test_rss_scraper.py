@@ -391,7 +391,7 @@ class TestScrapeAllActiveSources:
 
         mock_parse.return_value = mock_rss_feed
 
-        total_count = scrape_all_active_sources()
+        total_count = scrape_all_active_sources(session)
 
         # Should scrape both sources: 2 articles × 2 sources = 4 articles
         assert total_count == 4
@@ -415,7 +415,7 @@ class TestScrapeAllActiveSources:
         """Test that inactive sources are skipped"""
         mock_parse.return_value = mock_rss_feed
 
-        total_count = scrape_all_active_sources()
+        total_count = scrape_all_active_sources(session)
 
         # Only active source should be scraped
         assert total_count == 2
@@ -429,7 +429,7 @@ class TestScrapeAllActiveSources:
     @patch('app.services.rss_scraper.feedparser.parse')
     def test_no_active_sources(self, mock_parse, session: Session, inactive_source: Source):
         """Test scraping when no active sources exist"""
-        total_count = scrape_all_active_sources()
+        total_count = scrape_all_active_sources(session)
 
         assert total_count == 0
         mock_parse.assert_not_called()
@@ -458,7 +458,7 @@ class TestScrapeAllActiveSources:
             mock_feed
         ]
 
-        total_count = scrape_all_active_sources()
+        total_count = scrape_all_active_sources(session)
 
         # Second source should still be scraped
         assert total_count == 1

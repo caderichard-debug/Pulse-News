@@ -128,7 +128,7 @@ def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict
     user_preferences = session.exec(
         select(UserTopicPreference)
         .where(UserTopicPreference.user_id == user.id)
-        .where(UserTopicPreference.is_active == True)
+        .where(UserTopicPreference.include_in_newsletter == True)
     ).all()
 
     preferred_topic_ids = [pref.topic_id for pref in user_preferences]

@@ -241,7 +241,7 @@ class TestProcessPendingArticles:
             'word_count': 250
         }
 
-        count = process_pending_articles(batch_size=10, delay=0)
+        count = process_pending_articles(session, batch_size=10, delay=0)
 
         assert count == 1
 
@@ -264,7 +264,7 @@ class TestProcessPendingArticles:
             'word_count': 0
         }
 
-        count = process_pending_articles(batch_size=10, delay=0)
+        count = process_pending_articles(session, batch_size=10, delay=0)
 
         assert count == 0
 
@@ -298,7 +298,7 @@ class TestProcessPendingArticles:
             'word_count': 250
         }
 
-        process_pending_articles(batch_size=10, delay=0.5)
+        process_pending_articles(session, batch_size=10, delay=0.5)
 
         # Should sleep 2 times (between 3 articles)
         assert mock_sleep.call_count == 2
@@ -328,7 +328,7 @@ class TestProcessPendingArticles:
         }
 
         # Process with batch_size=5
-        count = process_pending_articles(batch_size=5, delay=0)
+        count = process_pending_articles(session, batch_size=5, delay=0)
 
         # Should only process 5 articles
         assert count == 5
@@ -337,7 +337,7 @@ class TestProcessPendingArticles:
     @patch('app.services.article_extractor.extract_article_content')
     def test_no_pending_articles(self, mock_extract, session: Session):
         """Test handling when no pending articles exist"""
-        count = process_pending_articles(batch_size=10, delay=0)
+        count = process_pending_articles(session, batch_size=10, delay=0)
 
         assert count == 0
         mock_extract.assert_not_called()
@@ -380,7 +380,7 @@ class TestProcessPendingArticles:
             'word_count': 250
         }
 
-        count = process_pending_articles(batch_size=10, delay=0)
+        count = process_pending_articles(session, batch_size=10, delay=0)
 
         # Should only process 1 pending article
         assert count == 1

@@ -133,8 +133,8 @@ def test_update_preferences_creates_topic_preferences(
     assert response.status_code == 200
 
     # Verify database records were created with correct field names
-    prefs = session.query(UserTopicPreference).filter(
-        UserTopicPreference.user_id == 1
+    prefs = session.exec(
+        select(UserTopicPreference).where(UserTopicPreference.user_id == 1)
     ).all()
 
     assert len(prefs) == 2
@@ -157,9 +157,11 @@ def test_subscribe_to_topic(client: TestClient, auth_token: str, session: Sessio
     assert response.status_code == 200
 
     # Verify preference was created with correct fields
-    pref = session.query(UserTopicPreference).filter(
-        UserTopicPreference.user_id == 1,
-        UserTopicPreference.topic_id == 1
+    pref = session.exec(
+        select(UserTopicPreference).where(
+            UserTopicPreference.user_id == 1,
+            UserTopicPreference.topic_id == 1
+        )
     ).first()
 
     assert pref is not None
@@ -188,9 +190,11 @@ def test_unsubscribe_from_topic(client: TestClient, auth_token: str, session: Se
     assert response.status_code == 200
 
     # Verify preference was updated (not deleted)
-    pref = session.query(UserTopicPreference).filter(
-        UserTopicPreference.user_id == 1,
-        UserTopicPreference.topic_id == 2
+    pref = session.exec(
+        select(UserTopicPreference).where(
+            UserTopicPreference.user_id == 1,
+            UserTopicPreference.topic_id == 2
+        )
     ).first()
 
     assert pref is not None

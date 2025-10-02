@@ -87,11 +87,12 @@ def extract_article_content(url: str, timeout: int = 10) -> Dict[str, any]:
     return result
 
 
-def process_pending_articles(batch_size: int = 20, delay: float = 1.0) -> int:
+def process_pending_articles(session: Session, batch_size: int = 20, delay: float = 1.0) -> int:
     """
     Process articles with status=PENDING, extracting their full content.
 
     Args:
+        session: Database session (injected for testing)
         batch_size: Maximum number of articles to process
         delay: Delay between requests in seconds (rate limiting)
 
@@ -100,56 +101,56 @@ def process_pending_articles(batch_size: int = 20, delay: float = 1.0) -> int:
     """
     processed_count = 0
 
-    with Session(engine) as session:
-        # Get pending articles
-        pending_articles = session.exec(
-            select(Article)
-            .where(Article.processing_status == ProcessingStatus.PENDING)
-            .limit(batch_size)
-        ).all()
+    # Get pending articles
+    pending_articles = session.exec(
+        select(Article)
+        .where(Article.processing_status == ProcessingStatus.PENDING)
+        .limit(batch_size)
+    ).all()
 
-        if not pending_articles:
-            logger.info("No pending articles to process")
-            return 0
+    if not pending_articles:
+        logger.info("No pending articles to process")
+        return 0
 
-        logger.info(f"Processing {len(pending_articles)} pending articles")
+    logger.info(f"Processing {len(pending_articles)} pending articles")
 
-        for i, article in enumerate(pending_articles, 1):
-            logger.info(f"[{i}/{len(pending_articles)}] Extracting: {article.title[:50]}...")
+    for i, article in enumerate(pending_articles, 1):
+        logger.info(f"[{i}/{len(pending_articles)}] Extracting: {article.title[:50]}...")
 
-            # Extract content
-            extraction_result = extract_article_content(article.url)
+        # Extract content
+        extraction_result = extract_article_content(article.url)
 
-            if extraction_result['success']:
-                # Update article with extracted content
-                article.content_text = extraction_result['content']
-                article.word_count = extraction_result['word_count']
-                article.extraction_method = extraction_result['method']
-                article.processing_status = ProcessingStatus.COMPLETED
+        if extraction_result['success']:
+            # Update article with extracted content
+            article.content_text = extraction_result['content']
+            article.word_count = extraction_result['word_count']
+            article.extraction_method = extraction_result['method']
+            article.processing_status = ProcessingStatus.COMPLETED
 
-                session.add(article)
-                processed_count += 1
-                logger.info(f"  ✓ Extracted {extraction_result['word_count']} words via {extraction_result['method']}")
-            else:
-                # Mark as failed
-                article.processing_status = ProcessingStatus.FAILED
-                article.extraction_method = 'failed'
-                session.add(article)
-                logger.warning(f"  ✗ Extraction failed")
+            session.add(article)
+            processed_count += 1
+            logger.info(f"  ✓ Extracted {extraction_result['word_count']} words via {extraction_result['method']}")
+        else:
+            # Mark as failed
+            article.processing_status = ProcessingStatus.FAILED
+            article.extraction_method = 'failed'
+            session.add(article)
+            logger.warning(f"  ✗ Extraction failed")
 
-            # Commit after each article to avoid losing progress
-            session.commit()
+        # Commit after each article to avoid losing progress
+        session.commit()
 
-            # Rate limiting
-            if i < len(pending_articles):
-                time.sleep(delay)
+        # Rate limiting
+        if i < len(pending_articles):
+            time.sleep(delay)
 
-        logger.info(f"Processing complete. Successfully extracted: {processed_count}/{len(pending_articles)}")
+    logger.info(f"Processing complete. Successfully extracted: {processed_count}/{len(pending_articles)}")
 
     return processed_count
 
 
 if __name__ == "__main__":
     # Test the extractor
-    count = process_pending_articles(batch_size=10, delay=1.0)
-    print(f"Processed {count} articles")
+    with Session(engine) as session:
+        count = process_pending_articles(session, batch_size=10, delay=1.0)
+        print(f"Processed {count} articles")

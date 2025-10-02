@@ -17,11 +17,16 @@ import json
 logger = logging.getLogger(__name__)
 
 
-def map_articles_to_frameworks(article_ids: List[int] = None, limit: int = 10) -> int:
+def map_articles_to_frameworks(
+    session: Session,
+    article_ids: List[int] = None,
+    limit: int = 10
+) -> int:
     """
     Map analyzed articles to existing frameworks using AI.
 
     Args:
+        session: Database session (injected for testing)
         article_ids: Specific article IDs to map, or None for recent unanalyzed ones
         limit: Maximum number of articles to process
 
@@ -34,124 +39,124 @@ def map_articles_to_frameworks(article_ids: List[int] = None, limit: int = 10) -
 
     mappings_created = 0
 
-    with Session(engine) as session:
-        # Get frameworks to map against
-        frameworks = session.exec(select(Framework)).all()
+    # Get frameworks to map against
+    frameworks = session.exec(select(Framework)).all()
 
-        if not frameworks:
-            logger.warning("No frameworks available for mapping")
-            return 0
+    if not frameworks:
+        logger.warning("No frameworks available for mapping")
+        return 0
 
-        # Get articles to map
-        if article_ids:
-            articles = session.exec(
-                select(Article)
-                .where(Article.id.in_(article_ids))
-            ).all()
-        else:
-            # Get recently analyzed articles that haven't been mapped yet
-            articles = session.exec(
-                select(Article)
-                .join(ArticleAnalysis)
-                .where(~Article.id.in_(
-                    select(ArticleFrameworkLink.article_id)
-                ))
-                .limit(limit)
-            ).all()
+    # Get articles to map
+    if article_ids:
+        articles = session.exec(
+            select(Article)
+            .where(Article.id.in_(article_ids))
+        ).all()
+    else:
+        # Get recently analyzed articles that haven't been mapped yet
+        articles = session.exec(
+            select(Article)
+            .join(ArticleAnalysis)
+            .where(~Article.id.in_(
+                select(ArticleFrameworkLink.article_id)
+            ))
+            .limit(limit)
+        ).all()
 
-        if not articles:
-            logger.info("No articles to map")
-            return 0
+    if not articles:
+        logger.info("No articles to map")
+        return 0
 
-        logger.info(f"Mapping {len(articles)} articles to {len(frameworks)} frameworks...")
+    logger.info(f"Mapping {len(articles)} articles to {len(frameworks)} frameworks...")
 
-        # Build framework descriptions for the prompt
-        framework_descriptions = {}
-        for fw in frameworks:
-            framework_descriptions[fw.id] = {
-                "name": fw.name,
-                "description": fw.description,
-                "axis": f"{fw.left_position} ←→ {fw.right_position}"
+    # Build framework descriptions for the prompt
+    framework_descriptions = {}
+    for fw in frameworks:
+        framework_descriptions[fw.id] = {
+            "name": fw.name,
+            "description": fw.description,
+            "axis": f"{fw.left_position} ←→ {fw.right_position}"
+        }
+
+    # Process each article
+    for article in articles:
+        # Get the analysis
+        analysis = session.exec(
+            select(ArticleAnalysis)
+            .where(ArticleAnalysis.article_id == article.id)
+        ).first()
+
+        if not analysis:
+            logger.warning(f"No analysis found for article {article.id}")
+            continue
+
+        # Ask OpenAI to map this article to frameworks
+        framework_list = [
+            {
+                "id": fw_id,
+                "name": fw_info["name"],
+                "description": fw_info["description"],
+                "axis_description": fw_info["axis"],
+                "left_position": "",
+                "right_position": ""
             }
+            for fw_id, fw_info in framework_descriptions.items()
+        ]
 
-        # Process each article
-        for article in articles:
-            # Get the analysis
-            analysis = session.exec(
-                select(ArticleAnalysis)
-                .where(ArticleAnalysis.article_id == article.id)
-            ).first()
+        try:
+            mappings = openai_client.map_article_to_frameworks(
+                article.title,
+                analysis.summary,
+                framework_list
+            )
 
-            if not analysis:
-                logger.warning(f"No analysis found for article {article.id}")
+            if not mappings:
+                logger.warning(f"No mappings returned for article {article.id}")
                 continue
 
-            # Ask OpenAI to map this article to frameworks
-            framework_list = [
-                {
-                    "id": fw_id,
-                    "name": fw_info["name"],
-                    "description": fw_info["description"],
-                    "axis_description": fw_info["axis"],
-                    "left_position": "",
-                    "right_position": ""
-                }
-                for fw_id, fw_info in framework_descriptions.items()
-            ]
-
-            try:
-                mappings = openai_client.map_article_to_frameworks(
-                    article.title,
-                    analysis.summary,
-                    framework_list
-                )
-
-                if not mappings:
-                    logger.warning(f"No mappings returned for article {article.id}")
+            # Create framework links
+            for mapping in mappings:
+                framework_id = mapping.get('framework_id')
+                if framework_id not in framework_descriptions:
+                    logger.warning(f"Invalid framework_id {framework_id}")
                     continue
 
-                # Create framework links
-                for mapping in mappings:
-                    framework_id = mapping.get('framework_id')
-                    if framework_id not in framework_descriptions:
-                        logger.warning(f"Invalid framework_id {framework_id}")
-                        continue
+                link = ArticleFrameworkLink(
+                    article_id=article.id,
+                    framework_id=framework_id,
+                    relevance_score=mapping.get('relevance_score', 0.5),
+                    position_on_axis=mapping.get('position', 0),
+                    ai_explanation=mapping.get('explanation', '')[:500],
+                    created_at=datetime.utcnow()
+                )
 
-                    link = ArticleFrameworkLink(
-                        article_id=article.id,
-                        framework_id=framework_id,
-                        relevance_score=mapping.get('relevance_score', 0.5),
-                        position_on_axis=mapping.get('position', 0),
-                        ai_explanation=mapping.get('explanation', '')[:500],
-                        created_at=datetime.utcnow()
-                    )
+                session.add(link)
+                mappings_created += 1
 
-                    session.add(link)
-                    mappings_created += 1
+                logger.info(
+                    f"  ✓ Mapped '{article.title[:40]}...' to framework '{framework_descriptions[framework_id]['name']}'"
+                )
 
-                    logger.info(
-                        f"  ✓ Mapped '{article.title[:40]}...' to framework '{framework_descriptions[framework_id]['name']}'"
-                    )
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse framework mapping response: {e}")
+            continue
+        except Exception as e:
+            logger.error(f"Error mapping article {article.id}: {e}")
+            continue
 
-            except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse framework mapping response: {e}")
-                continue
-            except Exception as e:
-                logger.error(f"Error mapping article {article.id}: {e}")
-                continue
-
-        session.commit()
-        logger.info(f"Created {mappings_created} framework mappings")
+    session.commit()
+    logger.info(f"Created {mappings_created} framework mappings")
 
     return mappings_created
 
 
-def discover_new_frameworks(min_articles: int = 50) -> int:
+def discover_new_frameworks(session: Session, min_articles: int = 50) -> int:
     """
     Use AI to discover new ethical frameworks from recent articles.
     This is run weekly to evolve the framework library.
 
     Args:
+        session: Database session (injected for testing)
         min_articles: Minimum number of recent articles to analyze
 
     Returns:
@@ -163,71 +168,70 @@ def discover_new_frameworks(min_articles: int = 50) -> int:
 
     created_count = 0
 
-    with Session(engine) as session:
-        # Get recent analyzed articles (last 7 days)
-        week_ago = datetime.utcnow() - timedelta(days=7)
+    # Get recent analyzed articles (last 7 days)
+    week_ago = datetime.utcnow() - timedelta(days=7)
 
-        recent_articles = session.exec(
-            select(Article, ArticleAnalysis)
-            .join(ArticleAnalysis)
-            .where(Article.scraped_at >= week_ago)
-            .limit(min_articles)
-        ).all()
+    recent_articles = session.exec(
+        select(Article, ArticleAnalysis)
+        .join(ArticleAnalysis)
+        .where(Article.scraped_at >= week_ago)
+        .limit(min_articles)
+    ).all()
 
-        if len(recent_articles) < min_articles:
-            logger.warning(
-                f"Not enough recent articles ({len(recent_articles)}) to discover frameworks"
-            )
+    if len(recent_articles) < min_articles:
+        logger.warning(
+            f"Not enough recent articles ({len(recent_articles)}) to discover frameworks"
+        )
+        return 0
+
+    logger.info(f"Analyzing {len(recent_articles)} recent articles for new frameworks...")
+
+    # Get existing framework names to avoid duplicates
+    existing_frameworks = session.exec(select(Framework)).all()
+    existing_names = [fw.name for fw in existing_frameworks]
+
+    # Build summary of articles
+    article_summaries = []
+    for article, analysis in recent_articles[:30]:  # Limit to 30 for token economy
+        article_summaries.append(f"{article.title}: {analysis.summary[:200]}")
+
+    # Ask OpenAI to identify new frameworks
+    try:
+        new_frameworks = openai_client.generate_frameworks(
+            article_summaries,
+            existing_names
+        )
+
+        if not new_frameworks:
+            logger.warning("No new frameworks generated")
             return 0
 
-        logger.info(f"Analyzing {len(recent_articles)} recent articles for new frameworks...")
-
-        # Get existing framework names to avoid duplicates
-        existing_frameworks = session.exec(select(Framework)).all()
-        existing_names = [fw.name for fw in existing_frameworks]
-
-        # Build summary of articles
-        article_summaries = []
-        for article, analysis in recent_articles[:30]:  # Limit to 30 for token economy
-            article_summaries.append(f"{article.title}: {analysis.summary[:200]}")
-
-        # Ask OpenAI to identify new frameworks
-        try:
-            new_frameworks = openai_client.generate_frameworks(
-                article_summaries,
-                existing_names
+        # Create new framework records
+        for fw_data in new_frameworks:
+            framework = Framework(
+                name=fw_data.get('name', '')[:200],
+                description=fw_data.get('description', '')[:1000],
+                axis_description=fw_data.get('axis_description', '')[:200],
+                left_position=fw_data.get('left_position', '')[:200],
+                right_position=fw_data.get('right_position', '')[:200],
+                article_count=0,
+                last_active=datetime.utcnow(),
+                created_at=datetime.utcnow(),
+                is_seed=False  # AI-generated, not hand-curated
             )
 
-            if not new_frameworks:
-                logger.warning("No new frameworks generated")
-                return 0
+            session.add(framework)
+            created_count += 1
 
-            # Create new framework records
-            for fw_data in new_frameworks:
-                framework = Framework(
-                    name=fw_data.get('name', '')[:200],
-                    description=fw_data.get('description', '')[:1000],
-                    axis_description=fw_data.get('axis_description', '')[:200],
-                    left_position=fw_data.get('left_position', '')[:200],
-                    right_position=fw_data.get('right_position', '')[:200],
-                    article_count=0,
-                    last_active=datetime.utcnow(),
-                    created_at=datetime.utcnow(),
-                    is_seed=False  # AI-generated, not hand-curated
-                )
+            logger.info(f"  ✓ Created new framework: {framework.name}")
 
-                session.add(framework)
-                created_count += 1
+        session.commit()
+        logger.info(f"Discovered {created_count} new frameworks")
 
-                logger.info(f"  ✓ Created new framework: {framework.name}")
-
-            session.commit()
-            logger.info(f"Discovered {created_count} new frameworks")
-
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse framework discovery response: {e}")
-        except Exception as e:
-            logger.error(f"Error discovering frameworks: {e}", exc_info=True)
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse framework discovery response: {e}")
+    except Exception as e:
+        logger.error(f"Error discovering frameworks: {e}", exc_info=True)
 
     return created_count
 
@@ -328,5 +332,6 @@ Return ONLY the JSON array, no other text."""
 
 if __name__ == "__main__":
     # Test mapping
-    count = map_articles_to_frameworks(limit=5)
-    print(f"Created {count} framework mappings")
+    with Session(engine) as session:
+        count = map_articles_to_frameworks(session, limit=5)
+        print(f"Created {count} framework mappings")

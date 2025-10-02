@@ -66,7 +66,7 @@ def test_user_registration_creates_user(client: TestClient, session: Session):
     assert "email_verified" in data["user"]
 
     # Check database - verify User model uses correct field names
-    user = session.query(User).filter(User.email == "newuser@example.com").first()
+    user = session.exec(select(User).where(User.email == "newuser@example.com")).first()
     assert user is not None
     assert hasattr(user, "hashed_password")  # Not password_hash!
     assert user.hashed_password is not None
