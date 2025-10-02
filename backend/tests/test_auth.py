@@ -56,7 +56,7 @@ def test_user_registration_creates_user(client: TestClient, session: Session):
         }
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 201  # Registration returns 201 Created
     data = response.json()
 
     # Check response structure
@@ -154,7 +154,7 @@ def test_bcrypt_handles_long_passwords(client: TestClient):
             "password": "testpass123",
         }
     )
-    assert response.status_code == 200
+    assert response.status_code == 201  # Registration returns 201 Created
 
     # Test with maximum length password (bcrypt has 72-byte limit)
     long_password = "a" * 100  # 100 characters, more than 72 bytes
@@ -166,7 +166,7 @@ def test_bcrypt_handles_long_passwords(client: TestClient):
         }
     )
     # Should handle gracefully, not crash
-    assert response.status_code in [200, 400, 422]
+    assert response.status_code in [201, 400, 422]  # 201 for success, 400/422 for validation errors
 
 
 def test_register_requires_minimum_password_length(client: TestClient):
@@ -234,6 +234,7 @@ def test_protected_endpoint_works_with_valid_token(client: TestClient, session: 
     )
     session.add(user)
     session.commit()
+    session.refresh(user)  # Refresh to ensure user is fully loaded
 
     # Login to get token
     login_response = client.post(

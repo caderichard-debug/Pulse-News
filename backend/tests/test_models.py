@@ -10,16 +10,16 @@ import pytest
 def test_user_model():
     """Test User model creation"""
     user = User(
-        name="Test User",
         email="test@example.com",
-        password_hash="hashed_password_here",
+        hashed_password="hashed_password_here",  # Fixed: was password_hash
         is_active=True,
         email_verified=False,
         created_at=datetime.utcnow()
     )
-    assert user.name == "Test User"
+    # User model doesn't have 'name' field
     assert user.email == "test@example.com"
     assert user.is_active is True
+    assert user.hashed_password == "hashed_password_here"  # Fixed: was password_hash
 
 
 def test_article_model():
@@ -60,6 +60,6 @@ def test_processing_status_enum():
 
 def test_political_lean_enum():
     """Test PoliticalLean enum values"""
-    assert PoliticalLean.LEFT == "LEFT"
-    assert PoliticalLean.CENTER == "CENTER"
-    assert PoliticalLean.RIGHT == "RIGHT"
+    assert PoliticalLean.LEFT == "left"  # Fixed: lowercase, not uppercase
+    assert PoliticalLean.CENTER == "center"  # Fixed: lowercase, not uppercase
+    assert PoliticalLean.RIGHT == "right"  # Fixed: lowercase, not uppercase

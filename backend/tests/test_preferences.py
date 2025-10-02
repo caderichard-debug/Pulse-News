@@ -150,7 +150,7 @@ def test_update_preferences_creates_topic_preferences(
 def test_subscribe_to_topic(client: TestClient, auth_token: str, session: Session):
     """Test subscribing to a specific topic"""
     response = client.post(
-        "/topics/1/subscribe?priority=7",
+        "/preferences/topics/1/subscribe?priority=7",  # Fixed: added /preferences prefix
         headers={"Authorization": f"Bearer {auth_token}"}
     )
 
@@ -181,7 +181,7 @@ def test_unsubscribe_from_topic(client: TestClient, auth_token: str, session: Se
 
     # Then unsubscribe
     response = client.post(
-        "/topics/2/unsubscribe",
+        "/preferences/topics/2/unsubscribe",  # Fixed: added /preferences prefix
         headers={"Authorization": f"Bearer {auth_token}"}
     )
 
@@ -201,21 +201,21 @@ def test_priority_validation(client: TestClient, auth_token: str):
     """Test that priority values are validated (1-10)"""
     # Test with invalid priority (too high)
     response = client.post(
-        "/topics/1/subscribe?priority=15",
+        "/preferences/topics/1/subscribe?priority=15",  # Fixed: added /preferences prefix
         headers={"Authorization": f"Bearer {auth_token}"}
     )
     assert response.status_code == 422  # Validation error
 
     # Test with invalid priority (too low)
     response = client.post(
-        "/topics/1/subscribe?priority=0",
+        "/preferences/topics/1/subscribe?priority=0",  # Fixed: added /preferences prefix
         headers={"Authorization": f"Bearer {auth_token}"}
     )
     assert response.status_code == 422  # Validation error
 
     # Test with valid priority
     response = client.post(
-        "/topics/1/subscribe?priority=5",
+        "/preferences/topics/1/subscribe?priority=5",  # Fixed: added /preferences prefix
         headers={"Authorization": f"Bearer {auth_token}"}
     )
     assert response.status_code == 200
@@ -224,7 +224,7 @@ def test_priority_validation(client: TestClient, auth_token: str):
 def test_subscribe_to_nonexistent_topic(client: TestClient, auth_token: str):
     """Test that subscribing to non-existent topic fails gracefully"""
     response = client.post(
-        "/topics/999/subscribe",
+        "/preferences/topics/999/subscribe",  # Fixed: added /preferences prefix
         headers={"Authorization": f"Bearer {auth_token}"}
     )
     assert response.status_code == 404

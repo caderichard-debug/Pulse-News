@@ -230,8 +230,7 @@ def get_current_user_info(
     """
     return {
         "id": current_user.id,
-        "name": current_user.name,
-        "email": current_user.email,
+        "email": current_user.email,  # Removed 'name' - User model doesn't have it
         "email_verified": current_user.email_verified,
         "created_at": current_user.created_at,
         "last_login": current_user.last_login

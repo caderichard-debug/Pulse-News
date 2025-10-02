@@ -183,7 +183,7 @@ def subscribe_to_topic(
         new_pref = UserTopicPreference(
             user_id=current_user.id,
             topic_id=topic_id,
-            priority=priority,
+            priority_level=priority,  # Fixed: was priority
             include_in_newsletter=True
         )
         session.add(new_pref)
