@@ -65,22 +65,35 @@ def existing_article(session: Session, active_source: Source):
 @pytest.fixture
 def mock_rss_feed():
     """Create a mock RSS feed response"""
+    class MockEntry:
+        """Mock RSS entry that supports both dict-like .get() and attribute access"""
+        def __init__(self, **kwargs):
+            self._data = kwargs
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+
+        def get(self, key, default=None):
+            return self._data.get(key, default)
+
     mock_feed = MagicMock()
     mock_feed.bozo = False  # No parsing errors
-    mock_feed.entries = [
-        {
-            'link': 'https://technews.com/article1',
-            'title': 'AI Breakthrough in 2025',
-            'author': 'John Doe',
-            'published_parsed': time.struct_time((2025, 1, 15, 12, 0, 0, 0, 0, 0))
-        },
-        {
-            'link': 'https://technews.com/article2',
-            'title': 'New Programming Language Released',
-            'author': 'Jane Smith',
-            'published_parsed': time.struct_time((2025, 1, 14, 10, 0, 0, 0, 0, 0))
-        }
-    ]
+
+    # Create entry objects with both dict and attribute access
+    entry1 = MockEntry(
+        link='https://technews.com/article1',
+        title='AI Breakthrough in 2025',
+        author='John Doe',
+        published_parsed=time.struct_time((2025, 1, 15, 12, 0, 0, 0, 0, 0))
+    )
+
+    entry2 = MockEntry(
+        link='https://technews.com/article2',
+        title='New Programming Language Released',
+        author='Jane Smith',
+        published_parsed=time.struct_time((2025, 1, 14, 10, 0, 0, 0, 0, 0))
+    )
+
+    mock_feed.entries = [entry1, entry2]
     return mock_feed
 
 
@@ -133,7 +146,7 @@ class TestScrapeSource:
     ):
         """Test that duplicate articles are skipped"""
         # Modify mock to include existing article URL
-        mock_rss_feed.entries[0]['link'] = existing_article.url
+        mock_rss_feed.entries[0].link = existing_article.url
         mock_parse.return_value = mock_rss_feed
 
         articles = scrape_source(active_source, session)

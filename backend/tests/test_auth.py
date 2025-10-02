@@ -5,7 +5,7 @@ Run with: pytest backend/tests/test_auth.py -v
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, create_engine, SQLModel
+from sqlmodel import Session, create_engine, SQLModel, select
 from sqlmodel.pool import StaticPool
 from app.main import app
 from app.database import get_session
@@ -90,9 +90,9 @@ def test_user_model_field_names(session: Session):
     assert hasattr(user, "email")
     assert hasattr(user, "email_verified")
     assert hasattr(user, "is_active")
+    assert hasattr(user, "name")  # Added for newsletter personalization
     # User model should NOT have these fields:
     assert not hasattr(user, "password_hash")
-    assert not hasattr(user, "name")
 
 
 def test_login_verifies_password_correctly(client: TestClient, session: Session):

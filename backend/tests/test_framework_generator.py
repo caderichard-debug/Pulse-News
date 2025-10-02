@@ -377,7 +377,7 @@ class TestDiscoverNewFrameworks:
         mock_client.generate_frameworks.assert_not_called()
 
     @patch('app.services.framework_generator.openai_client')
-    def test_no_api_key(self, mock_client):
+    def test_no_api_key(self, mock_client, session: Session):
         """Test that discovery fails gracefully without API key"""
         mock_client.is_available.return_value = False
 

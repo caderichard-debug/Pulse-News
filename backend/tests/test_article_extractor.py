@@ -159,9 +159,10 @@ class TestExtractArticleContent:
         assert result['success'] is False
         assert result['content'] is None
 
+    @patch('app.services.article_extractor.Document')
     @patch('app.services.article_extractor.requests.get')
     @patch('app.services.article_extractor.trafilatura.extract')
-    def test_extraction_too_short(self, mock_trafilatura, mock_get, sample_html):
+    def test_extraction_too_short(self, mock_trafilatura, mock_get, mock_document, sample_html):
         """Test that very short extractions are rejected"""
         mock_response = Mock()
         mock_response.text = sample_html
@@ -170,6 +171,11 @@ class TestExtractArticleContent:
 
         # Both methods return content < 200 chars
         mock_trafilatura.return_value = "Short"
+
+        # Mock readability also returning short content
+        mock_doc = Mock()
+        mock_doc.summary.return_value = "<p>Short</p>"
+        mock_document.return_value = mock_doc
 
         result = extract_article_content("https://testnews.com/article")
 

@@ -5,7 +5,7 @@ Run with: pytest backend/tests/test_preferences.py -v
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, create_engine, SQLModel
+from sqlmodel import Session, create_engine, SQLModel, select
 from sqlmodel.pool import StaticPool
 from app.main import app
 from app.database import get_session
