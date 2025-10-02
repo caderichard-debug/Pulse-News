@@ -113,7 +113,7 @@ class TestExtractArticleContent:
         assert result['word_count'] > 0
         mock_get.assert_called_once()
 
-    @patch('app.services.article_extractor.BeautifulSoup')
+    @patch('bs4.BeautifulSoup')
     @patch('app.services.article_extractor.Document')
     @patch('app.services.article_extractor.requests.get')
     @patch('app.services.article_extractor.trafilatura.extract')
@@ -129,13 +129,15 @@ class TestExtractArticleContent:
         mock_trafilatura.return_value = "Too short"
 
         # Mock readability Document and BeautifulSoup
+        # Need >200 chars after BeautifulSoup extracts text
+        long_text = "This is a longer article content that should be extracted successfully from the HTML using readability library as a fallback method when trafilatura fails to extract sufficient content. Adding more text here to ensure we exceed the 200 character minimum requirement for successful extraction."
         mock_doc = Mock()
-        mock_doc.summary.return_value = "<p>This is a longer article content that should be extracted successfully from the HTML using readability library as a fallback method when trafilatura fails to extract sufficient content.</p>"
+        mock_doc.summary.return_value = f"<p>{long_text}</p>"
         mock_document.return_value = mock_doc
 
         # Mock BeautifulSoup to extract text from HTML
         mock_soup = Mock()
-        mock_soup.get_text.return_value = "This is a longer article content that should be extracted successfully from the HTML using readability library as a fallback method when trafilatura fails to extract sufficient content."
+        mock_soup.get_text.return_value = long_text
         mock_bs.return_value = mock_soup
 
         result = extract_article_content("https://testnews.com/article")
