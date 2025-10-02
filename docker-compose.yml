@@ -24,6 +24,7 @@ services:
       DATABASE_URL: postgresql://postgres:password@db:5432/news_db
     volumes:
       - ./backend/app:/app/app
+      - ./backend/tests:/app/tests
 
 volumes:
   postgres_data:
