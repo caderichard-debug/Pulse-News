@@ -26,8 +26,8 @@ export default function LoginPage() {
 
       // Redirect to preferences page
       router.push('/preferences');
-    } catch (err: any) {
-      setError(err.message || 'Login failed');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
       setLoading(false);
     }
   };
@@ -89,7 +89,7 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-6 text-center text-sm text-gray-600">
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <a href="/signup" className="text-indigo-600 hover:text-indigo-700">
             Sign up
           </a>

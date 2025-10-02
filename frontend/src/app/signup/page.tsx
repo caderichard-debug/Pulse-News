@@ -64,8 +64,8 @@ export default function SignupPage() {
 
       // Redirect to preferences page
       router.push('/preferences');
-    } catch (err: any) {
-      setError(err.message || 'Registration failed');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Registration failed');
       setLoading(false);
     }
   };
@@ -185,7 +185,7 @@ export default function SignupPage() {
                   Choose Your Topics
                 </h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  Select topics you're interested in. You can change these later.
+                  Select topics you&apos;re interested in. You can change these later.
                 </p>
 
                 <div className="space-y-2 max-h-80 overflow-y-auto">
