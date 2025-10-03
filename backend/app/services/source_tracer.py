@@ -1,18 +1,21 @@
 """
 Source Tracer Service
 
-Traces statistics to their original sources within article content.
-Uses AI to identify source mentions and extract URLs/citations.
+Traces statistics to their original sources using multiple methods:
+1. Within article content (AI extraction + URL parsing)
+2. Web search for the statistic
+3. Cross-article database search
 """
 
 import re
 import json
 import logging
+import requests
 from typing import Optional, Dict, List
-from urllib.parse import urlparse
-from sqlmodel import Session
+from urllib.parse import urlparse, quote
+from sqlmodel import Session, select
 
-from app.models import Article
+from app.models import Article, StatisticVerification
 from app.config import settings
 from openai import OpenAI
 
@@ -67,7 +70,12 @@ class SourceTracer:
         session: Session = None
     ) -> Optional[Dict]:
         """
-        Trace a statistic to its original source within an article.
+        Trace a statistic to its original source using multiple methods.
+
+        Priority order:
+        1. Within article content (AI + URL extraction)
+        2. Web search for the statistic
+        3. Cross-article database search
 
         Args:
             statistic_text: The statistic to trace
@@ -76,9 +84,52 @@ class SourceTracer:
             session: Database session (optional)
 
         Returns:
-            Dict with keys: source_url, source_name, source_excerpt, confidence
-            Returns None if tracing fails
+            Dict with keys: source_url, source_name, source_excerpt, confidence, method
+            Returns None if all tracing methods fail
         """
+        try:
+            # Method 1: Try to find source within the article
+            result = self._trace_within_article(statistic_text, article_content, article_url)
+
+            if result and result.get("source_name"):
+                result["method"] = "article_content"
+                logger.info(f"Found source in article: {result.get('source_name')}")
+                return result
+
+            # Method 2: Try web search
+            if settings.google_fact_check_api_key:  # Reuse the Google API key if available
+                web_result = self._trace_via_web_search(statistic_text)
+                if web_result and web_result.get("source_name"):
+                    web_result["method"] = "web_search"
+                    logger.info(f"Found source via web search: {web_result.get('source_name')}")
+                    return web_result
+
+            # Method 3: Try cross-article database search
+            if session:
+                db_result = self._trace_via_database(statistic_text, session)
+                if db_result and db_result.get("source_name"):
+                    db_result["method"] = "database_search"
+                    logger.info(f"Found source in database: {db_result.get('source_name')}")
+                    return db_result
+
+            # If we have a partial result from article (no source name), return it
+            if result:
+                result["method"] = "article_content"
+                return result
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Error tracing source for statistic '{statistic_text[:50]}': {e}")
+            return None
+
+    def _trace_within_article(
+        self,
+        statistic_text: str,
+        article_content: str,
+        article_url: str
+    ) -> Optional[Dict]:
+        """Trace source within the article content (original method)."""
         try:
             # Step 1: Try to find URLs near the statistic in the text
             nearby_urls = self._extract_nearby_urls(statistic_text, article_content)
@@ -87,7 +138,6 @@ class SourceTracer:
             ai_result = self._ai_extract_source(statistic_text, article_content, article_url)
 
             if not ai_result:
-                logger.warning(f"AI source extraction failed for statistic: {statistic_text[:50]}")
                 return None
 
             # Step 3: Combine results - prefer AI-identified URL over nearby URLs
@@ -96,12 +146,12 @@ class SourceTracer:
             # If AI didn't find a URL but we found nearby URLs, use the first one
             if not result.get("source_url") and nearby_urls:
                 result["source_url"] = nearby_urls[0]
-                result["confidence"] = min(result.get("confidence", 0.5), 0.6)  # Lower confidence
+                result["confidence"] = min(result.get("confidence", 0.5), 0.6)
 
             return result
 
         except Exception as e:
-            logger.error(f"Error tracing source for statistic '{statistic_text[:50]}': {e}")
+            logger.error(f"Error in article source trace: {e}")
             return None
 
     def _extract_nearby_urls(self, statistic_text: str, article_content: str, window: int = 500) -> List[str]:
@@ -232,6 +282,123 @@ class SourceTracer:
         except Exception as e:
             logger.error(f"Error in AI source extraction: {e}")
             return None
+
+
+    def _trace_via_web_search(self, statistic_text: str) -> Optional[Dict]:
+        """
+        Trace source via web search using Google Custom Search API.
+
+        Args:
+            statistic_text: The statistic to search for
+
+        Returns:
+            Dict with source info or None
+        """
+        if not settings.google_fact_check_api_key:
+            return None
+
+        try:
+            # Use Google Custom Search API to search for the statistic
+            search_query = f'"{statistic_text}" source study report'
+            url = "https://www.googleapis.com/customsearch/v1"
+            params = {
+                "key": settings.google_fact_check_api_key,
+                "cx": settings.google_search_engine_id if hasattr(settings, 'google_search_engine_id') else None,
+                "q": search_query,
+                "num": 3  # Get top 3 results
+            }
+
+            if not params["cx"]:
+                logger.debug("Google Custom Search Engine ID not configured")
+                return None
+
+            response = requests.get(url, params=params, timeout=10)
+
+            if response.status_code != 200:
+                logger.warning(f"Google Search API returned status {response.status_code}")
+                return None
+
+            data = response.json()
+
+            if not data.get("items"):
+                return None
+
+            # Analyze top result
+            top_result = data["items"][0]
+            source_url = top_result.get("link", "")
+            title = top_result.get("title", "")
+            snippet = top_result.get("snippet", "")
+
+            # Use AI to extract source name from title/snippet
+            source_name = self._extract_source_name_from_search(title, snippet, source_url)
+
+            return {
+                "source_url": source_url,
+                "source_name": source_name,
+                "source_excerpt": snippet[:200],
+                "confidence": 0.7  # Medium-high confidence for web search
+            }
+
+        except Exception as e:
+            logger.error(f"Error in web search trace: {e}")
+            return None
+
+    def _trace_via_database(self, statistic_text: str, session: Session) -> Optional[Dict]:
+        """
+        Trace source by finding the same statistic in other articles in our database.
+
+        Args:
+            statistic_text: The statistic to search for
+            session: Database session
+
+        Returns:
+            Dict with source info or None
+        """
+        try:
+            # Search for statistics with similar text in our database
+            all_stats = session.exec(
+                select(StatisticVerification)
+                .where(StatisticVerification.source_name.isnot(None))
+            ).all()
+
+            # Look for similar statistics
+            stat_lower = statistic_text.lower()
+            for other_stat in all_stats:
+                if other_stat.statistic_text.lower() in stat_lower or stat_lower in other_stat.statistic_text.lower():
+                    # Found a match!
+                    return {
+                        "source_url": other_stat.source_url,
+                        "source_name": other_stat.source_name,
+                        "source_excerpt": f"Found in another article: {other_stat.source_excerpt[:100] if other_stat.source_excerpt else ''}",
+                        "confidence": 0.65  # Medium confidence for cross-reference
+                    }
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Error in database trace: {e}")
+            return None
+
+    def _extract_source_name_from_search(self, title: str, snippet: str, url: str) -> Optional[str]:
+        """Extract source name from search result using heuristics."""
+        # Extract domain
+        domain = urlparse(url).netloc
+        if domain.startswith("www."):
+            domain = domain[4:]
+
+        # Look for known patterns in title/snippet
+        patterns = [
+            r"(?:according to|from|by|study by|report by)\s+([A-Z][A-Za-z\s&]+(?:University|Institute|Bureau|Agency|Department|Foundation|Center|Association))",
+            r"([A-Z][A-Za-z\s&]+(?:University|Institute|Bureau|Agency|Department|Foundation|Center|Association))",
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, title + " " + snippet)
+            if match:
+                return match.group(1).strip()
+
+        # Fallback to domain name
+        return domain.split(".")[0].title()
 
 
 # Singleton instance

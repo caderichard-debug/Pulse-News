@@ -14,6 +14,7 @@ class Settings(BaseSettings):
 
     # Fact-checking APIs (V2)
     google_fact_check_api_key: Optional[str] = None
+    google_search_engine_id: Optional[str] = None  # For Google Custom Search
     claimbuster_api_key: Optional[str] = None
 
     # Email Configuration
