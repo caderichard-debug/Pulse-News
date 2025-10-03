@@ -1,7 +1,10 @@
 """
-Statistics Verification Service
+Statistics Verification Service V2
 
-Extracts and verifies numerical claims in articles using AI and cross-referencing.
+Extracts and verifies numerical claims in articles using a three-stage pipeline:
+1. Source Tracing: Identify original source of statistics
+2. Credibility Rating: Rate source credibility
+3. Fact-Checking: Verify against external fact-checking APIs
 """
 
 import json
@@ -15,6 +18,11 @@ from app.models import (
 )
 from app.config import settings
 from openai import OpenAI
+
+# Import V2 services
+from app.services.source_tracer import get_source_tracer
+from app.services.credibility_rater import get_credibility_rater
+from app.services.fact_check_integrator import get_fact_check_integrator
 
 # Initialize OpenAI client
 openai_api = OpenAI(api_key=settings.openai_api_key) if settings.openai_api_key else None
@@ -126,10 +134,9 @@ def extract_statistics_from_article(
             verification = StatisticVerification(
                 article_id=article.id,
                 statistic_text=stat.get("exact_quote", ""),
+                context=stat.get("context", ""),
                 verification_status=VerificationStatus.UNVERIFIED,
-                confidence_score=stat.get("confidence", 0.5),
-                notes=stat.get("context", ""),
-                verified_by="ai"
+                confidence_score=stat.get("confidence", 0.5)
             )
             verifications.append(verification)
 
@@ -144,61 +151,162 @@ def extract_statistics_from_article(
         return []
 
 
-def verify_statistic_cross_reference(
+def verify_statistic_v2(
     verification: StatisticVerification,
     article: Article,
     session: Session
-) -> None:
+) -> bool:
     """
-    Verify a statistic by cross-referencing with other articles.
-
-    This is a simple implementation that checks if the same statistic
-    appears in other articles about the same topic.
+    Verify a statistic using V2 three-stage pipeline:
+    1. Trace source
+    2. Rate credibility
+    3. Fact-check
 
     Args:
         verification: The statistic to verify
         article: The source article
         session: Database session
+
+    Returns:
+        True if verification was attempted, False otherwise
     """
-    # Search for similar statistics in other articles
-    # This is a placeholder - real implementation would use more sophisticated matching
-
     try:
-        # Get other articles with analysis
-        other_articles = session.exec(
-            select(Article, ArticleAnalysis)
-            .join(ArticleAnalysis)
-            .where(Article.id != article.id)
-            .where(Article.topic_category == article.topic_category)
-            .limit(10)
-        ).all()
+        # Get article content (prefer full text, fallback to summary)
+        article_content = article.content_text
+        if not article_content:
+            analysis = session.exec(
+                select(ArticleAnalysis)
+                .where(ArticleAnalysis.article_id == article.id)
+            ).first()
+            article_content = analysis.summary if analysis else ""
 
-        # Check if similar statistics appear
-        stat_lower = verification.statistic_text.lower()
-        matches = []
+        # Stage 1: Trace source
+        source_tracer = get_source_tracer()
+        source_info = source_tracer.trace_statistic_source(
+            statistic_text=verification.statistic_text,
+            article_content=article_content,
+            article_url=article.url,
+            session=session
+        )
 
-        for other_article, other_analysis in other_articles:
-            if other_analysis.key_stats:
-                # Simple substring matching
-                if stat_lower in other_analysis.key_stats.lower():
-                    matches.append(other_article.url)
+        if source_info:
+            verification.source_url = source_info.get("source_url")
+            verification.source_name = source_info.get("source_name")
+            verification.source_excerpt = source_info.get("source_excerpt")
 
-        if len(matches) >= 2:
-            # Found in 2+ other sources
-            verification.verification_status = VerificationStatus.VERIFIED
-            verification.verification_method = VerificationMethod.CROSS_REFERENCE
-            verification.verified_sources = json.dumps(matches)
-            verification.verified_at = datetime.utcnow()
-            verification.confidence_score = min(0.9, 0.6 + (len(matches) * 0.1))
-            session.add(verification)
-            session.commit()
-            logger.info(f"Verified statistic '{verification.statistic_text}' via cross-reference")
-        else:
-            # Not enough matches to verify
-            logger.debug(f"Could not verify statistic via cross-reference: {verification.statistic_text}")
+            # Stage 2: Rate source credibility
+            if verification.source_url and verification.source_name:
+                credibility_rater = get_credibility_rater()
+                verification.source_credibility_score = credibility_rater.rate_source_credibility(
+                    source_url=verification.source_url,
+                    source_name=verification.source_name,
+                    session=session
+                )
+
+        # Stage 3: Fact-check (regardless of whether we found a source)
+        fact_checker = get_fact_check_integrator()
+        fact_check_result = fact_checker.verify_statistic(
+            statistic_text=verification.statistic_text,
+            source_url=verification.source_url
+        )
+
+        if fact_check_result:
+            verification.fact_check_status = fact_check_result.get("fact_check_status")
+            verification.fact_check_source = fact_check_result.get("fact_check_source")
+            verification.fact_check_url = fact_check_result.get("fact_check_url")
+            verification.fact_check_details = fact_check_result.get("fact_check_details")
+
+        # Determine final verification status
+        verification.verification_status = _determine_final_status(verification)
+        verification.confidence_score = _calculate_final_confidence(verification)
+        verification.verification_method = _determine_verification_method(verification)
+        verification.verified_at = datetime.utcnow()
+        verification.last_checked = datetime.utcnow()
+
+        session.add(verification)
+        session.commit()
+
+        logger.info(
+            f"Verified statistic '{verification.statistic_text[:50]}': "
+            f"{verification.verification_status.value} (confidence: {verification.confidence_score:.2f})"
+        )
+
+        return True
 
     except Exception as e:
-        logger.error(f"Error in cross-reference verification: {e}", exc_info=True)
+        logger.error(f"Error in V2 verification: {e}", exc_info=True)
+        return False
+
+
+def _determine_final_status(verification: StatisticVerification) -> VerificationStatus:
+    """
+    Determine final verification status based on fact-check and source credibility.
+
+    Logic:
+    - If fact_check_status == "false" -> FALSE
+    - If fact_check_status == "verified" AND source_credibility >= 0.6 -> VERIFIED
+    - If source_credibility >= 0.7 AND no contradicting fact-check -> VERIFIED
+    - If fact_check_status == "mixed" -> DISPUTED
+    - Otherwise -> UNVERIFIED
+    """
+    if verification.fact_check_status == "false":
+        return VerificationStatus.FALSE
+
+    if verification.fact_check_status == "verified":
+        if verification.source_credibility_score and verification.source_credibility_score >= 0.6:
+            return VerificationStatus.VERIFIED
+
+    if verification.source_credibility_score and verification.source_credibility_score >= 0.7:
+        # High credibility source with no contradicting fact-check
+        if verification.fact_check_status not in ["false", "mixed"]:
+            return VerificationStatus.VERIFIED
+
+    if verification.fact_check_status == "mixed":
+        return VerificationStatus.DISPUTED
+
+    return VerificationStatus.UNVERIFIED
+
+
+def _calculate_final_confidence(verification: StatisticVerification) -> float:
+    """
+    Calculate overall confidence score (0.0 to 1.0).
+
+    Factors:
+    - Source credibility (40% weight)
+    - Fact-check confidence (40% weight)
+    - Source traceability (20% weight)
+    """
+    score = 0.0
+
+    # Source credibility contribution (40%)
+    if verification.source_credibility_score:
+        score += verification.source_credibility_score * 0.4
+
+    # Fact-check contribution (40%)
+    if verification.fact_check_status:
+        fact_check_confidence = {
+            "verified": 1.0,
+            "false": 0.0,
+            "mixed": 0.5,
+            "unverifiable": 0.3
+        }.get(verification.fact_check_status, 0.5)
+        score += fact_check_confidence * 0.4
+
+    # Source traceability contribution (20%)
+    if verification.source_url:
+        score += 0.2  # Bonus for having traceable source
+
+    return min(1.0, max(0.0, score))
+
+
+def _determine_verification_method(verification: StatisticVerification) -> VerificationMethod:
+    """Determine which verification method was most influential."""
+    if verification.fact_check_source:
+        return VerificationMethod.API_CHECK
+    elif verification.source_credibility_score and verification.source_credibility_score >= 0.7:
+        return VerificationMethod.AI_ANALYSIS
+    else:
+        return VerificationMethod.AI_ANALYSIS
 
 
 def process_article_statistics(
@@ -235,9 +343,11 @@ def process_article_statistics(
     for verification in verifications:
         session.add(verification)
 
-    # Attempt cross-reference verification for each
+    session.commit()  # Commit to get IDs
+
+    # Attempt V2 verification for each
     for verification in verifications:
-        verify_statistic_cross_reference(verification, article, session)
+        verify_statistic_v2(verification, article, session)
 
     # Update article analysis
     analysis.stats_verification_status = VerificationStatus.UNVERIFIED
@@ -325,9 +435,15 @@ def get_article_statistics(article_id: int, session: Session) -> List[Dict]:
             "text": v.statistic_text,
             "status": v.verification_status.value,
             "confidence": v.confidence_score,
-            "context": v.notes,
+            "context": v.context,
             "verified_at": v.verified_at.isoformat() if v.verified_at else None,
-            "sources": json.loads(v.verified_sources) if v.verified_sources else []
+            # V2 fields
+            "source_name": v.source_name,
+            "source_url": v.source_url,
+            "source_credibility_score": v.source_credibility_score,
+            "fact_check_status": v.fact_check_status,
+            "fact_check_source": v.fact_check_source,
+            "fact_check_url": v.fact_check_url
         }
         for v in verifications
     ]

@@ -320,18 +320,86 @@
                 {% endif %}
 
                 {% if article.statistics %}
-                <div class="statistics">
-                    <strong>🔍 Verified Statistics:</strong>
+                <!-- Statistics with V2 badges -->
+                <div style="margin-top: 15px; padding: 12px; background-color: #FFF9C4; border-left: 4px solid #FBC02D; border-radius: 3px;">
+                    <div style="font-weight: 600; color: #F57F17; margin-bottom: 8px;">📊 Key Statistics</div>
+
                     {% for stat in article.statistics %}
-                    <div class="statistic">
-                        <span>{{ stat.text }}</span>
-                        <span class="verified-badge {{ stat.status }}">
-                            {{ '✓ Verified' if stat.status == 'verified' else '⏳ Unverified' }}
-                        </span>
-                        {% if stat.confidence and stat.status == 'verified' %}
-                        <span style="margin-left: 8px; font-size: 11px; color: #666;">
-                            ({{ (stat.confidence * 100)|int }}% confidence)
-                        </span>
+                    <div style="margin-bottom: 12px; padding: 10px; background-color: #FFFDE7; border-radius: 4px;">
+                        <!-- Statistic text -->
+                        <div style="font-size: 13px; color: #333; margin-bottom: 6px; font-weight: 500;">
+                            {{ stat.text }}
+                        </div>
+
+                        <!-- V2 Verification badge -->
+                        <table cellpadding="0" cellspacing="0" border="0" width="100%" style="font-size: 11px;">
+                            <tr>
+                                <!-- Status icon -->
+                                <td width="30" style="vertical-align: top;">
+                                    {% if stat.status == 'verified' %}
+                                        <span style="color: #2E7D32; font-size: 16px;">✓</span>
+                                    {% elif stat.status == 'disputed' %}
+                                        <span style="color: #F57C00; font-size: 16px;">⚠️</span>
+                                    {% elif stat.status == 'false' %}
+                                        <span style="color: #C62828; font-size: 16px;">❌</span>
+                                    {% else %}
+                                        <span style="color: #757575; font-size: 16px;">⏳</span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Source credibility stars -->
+                                <td width="100" style="vertical-align: top;">
+                                    {% if stat.source_credibility_score %}
+                                        {% set stars = (stat.source_credibility_score * 5) | round(0, 'floor') | int %}
+                                        <span style="color: #FFB300; letter-spacing: 1px;">
+                                            {{ '⭐' * stars }}{{ '☆' * (5 - stars) }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Source name with link -->
+                                <td style="vertical-align: top;">
+                                    {% if stat.source_name %}
+                                        <span style="color: #1976D2; font-size: 11px;">
+                                            {% if stat.source_url %}
+                                                <a href="{{ stat.source_url }}" style="color: #1976D2; text-decoration: none;">
+                                                    {{ stat.source_name }}
+                                                </a>
+                                            {% else %}
+                                                {{ stat.source_name }}
+                                            {% endif %}
+                                        </span>
+                                    {% else %}
+                                        <span style="color: #9E9E9E; font-style: italic; font-size: 11px;">Source not traced</span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Confidence percentage -->
+                                <td width="80" align="right" style="vertical-align: top;">
+                                    {% if stat.confidence %}
+                                        <span style="color: #424242; font-weight: 600; font-size: 11px;">
+                                            {{ (stat.confidence * 100) | round(0) | int }}%
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- Fact-check details (if available) -->
+                        {% if stat.fact_check_details %}
+                        <div style="margin-top: 6px; padding: 6px; background-color: #E3F2FD; border-left: 2px solid #1976D2; font-size: 11px; color: #0D47A1;">
+                            <strong>Fact-check:</strong> {{ stat.fact_check_details[:200] }}
+                            {% if stat.fact_check_url %}
+                                <a href="{{ stat.fact_check_url }}" style="color: #1976D2; text-decoration: underline;">Read more</a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Context (if available) -->
+                        {% if stat.context %}
+                        <div style="margin-top: 4px; font-size: 11px; color: #666; font-style: italic;">
+                            {{ stat.context }}
+                        </div>
                         {% endif %}
                     </div>
                     {% endfor %}

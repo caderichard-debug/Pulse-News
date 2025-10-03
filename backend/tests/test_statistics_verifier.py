@@ -10,7 +10,7 @@ from app.models import (
 )
 from app.services.statistics_verifier import (
     extract_statistics_from_article,
-    verify_statistic_cross_reference,
+    verify_statistic_v2,
     process_article_statistics,
     get_article_statistics
 )
@@ -159,142 +159,136 @@ class TestExtractStatistics:
         assert len(verifications) == 0
 
 
-class TestCrossReferenceVerification:
-    """Test cross-reference verification of statistics"""
+# V2 Verification Tests
+class TestV2Verification:
+    """Test V2 verification pipeline with source tracing and fact-checking"""
 
-    def test_verify_with_multiple_sources(self, session: Session):
-        """Test verification when statistic appears in multiple sources"""
-        source1 = Source(
-            name="Source 1",
-            url="https://source1.com",
-            rss_feed_url="https://source1.com/feed"
-        )
-        source2 = Source(
-            name="Source 2",
-            url="https://source2.com",
-            rss_feed_url="https://source2.com/feed"
-        )
-        session.add_all([source1, source2])
-        session.commit()
-
-        # Create main article
-        article1 = Article(
-            source_id=source1.id,
-            title="Main Article",
-            url="https://source1.com/article",
-            published_at=datetime.utcnow(),
-            topic_category="Economy"
-        )
-        session.add(article1)
-        session.commit()
-
-        analysis1 = ArticleAnalysis(
-            article_id=article1.id,
-            summary="Economy grew 50%",
-            sentiment_score=5,
-            political_lean=PoliticalLean.CENTER,
-            key_stats='["50% growth"]'
-        )
-        session.add(analysis1)
-
-        # Create matching articles
-        article2 = Article(
-            source_id=source2.id,
-            title="Other Article",
-            url="https://source2.com/article",
-            published_at=datetime.utcnow(),
-            topic_category="Economy"
-        )
-        session.add(article2)
-        session.commit()
-
-        analysis2 = ArticleAnalysis(
-            article_id=article2.id,
-            summary="GDP increased by 50%",
-            sentiment_score=5,
-            political_lean=PoliticalLean.CENTER,
-            key_stats='["50% growth in Q3"]'
-        )
-        session.add(analysis2)
-
-        article3 = Article(
-            source_id=source1.id,
-            title="Third Article",
-            url="https://source1.com/article3",
-            published_at=datetime.utcnow(),
-            topic_category="Economy"
-        )
-        session.add(article3)
-        session.commit()
-
-        analysis3 = ArticleAnalysis(
-            article_id=article3.id,
-            summary="50% economic growth reported",
-            sentiment_score=5,
-            political_lean=PoliticalLean.CENTER,
-            key_stats='["Reports show 50% growth"]'
-        )
-        session.add(analysis3)
-        session.commit()
-
-        # Create verification
-        verification = StatisticVerification(
-            article_id=article1.id,
-            statistic_text="50% growth",
-            verification_status=VerificationStatus.UNVERIFIED
-        )
-        session.add(verification)
-        session.commit()
-
-        # Verify cross-reference
-        verify_statistic_cross_reference(verification, article1, session)
-
-        assert verification.verification_status == VerificationStatus.VERIFIED
-        assert verification.verification_method == VerificationMethod.CROSS_REFERENCE
-        assert verification.verified_sources is not None
-        assert verification.confidence_score >= 0.7
-
-    def test_no_verification_insufficient_matches(self, session: Session):
-        """Test that verification fails with insufficient matches"""
+    @patch('app.services.statistics_verifier.get_fact_check_integrator')
+    @patch('app.services.statistics_verifier.get_credibility_rater')
+    @patch('app.services.statistics_verifier.get_source_tracer')
+    def test_verify_v2_full_pipeline_success(
+        self, mock_tracer_getter, mock_rater_getter, mock_checker_getter, session: Session
+    ):
+        """Test full V2 verification pipeline with all stages successful"""
+        # Create test data
         source = Source(
-            name="Single Source",
-            url="https://single.com",
-            rss_feed_url="https://single.com/feed"
+            name="Test News",
+            url="https://test.com",
+            rss_feed_url="https://test.com/feed"
         )
         session.add(source)
         session.commit()
 
         article = Article(
             source_id=source.id,
-            title="Unique Article",
-            url="https://single.com/article",
+            title="Economic Report",
+            url="https://test.com/article",
             published_at=datetime.utcnow(),
-            topic_category="Tech"
+            content_text="According to the Bureau of Labor Statistics, unemployment is 3.5%"
         )
         session.add(article)
         session.commit()
 
         analysis = ArticleAnalysis(
             article_id=article.id,
-            summary="Unique statistic: 99% growth",
-            sentiment_score=0,
-            political_lean=PoliticalLean.CENTER,
-            key_stats='["99%"]'
+            summary="Unemployment at 3.5%",
+            sentiment_score=5,
+            political_lean=PoliticalLean.CENTER
         )
         session.add(analysis)
         session.commit()
 
         verification = StatisticVerification(
             article_id=article.id,
-            statistic_text="99% growth",
+            statistic_text="3.5% unemployment",
             verification_status=VerificationStatus.UNVERIFIED
         )
         session.add(verification)
         session.commit()
 
-        # Should remain unverified
-        verify_statistic_cross_reference(verification, article, session)
+        # Mock all three stages
+        mock_tracer = Mock()
+        mock_tracer.trace_statistic_source.return_value = {
+            "source_url": "https://bls.gov/data",
+            "source_name": "Bureau of Labor Statistics",
+            "source_excerpt": "According to the Bureau of Labor Statistics...",
+            "confidence": 0.9
+        }
+        mock_tracer_getter.return_value = mock_tracer
+
+        mock_rater = Mock()
+        mock_rater.rate_source_credibility.return_value = 0.95
+        mock_rater_getter.return_value = mock_rater
+
+        mock_checker = Mock()
+        mock_checker.verify_statistic.return_value = {
+            "fact_check_status": "verified",
+            "fact_check_source": "google_fact_check",
+            "fact_check_url": "https://factcheck.google.com/result",
+            "fact_check_details": "Verified by multiple fact-checkers",
+            "confidence": 0.9
+        }
+        mock_checker_getter.return_value = mock_checker
+
+        # Run verification
+        result = verify_statistic_v2(verification, article, session)
+
+        assert result is True
+        assert verification.verification_status == VerificationStatus.VERIFIED
+        assert verification.source_name == "Bureau of Labor Statistics"
+        assert verification.source_url == "https://bls.gov/data"
+        assert verification.source_credibility_score == 0.95
+        assert verification.fact_check_status == "verified"
+        assert verification.confidence_score > 0.7
+        assert verification.verified_at is not None
+
+    @patch('app.services.statistics_verifier.get_fact_check_integrator')
+    @patch('app.services.statistics_verifier.get_credibility_rater')
+    @patch('app.services.statistics_verifier.get_source_tracer')
+    def test_verify_v2_no_source_found(
+        self, mock_tracer_getter, mock_rater_getter, mock_checker_getter, session: Session
+    ):
+        """Test V2 verification when no source can be traced"""
+        source = Source(
+            name="Test",
+            url="https://test.com",
+            rss_feed_url="https://test.com/feed"
+        )
+        session.add(source)
+        session.commit()
+
+        article = Article(
+            source_id=source.id,
+            title="Article",
+            url="https://test.com/article",
+            published_at=datetime.utcnow(),
+            content_text="Some statistic without a clear source."
+        )
+        session.add(article)
+        session.commit()
+
+        verification = StatisticVerification(
+            article_id=article.id,
+            statistic_text="99%",
+            verification_status=VerificationStatus.UNVERIFIED
+        )
+        session.add(verification)
+        session.commit()
+
+        # Mock no source found
+        mock_tracer = Mock()
+        mock_tracer.trace_statistic_source.return_value = None
+        mock_tracer_getter.return_value = mock_tracer
+
+        mock_checker = Mock()
+        mock_checker.verify_statistic.return_value = None
+        mock_checker_getter.return_value = mock_checker
+
+        result = verify_statistic_v2(verification, article, session)
+
+        assert result is True
         assert verification.verification_status == VerificationStatus.UNVERIFIED
+        assert verification.source_name is None
 
 
 class TestGetArticleStatistics:
