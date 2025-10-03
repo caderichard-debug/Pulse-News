@@ -144,21 +144,25 @@ class FactCheckIntegrator:
         """
         rating_lower = rating_text.lower()
 
-        if any(word in rating_lower for word in ["true", "correct", "accurate"]):
-            if any(word in rating_lower for word in ["mostly", "partially"]):
-                return "mixed"
-            else:
-                return "verified"
-
+        # Check for false/incorrect first (to avoid "incorrect" matching "correct")
         if any(word in rating_lower for word in ["false", "incorrect", "inaccurate", "pants on fire"]):
             if any(word in rating_lower for word in ["mostly"]):
                 return "mixed"
             else:
                 return "false"
 
+        # Check for mixture/mixed/half
         if any(word in rating_lower for word in ["mixture", "mixed", "half"]):
             return "mixed"
 
+        # Check for true/correct/accurate
+        if any(word in rating_lower for word in ["true", "correct", "accurate"]):
+            if any(word in rating_lower for word in ["mostly", "partially"]):
+                return "mixed"
+            else:
+                return "verified"
+
+        # Check for unproven
         if any(word in rating_lower for word in ["unproven", "unclear", "unsupported"]):
             return "unverifiable"
 
