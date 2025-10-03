@@ -302,9 +302,17 @@ def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict
             "statistics": [
                 {
                     "text": stat.statistic_text,
+                    "context": stat.context,
                     "status": stat.verification_status.value,
                     "confidence": stat.confidence_score,
-                    "sources": json.loads(stat.verified_sources) if stat.verified_sources else []
+                    # V2 fields
+                    "source_name": stat.source_name,
+                    "source_url": stat.source_url,
+                    "source_credibility_score": stat.source_credibility_score,
+                    "fact_check_status": stat.fact_check_status,
+                    "fact_check_source": stat.fact_check_source,
+                    "fact_check_url": stat.fact_check_url,
+                    "fact_check_details": stat.fact_check_details
                 }
                 for stat in statistics
             ],

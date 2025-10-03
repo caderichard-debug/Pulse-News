@@ -274,18 +274,26 @@ class StatisticVerification(SQLModel, table=True):
 
     # Statistic details
     statistic_text: str = Field(max_length=500)
+    context: Optional[str] = Field(default=None, max_length=1000)
     verification_status: VerificationStatus = Field(default=VerificationStatus.UNVERIFIED)
     verification_method: Optional[VerificationMethod] = Field(default=None)
-
-    # Verification sources
-    verified_sources: Optional[str] = Field(default=None)  # JSON array of URLs
     confidence_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+
+    # V2: Source Tracing
+    source_url: Optional[str] = Field(default=None, max_length=500)
+    source_name: Optional[str] = Field(default=None, max_length=200)
+    source_excerpt: Optional[str] = Field(default=None, max_length=1000)
+    source_credibility_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+
+    # V2: Fact-Checking
+    fact_check_status: Optional[str] = Field(default=None, max_length=50)
+    fact_check_source: Optional[str] = Field(default=None, max_length=100)
+    fact_check_url: Optional[str] = Field(default=None, max_length=500)
+    fact_check_details: Optional[str] = Field(default=None, max_length=2000)
 
     # Metadata
     verified_at: Optional[datetime] = Field(default=None)
-    verified_by: Optional[str] = Field(default=None, max_length=50)  # ai, human, api
-    notes: Optional[str] = Field(default=None, max_length=1000)
-
+    last_checked: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -332,3 +340,23 @@ class ArticleContext(SQLModel, table=True):
     # Metadata
     generated_at: datetime = Field(default_factory=datetime.utcnow)
     tokens_used: Optional[int] = Field(default=None)
+
+
+class SourceCredibilityRating(SQLModel, table=True):
+    __tablename__ = "source_credibility_ratings"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    domain: str = Field(unique=True, index=True, max_length=200)
+    credibility_score: float = Field(ge=0.0, le=1.0)
+
+    # Credibility factors
+    is_academic: bool = Field(default=False)
+    is_government: bool = Field(default=False)
+    is_news_organization: bool = Field(default=False)
+    is_think_tank: bool = Field(default=False)
+
+    # Metadata
+    rating_method: str = Field(max_length=100)  # manual, ai, mbfc_api, etc.
+    notes: Optional[str] = Field(default=None, max_length=1000)
+    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.utcnow)

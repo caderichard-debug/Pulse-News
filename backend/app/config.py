@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     openai_api_key: Optional[str] = None
     resend_api_key: Optional[str] = None
 
+    # Fact-checking APIs (V2)
+    google_fact_check_api_key: Optional[str] = None
+    claimbuster_api_key: Optional[str] = None
+
     # Email Configuration
     from_email: str = "newsletter@pulse.news"
     from_name: str = "Pulse News"
