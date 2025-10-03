@@ -257,3 +257,278 @@ class TestSourceTracer:
 
         # The prompt should contain truncated content with "..."
         assert "..." in prompt
+
+    def test_extract_references_section_success(self):
+        """Test extracting references section from article"""
+        tracer = SourceTracer()
+
+        article = """
+        This is the main article content about a study.
+
+        Sources:
+        - CDC Health Report 2024
+        - Johns Hopkins Study on COVID-19
+
+        More content here.
+        """
+
+        references = tracer._extract_references_section(article)
+
+        assert references is not None
+        assert "CDC" in references
+        assert "Johns Hopkins" in references
+
+    def test_extract_references_section_various_patterns(self):
+        """Test different reference section patterns"""
+        tracer = SourceTracer()
+
+        patterns = [
+            "References:\n- Source 1\n- Source 2",
+            "Sources:\nCDC Report",
+            "This article cites:\nNIH Data",
+            "Learn more:\nhttps://example.com",
+        ]
+
+        for article in patterns:
+            references = tracer._extract_references_section(article)
+            assert references is not None
+
+    def test_extract_references_section_not_found(self):
+        """Test when no references section exists"""
+        tracer = SourceTracer()
+
+        article = "Just a normal article with no references section."
+
+        references = tracer._extract_references_section(article)
+
+        assert references is None
+
+    def test_get_relevant_context_with_statistic(self):
+        """Test context extraction when statistic is found"""
+        tracer = SourceTracer()
+
+        # Create article with statistic in the middle
+        article = "x" * 2000 + "The key statistic is 75%" + "y" * 2000
+
+        context = tracer._get_relevant_context("75%", article, None, max_chars=3000)
+
+        # Should include context around the statistic
+        assert "75%" in context
+        assert len(context) <= 3100  # Max chars + buffer
+
+    def test_get_relevant_context_with_references(self):
+        """Test context includes references section"""
+        tracer = SourceTracer()
+
+        article = "Main content here"
+        references = "Sources: CDC, NIH"
+
+        context = tracer._get_relevant_context("test", article, references)
+
+        assert "CDC" in context
+        assert "REFERENCES SECTION" in context
+
+    def test_get_relevant_context_fallback_strategy(self):
+        """Test beginning + end strategy when statistic not found"""
+        tracer = SourceTracer()
+
+        # Long article without the statistic - needs to exceed max_chars
+        # to trigger the fallback strategy
+        article = "Beginning unique content " + "x" * 4000 + " END_MARKER with unique text"
+
+        context = tracer._get_relevant_context("missing stat", article, max_chars=3000)
+
+        # Should include beginning
+        assert "Beginning unique content" in context
+        # Should include the "article continues" separator (proves fallback was used)
+        assert "article continues" in context
+        # The very end might be truncated, but we should see the last 1000 chars strategy was attempted
+        assert len(context) <= 3100  # Around max_chars
+
+    def test_verify_organization_exists_known_org(self):
+        """Test verification for known organizations"""
+        tracer = SourceTracer()
+
+        test_cases = [
+            ("CDC", "government"),
+            ("Pew Research Center", "research"),
+            ("Harvard University", "academic"),
+            ("World Health Organization", "international"),
+            ("Reuters", "media"),
+        ]
+
+        for org_name, expected_category in test_cases:
+            result = tracer._verify_organization_exists(org_name)
+
+            assert result['verified'] is True
+            assert result['category'] == expected_category
+            assert result['confidence'] >= 0.9
+
+    def test_verify_organization_exists_heuristic_patterns(self):
+        """Test verification using heuristic patterns"""
+        tracer = SourceTracer()
+
+        test_cases = [
+            ("Random University", "academic"),
+            ("Research Institute", "research"),
+            ("Federal Bureau", "government"),
+            ("Health Agency", "government"),
+            ("Science Foundation", "research"),
+        ]
+
+        for org_name, expected_category in test_cases:
+            result = tracer._verify_organization_exists(org_name)
+
+            assert result['verified'] is True
+            assert result['category'] == expected_category
+            assert result['confidence'] >= 0.65
+
+    @patch('app.services.source_tracer.settings')
+    def test_verify_organization_exists_unknown(self, mock_settings):
+        """Test verification for unknown organization"""
+        # Mock settings to disable web search fallback
+        mock_settings.google_fact_check_api_key = None
+
+        tracer = SourceTracer()
+
+        result = tracer._verify_organization_exists("Random Blog XYZ")
+
+        assert result['verified'] is False
+        assert result['category'] == 'unknown'
+
+    @patch('app.services.source_tracer.openai_api')
+    def test_ai_extract_source_with_reasoning(self, mock_openai_api):
+        """Test multi-turn AI extraction with verification"""
+        tracer = SourceTracer()
+
+        # Mock first response (extraction)
+        mock_response_1 = Mock()
+        mock_response_1.choices = [Mock(message=Mock(content='''
+        {
+            "source_url": "https://cdc.gov/report",
+            "source_name": "CDC",
+            "source_excerpt": "According to CDC...",
+            "confidence": 0.8
+        }
+        '''))]
+
+        # Mock second response (verification)
+        mock_response_2 = Mock()
+        mock_response_2.choices = [Mock(message=Mock(content='''
+        {
+            "verified": true,
+            "confidence_adjustment": 0.1,
+            "alternative_source": null,
+            "reasoning": "The article clearly mentions CDC as the source"
+        }
+        '''))]
+
+        mock_openai_api.chat.completions.create.side_effect = [
+            mock_response_1,
+            mock_response_2
+        ]
+
+        result = tracer._ai_extract_source_with_reasoning(
+            statistic_text="50% increase",
+            article_content="According to CDC, there's a 50% increase",
+            article_url="https://test.com"
+        )
+
+        assert result is not None
+        assert result['source_name'] == "CDC"
+        assert result['ai_verified'] is True
+        assert result['confidence'] == 0.9  # 0.8 + 0.1 adjustment
+        assert 'verification_reasoning' in result
+
+    @patch('app.services.source_tracer.openai_api')
+    def test_ai_extract_source_with_reasoning_alternative_source(self, mock_openai_api):
+        """Test multi-turn extraction when verification finds alternative source"""
+        tracer = SourceTracer()
+
+        # Mock first response
+        mock_response_1 = Mock()
+        mock_response_1.choices = [Mock(message=Mock(content='''
+        {
+            "source_url": null,
+            "source_name": "Wrong Source",
+            "source_excerpt": "...",
+            "confidence": 0.5
+        }
+        '''))]
+
+        # Mock second response with alternative
+        mock_response_2 = Mock()
+        mock_response_2.choices = [Mock(message=Mock(content='''
+        {
+            "verified": false,
+            "confidence_adjustment": -0.2,
+            "alternative_source": "Correct Source",
+            "reasoning": "Actually mentions a different organization"
+        }
+        '''))]
+
+        mock_openai_api.chat.completions.create.side_effect = [
+            mock_response_1,
+            mock_response_2
+        ]
+
+        result = tracer._ai_extract_source_with_reasoning(
+            statistic_text="test",
+            article_content="content",
+            article_url="https://test.com"
+        )
+
+        assert result is not None
+        assert result['source_name'] == "Correct Source"
+        assert result['ai_verified'] is False
+
+    @patch('app.services.source_tracer.openai_api')
+    def test_trace_within_article_enhanced(self, mock_openai_api):
+        """Test enhanced article tracing with all improvements"""
+        tracer = SourceTracer()
+
+        # Mock multi-turn AI responses
+        mock_response_1 = Mock()
+        mock_response_1.choices = [Mock(message=Mock(content='''
+        {
+            "source_url": "https://bls.gov/report",
+            "source_name": "Bureau of Labor Statistics",
+            "source_excerpt": "BLS reports...",
+            "confidence": 0.85
+        }
+        '''))]
+
+        mock_response_2 = Mock()
+        mock_response_2.choices = [Mock(message=Mock(content='''
+        {
+            "verified": true,
+            "confidence_adjustment": 0.05,
+            "alternative_source": null,
+            "reasoning": "Clearly cited in article"
+        }
+        '''))]
+
+        mock_openai_api.chat.completions.create.side_effect = [
+            mock_response_1,
+            mock_response_2
+        ]
+
+        article = """
+        According to the Bureau of Labor Statistics, unemployment fell to 3.5%.
+
+        Sources:
+        - BLS Employment Report
+        """
+
+        result = tracer._trace_within_article(
+            statistic_text="3.5%",
+            article_content=article,
+            article_url="https://test.com"
+        )
+
+        assert result is not None
+        assert result['source_name'] == "Bureau of Labor Statistics"
+        assert result['organization_verified'] is True
+        assert result['organization_category'] == 'government'
+        # Confidence boosted by org verification
+        assert result['confidence'] >= 0.9
