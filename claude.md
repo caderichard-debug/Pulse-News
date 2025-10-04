@@ -1,281 +1,452 @@
-# Pulse Development Changelog
+# Pulse - AI-Powered News Aggregator
 
-This file tracks significant changes, decisions, and progress throughout development.
-
----
-
-## 2025-10-03 23:45
-
-**Navigation & UI Polish** ✅
-- Created global navigation bar component - [frontend/src/components/Navbar.tsx](frontend/src/components/Navbar.tsx:1)
-  - Shows current page with active state (indigo background)
-  - Quick navigation between Dashboard, Feed, and Preferences
-  - Logout functionality
-  - Consistent branding with "Pulse" logo
-- Updated all pages with navbar and consistent color palette:
-  - Dashboard - [frontend/src/app/dashboard/page.tsx](frontend/src/app/dashboard/page.tsx:1)
-  - Feed - [frontend/src/app/feed/page.tsx](frontend/src/app/feed/page.tsx:1)
-  - Preferences - [frontend/src/app/preferences/page.tsx](frontend/src/app/preferences/page.tsx:1)
-  - Article Detail - [frontend/src/app/article/[id]/page.tsx](frontend/src/app/article/[id]/page.tsx:1)
-- Feed page styling improvements:
-  - Consistent gray-50 background
-  - White cards with shadow-sm
-  - Indigo accent colors (matching dashboard)
-  - Left border accent on article cards (border-l-4 border-indigo-500)
-  - Improved empty state messaging
-  - Better pagination button styling
-  - Responsive filters with proper spacing
-
-**Database Population** ✅
-- Triggered article scraping: 119 articles scraped from RSS feeds
-- Triggered extraction job: extracting full article content
-- Triggered analysis job: AI analyzing articles (14 completed, 105 in progress)
-- Articles now appearing in feed with full metadata
-
-## 2025-10-03 23:30
-
-**Frontend Test Suite Complete** ✅
-- Comprehensive test coverage for all frontend features
-- **107 tests passing** across 5 test suites:
-  - API Client Tests (14 tests): Authentication, preferences, analytics, feed, error handling
-  - Dashboard Page Tests (22 tests): Stats display, charts, time range selector, navigation, error handling
-  - Preferences Page Tests (15 tests): Topics tab, sources tab, settings tab, save functionality, logout
-  - Feed Page Tests (30 tests): Article list, filters, pagination, navigation, empty states, error handling
-  - Article Detail Page Tests (26 tests): Article metadata, statistics, frameworks, context, related articles, verification badges
-- Test infrastructure:
-  - Jest configuration for Next.js
-  - React Testing Library
-  - Mocks for next/navigation and Recharts
-  - Comprehensive fixtures and test data
-- Fixed all test issues:
-  - API method signatures (login/register use object params)
-  - Token loading (ApiClient loads from localStorage in constructor)
-  - Filter selectors (using getAllByRole('combobox') instead of getByLabelText)
-  - Async state updates (proper waitFor usage)
-  - Multiple element matches (using getAllByText for duplicates)
-
-## 2025-10-03 00:00
-
-**Changelog System Established**
-- Created running changelog in `CLAUDE.md` for tracking development progress
-- Format: Date/Time + Summary + Status Tags + Code References
-
-**Frontend Architecture Plan Complete** ✅
-- Created comprehensive 16-week implementation plan in `docs/FRONTEND_ARCHITECTURE_PLAN.md`
-- Designed "Lens on Discourse" features:
-  - Enhanced preferences (source customization, article ordering, discovery mode)
-  - Dashboard with sentiment/bias visualizations (line charts, heatmaps, scatter plots)
-  - Home feed with article analysis and cross-source coverage comparison
-  - Weekly challenge system to track viewpoint changes
-  - Advanced analytics (sentiment×framework heatmap, claim recurrence tracking)
-- Defined new database tables: `user_source_subscriptions`, `challenges`, `challenge_responses`, `curated_reflections`
-- Specified 15+ new API endpoints for analytics, preferences, and challenges
-- Organized into 6 implementation phases with clear deliverables
-- Tech stack: Next.js 15, React 19, Recharts, TanStack Query
-
-**Phase 1: Enhanced Preferences** ✅ COMPLETE
-
-### Backend ✅
-- Created database migration `aafc42a52a96` for user preferences
-- Added columns to `users` table: `source_discovery_mode`, `article_order_preference`, `articles_per_topic_default`
-- Created `user_source_subscriptions` table for source management
-- Added `articles_per_topic` to `user_topic_preferences`
-- Implemented new API endpoints in `backend/app/routes/preferences.py`:
-  - `GET /preferences/sources` - Get source subscriptions with political lean
-  - `PUT /preferences/sources` - Update source subscriptions
-  - `GET /preferences/settings` - Get user settings
-  - `PUT /preferences/settings` - Update settings (discovery mode, article ordering)
-- Updated newsletter service to respect:
-  - User's subscribed sources (filters articles)
-  - Article ordering preference (good_first, good_last, mixed)
-  - Articles per topic setting
-
-### Frontend (Partial) 🔨
-- Extended API client (`frontend/src/lib/api.ts`) with:
-  - `getSources()`, `updateSourcePreferences()`
-  - `getSettings()`, `updateSettings()`
-- Enhanced preferences page (`frontend/src/app/preferences/page.tsx`):
-  - Added tabbed interface (Topics, Sources, Settings)
-  - State management for sources and settings
-  - Handlers for saving source/setting changes
-  - **Note**: UI rendering incomplete - will complete in Phase 2
-
-### Testing ✅
-- Created `test_source_preferences.py` - 17 tests for source & settings endpoints
-- Created `test_newsletter_preferences.py` - 9 tests for newsletter filtering/ordering
-- **All 35 tests passing** (including existing 9 preference tests)
-- Fixed bug: Invalid source IDs now properly skipped with accurate count
-
-### Bugs Fixed 🐞
-- Fixed `subscribed_count` to only count valid sources (not all requested)
-- Fixed test ordering issues by preserving article_ids order from newsletter
+> **Project Context for AI Assistants**
+> This document helps new Claude sessions quickly understand the Pulse codebase, navigate to relevant files, and maintain documentation standards.
 
 ---
 
-## 2025-10-03 01:30
+## 📋 Quick Start for New Sessions
 
-**Phase 2: Dashboard & Analytics** ✅ COMPLETE
+### What is Pulse?
 
-### Backend ✅
-- Created new analytics routes in `backend/app/routes/analytics.py` with 5 endpoints:
-  - `GET /analytics/user-stats` - Articles read, newsletters received, topics tracked, sources subscribed
-  - `GET /analytics/sentiment-over-time` - Daily sentiment scores by topic (multi-line chart data)
-  - `GET /analytics/bias-distribution` - Weekly political lean percentages (stacked area chart data)
-  - `GET /analytics/framework-heatmap` - 2D heatmap for framework positioning analysis
-  - `GET /analytics/frameworks/available` - List frameworks with article counts
-- Implemented database-agnostic date grouping (Python-based) for SQLite/PostgreSQL compatibility
-- Registered analytics router in `backend/app/main.py`
+**Pulse** is an AI-powered news aggregation platform that:
+- Scrapes articles from trusted news sources via RSS feeds
+- Uses AI (OpenAI GPT-4o-mini) to analyze sentiment, bias, and ethical frameworks
+- Verifies statistics with source tracing and fact-checking
+- Generates personalized daily newsletters
+- Provides a **"Lens on Discourse"** - helping users understand how news shapes conversation through data visualizations
 
-### Frontend ✅
-- Installed `recharts` library for data visualization (`npm install recharts`)
-- Extended API client (`frontend/src/lib/api.ts`) with analytics methods:
-  - `getUserStats()`, `getSentimentOverTime()`, `getBiasDistribution()`
-  - `getFrameworkHeatmap()`, `getAvailableFrameworks()`
-- Created dashboard page (`frontend/src/app/dashboard/page.tsx`):
-  - User stats overview cards (articles read, newsletters received, etc.)
-  - Time range selector (7/30/90 days)
-  - Sentiment line chart (multi-topic sentiment trends using Recharts)
-  - Bias stacked area chart (political lean distribution using Recharts)
-  - Navigation buttons to preferences and home
+### Project Status
 
-### Testing ✅
-- Created `test_analytics.py` - 10 tests covering all analytics endpoints
-- **All 36 tests passing** (10 analytics + 17 source preferences + 9 newsletter preferences)
+**Current Phase**: Phase 3 Complete ✅
+- ✅ Backend: All core services operational (127 backend tests passing)
+- ✅ Frontend: Phase 1-3 complete (107 frontend tests passing)
+  - Enhanced preferences (topics, sources, settings)
+  - Dashboard with analytics visualizations
+  - Article feed with filtering and detail pages
+  - Comprehensive test coverage
+- 🔨 Next: Phase 4 (Challenge System) - Weekly viewpoint engagement tracking
 
-### Bugs Fixed 🐞
-- Fixed SQLite incompatibility: Replaced PostgreSQL-specific `date_trunc()` and `cast(Date)` with Python-based date grouping
-- Applied fix to both `get_sentiment_over_time` and `get_bias_distribution` endpoints
-- Now works with both SQLite (testing) and PostgreSQL (production)
+---
+
+## 🗂️ Project Structure Navigator
+
+### Backend (`/backend/app/`)
+
+#### Core Configuration
+- **[models.py](backend/app/models.py)** - SQLModel database schemas (all tables)
+- **[config.py](backend/app/config.py)** - Environment settings
+- **[database.py](backend/app/database.py)** - Database session management
+- **[main.py](backend/app/main.py)** - FastAPI app entry point & router registration
+
+#### API Routes (`/backend/app/routes/`)
+- **[auth.py](backend/app/routes/auth.py)** - User registration, login (JWT)
+- **[preferences.py](backend/app/routes/preferences.py)** - User preferences (topics, sources, settings)
+- **[analytics.py](backend/app/routes/analytics.py)** - Dashboard analytics endpoints
+- **[feed.py](backend/app/routes/feed.py)** - Article feed with filtering
+- **[article_detail.py](backend/app/routes/article_detail.py)** - Full article analysis
+- **[articles.py](backend/app/routes/articles.py)** - Public article browsing
+- **[admin.py](backend/app/routes/admin.py)** - Admin controls & job triggers
+- **[test_email.py](backend/app/routes/test_email.py)** - Email testing endpoints
+
+#### Services (`/backend/app/services/`)
+**Article Pipeline:**
+- **[rss_scraper.py](backend/app/services/rss_scraper.py)** - Fetch articles from RSS feeds
+- **[article_extractor.py](backend/app/services/article_extractor.py)** - Extract full content (trafilatura + readability)
+- **[ai_analyzer.py](backend/app/services/ai_analyzer.py)** - AI analysis (summary, sentiment, bias)
+- **[framework_generator.py](backend/app/services/framework_generator.py)** - Map articles to ethical frameworks
+
+**Statistics Verification (V2 - 3-stage pipeline):**
+- **[statistics_verifier.py](backend/app/services/statistics_verifier.py)** - Orchestrator
+- **[source_tracer.py](backend/app/services/source_tracer.py)** - Extract source URLs/names
+- **[credibility_rater.py](backend/app/services/credibility_rater.py)** - Rate source credibility
+- **[fact_check_integrator.py](backend/app/services/fact_check_integrator.py)** - External fact-checking APIs
+
+**Enhancement Services:**
+- **[article_clusterer.py](backend/app/services/article_clusterer.py)** - Group similar articles
+- **[context_generator.py](backend/app/services/context_generator.py)** - Generate article context
+- **[newsletter_service.py](backend/app/services/newsletter_service.py)** - Build & send newsletters
+
+#### Background Jobs (`/backend/app/jobs/`)
+- **[scheduler.py](backend/app/jobs/scheduler.py)** - APScheduler configuration
+- **[tasks.py](backend/app/jobs/tasks.py)** - Job definitions
+
+#### Testing (`/backend/tests/`)
+- 127 tests, 100% passing
+- Key test files:
+  - `test_analytics.py` - Analytics endpoints
+  - `test_feed.py` - Feed filtering/pagination
+  - `test_article_detail.py` - Article detail endpoint
+  - `test_source_preferences.py` - Source management
+  - `test_newsletter_preferences.py` - Newsletter filtering
+  - `test_statistics_verifier.py` - V2 verification pipeline
+
+### Frontend (`/frontend/src/`)
+
+#### Pages (`/frontend/src/app/`)
+- **[page.tsx](frontend/src/app/page.tsx)** - Landing page (hero, features)
+- **[login/](frontend/src/app/login/)** - Login page
+- **[signup/](frontend/src/app/signup/)** - Registration page
+- **[preferences/](frontend/src/app/preferences/)** - Topic/source/settings management
+- **[dashboard/](frontend/src/app/dashboard/)** - Analytics dashboard
+- **[feed/](frontend/src/app/feed/)** - Article feed with filters
+- **[article/[id]/](frontend/src/app/article/[id]/)** - Article detail page
+
+#### Components (`/frontend/src/components/`)
+- **[Navbar.tsx](frontend/src/components/Navbar.tsx)** - Global navigation bar
+
+#### API Client (`/frontend/src/lib/`)
+- **[api.ts](frontend/src/lib/api.ts)** - Centralized API client with all endpoints
+
+#### Testing (`/frontend/src/`)
+- 107 tests passing
+- Test suites:
+  - `lib/__tests__/api.test.ts` - API client tests
+  - `app/dashboard/__tests__/page.test.tsx` - Dashboard tests
+  - `app/preferences/__tests__/page.test.tsx` - Preferences tests
+  - `app/feed/__tests__/page.test.tsx` - Feed tests
+  - `app/article/__tests__/page.test.tsx` - Article detail tests
+
+---
+
+## 📚 Documentation Index
+
+### Core Documentation (`/docs/`)
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture, data flow, deployment
+- **[API.md](docs/API.md)** - Complete API reference with examples
+- **[FRONTEND_ARCHITECTURE_PLAN.md](docs/FRONTEND_ARCHITECTURE_PLAN.md)** - 16-week frontend roadmap (Phases 1-6)
+- **[STATISTICS_VERIFICATION_V2_PLAN.md](docs/STATISTICS_VERIFICATION_V2_PLAN.md)** - V2 verification design
+
+### Guides
+- **[SETUP.md](docs/SETUP.md)** - Installation & configuration
+- **[DEVELOPMENT_GUIDE.md](docs/DEVELOPMENT_GUIDE.md)** - Development workflows
+- **[TESTING.md](docs/TESTING.md)** - Test patterns & commands
+- **[HOW_TO_RUN_TESTS.md](docs/HOW_TO_RUN_TESTS.md)** - Quick test reference
+- **[GIT_WORKFLOW_CHEATSHEET.md](docs/GIT_WORKFLOW_CHEATSHEET.md)** - Git commands
+
+### Email Testing
+- **[HOW_TO_SEND_TEST_EMAIL.md](docs/HOW_TO_SEND_TEST_EMAIL.md)** - Email testing guide
+- **[QUICK_EMAIL_TEST.md](docs/QUICK_EMAIL_TEST.md)** - Quick email reference
+
+### Project Context
+- **[CHANGELOG.md](CHANGELOG.md)** - Complete development history (all changes)
+- **[README.md](README.md)** - Project overview & quick start
+
+---
+
+## 🧭 Finding Code by Feature
+
+### "I need to work on [X]"
+
+#### Authentication & Users
+- **Models**: `User` in [models.py](backend/app/models.py:30)
+- **Routes**: [auth.py](backend/app/routes/auth.py)
+- **Frontend**: [login/](frontend/src/app/login/), [signup/](frontend/src/app/signup/)
+
+#### Article Scraping & Extraction
+- **Scraper**: [rss_scraper.py](backend/app/services/rss_scraper.py)
+- **Extractor**: [article_extractor.py](backend/app/services/article_extractor.py)
+- **Models**: `Article` in [models.py](backend/app/models.py:80)
+- **Jobs**: [tasks.py](backend/app/jobs/tasks.py) - `scrape_rss_feeds()`, `extract_articles()`
+
+#### AI Analysis & Frameworks
+- **Analyzer**: [ai_analyzer.py](backend/app/services/ai_analyzer.py)
+- **Framework Generator**: [framework_generator.py](backend/app/services/framework_generator.py)
+- **Models**: `ArticleAnalysis`, `Framework`, `ArticleFrameworkLink` in [models.py](backend/app/models.py)
+
+#### Statistics Verification
+- **Orchestrator**: [statistics_verifier.py](backend/app/services/statistics_verifier.py)
+- **Stage 1 (Tracing)**: [source_tracer.py](backend/app/services/source_tracer.py)
+- **Stage 2 (Credibility)**: [credibility_rater.py](backend/app/services/credibility_rater.py)
+- **Stage 3 (Fact-checking)**: [fact_check_integrator.py](backend/app/services/fact_check_integrator.py)
+- **Models**: `StatisticVerification`, `SourceCredibilityRating` in [models.py](backend/app/models.py)
+
+#### User Preferences
+- **Backend**: [preferences.py](backend/app/routes/preferences.py) - topics, sources, settings
+- **Frontend**: [preferences/](frontend/src/app/preferences/)
+- **Models**: `UserTopicPreference`, `UserSourceSubscription` in [models.py](backend/app/models.py)
+- **Tests**: [test_source_preferences.py](backend/tests/test_source_preferences.py)
+
+#### Analytics & Dashboard
+- **Backend**: [analytics.py](backend/app/routes/analytics.py) - sentiment, bias, heatmaps
+- **Frontend**: [dashboard/](frontend/src/app/dashboard/)
+- **Visualizations**: Recharts (sentiment line chart, bias stacked area)
+- **Tests**: [test_analytics.py](backend/tests/test_analytics.py)
+
+#### Article Feed
+- **Backend**: [feed.py](backend/app/routes/feed.py) - filtering, pagination
+- **Frontend**: [feed/](frontend/src/app/feed/)
+- **Article Detail**: [article_detail.py](backend/app/routes/article_detail.py)
+- **Tests**: [test_feed.py](backend/tests/test_feed.py), [test_article_detail.py](backend/tests/test_article_detail.py)
+
+#### Newsletters
+- **Service**: [newsletter_service.py](backend/app/services/newsletter_service.py)
+- **Template**: [newsletter.html](backend/app/templates/newsletter.html)
+- **Models**: `Newsletter` in [models.py](backend/app/models.py)
+- **Tests**: [test_newsletter_preferences.py](backend/tests/test_newsletter_preferences.py)
+
+#### Background Jobs
+- **Scheduler**: [scheduler.py](backend/app/jobs/scheduler.py)
+- **Tasks**: [tasks.py](backend/app/jobs/tasks.py)
+- **Admin Triggers**: [admin.py](backend/app/routes/admin.py)
+
+---
+
+## 🔧 Common Development Tasks
+
+### Running Tests
+```bash
+# Backend (all tests)
+docker-compose exec backend pytest
+
+# Backend (specific file)
+docker-compose exec backend pytest tests/test_analytics.py -v
+
+# Frontend (all tests)
+cd frontend && npm test
+
+# Frontend (watch mode)
+cd frontend && npm run test:watch
+```
+
+### Database Migrations
+```bash
+# Create new migration
+docker-compose exec backend alembic revision --autogenerate -m "description"
+
+# Apply migrations
+docker-compose exec backend alembic upgrade head
+
+# Rollback
+docker-compose exec backend alembic downgrade -1
+```
+
+### Manual Job Triggers
+```bash
+# Get auth token
+TOKEN=$(curl -s -X POST http://localhost:8000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password"}' \
+  | jq -r '.access_token')
+
+# Trigger scraping
+curl -X POST http://localhost:8000/admin/jobs/scrape
+
+# Trigger analysis
+curl -X POST http://localhost:8000/admin/jobs/analyze
+
+# Check job status
+curl http://localhost:8000/admin/scheduler/status
+```
+
+### Docker Operations
+```bash
+# Start all services
+docker-compose up --build
+
+# Restart backend
+docker-compose restart backend
+
+# View logs
+docker logs news_backend -f
+
+# Stop all
+docker-compose down
+```
+
+---
+
+## 🗄️ Database Schema Quick Reference
+
+### Key Tables
+```
+users
+├── UserTopicPreference (topics subscribed, priority)
+└── UserSourceSubscription (sources subscribed)
+
+sources
+├── Articles
+│   ├── ArticleAnalysis (AI summary, sentiment, bias)
+│   ├── ArticleFrameworkLink → Frameworks
+│   ├── StatisticVerification (V2 with source tracing)
+│   ├── ArticleClusterMember → ArticleCluster
+│   └── ArticleContext (background, timeline, significance)
+└── SourceCredibilityRating (cached credibility scores)
+
+topics
+└── UserTopicPreference
+
+newsletters
+```
+
+See [ARCHITECTURE.md](docs/ARCHITECTURE.md#database-schema) for full schema with field details.
+
+---
+
+## 🎯 Current Implementation Status
+
+### ✅ Completed (Backend)
+- Core article pipeline (scrape → extract → analyze → frameworks)
+- Statistics verification V2 (source tracing, credibility, fact-checking)
+- Article clustering & context generation
+- Newsletter generation & email delivery
+- User authentication & preferences
+- Admin controls & job scheduling
+- **All 127 backend tests passing**
+
+### ✅ Completed (Frontend - Phases 1-3)
+- **Phase 1**: Enhanced preferences (topics, sources, settings)
+- **Phase 2**: Dashboard with analytics visualizations
+- **Phase 3**: Article feed & detail pages
+- Global navigation bar
+- **All 107 frontend tests passing**
+
+### 🔜 Upcoming (Phase 4-6)
+- **Phase 4**: Challenge system (weekly viewpoint tracking)
+- **Phase 5**: Advanced analytics (claim recurrence, heatmap animations)
+- **Phase 6**: Polish & optimization (React Query, virtualization, dark mode)
+
+See [FRONTEND_ARCHITECTURE_PLAN.md](docs/FRONTEND_ARCHITECTURE_PLAN.md) for full roadmap.
+
+---
+
+## 📝 Documentation Workflow for AI Sessions
+
+### When Working on Any Feature/Bug/Test:
+
+1. **ALWAYS update [CHANGELOG.md](CHANGELOG.md)** with:
+   - Timestamp (format: `## YYYY-MM-DD HH:MM`)
+   - Feature/bug name with status emoji (✅ 🔨 🐞 ⚠️)
+   - What was changed (bullet points)
+   - Code references using markdown links: `[file.py](path/to/file.py:line)`
+   - Test results if applicable
+
+2. **Update this file (claude.md)** if:
+   - Project structure changes (new folders, major refactors)
+   - New major features are completed (update "Current Implementation Status")
+   - Documentation references change
+   - New common tasks are established
+
+3. **Update relevant docs/** files if:
+   - API endpoints change → Update [API.md](docs/API.md)
+   - Architecture changes → Update [ARCHITECTURE.md](docs/ARCHITECTURE.md)
+   - New setup steps → Update [SETUP.md](docs/SETUP.md)
+   - Test patterns change → Update [TESTING.md](docs/TESTING.md)
+
+### Changelog Entry Format
+
+```markdown
+## YYYY-MM-DD HH:MM
+
+**Feature Name** ✅ / 🔨 / 🐞 / ⚠️
+
+### What Changed
+- Implemented X in [file.py](path/to/file.py:line)
+- Fixed Y by modifying Z
+- Added tests in [test_file.py](path/to/test_file.py)
+
+### Test Results
+- X tests passing
+- Issues: [if any]
 
 **Code References:**
-- Analytics backend: [backend/app/routes/analytics.py](backend/app/routes/analytics.py)
-- Dashboard UI: [frontend/src/app/dashboard/page.tsx](frontend/src/app/dashboard/page.tsx)
-- Tests: [backend/tests/test_analytics.py](backend/tests/test_analytics.py)
+- Main file: [file.py](path/to/file.py)
+- Tests: [test_file.py](path/to/test_file.py)
+```
+
+### Status Emojis
+- ✅ Complete
+- 🔨 In Progress
+- 🐞 Bug Fix
+- ⚠️ Partial/Blocked
 
 ---
 
-## 2025-10-03 03:30
+## 🔐 Environment Variables
 
-**Phase 3: Home Feed & Article Analysis** ✅ COMPLETE
+Required in `backend/.env`:
 
-### Backend ✅
-- Created feed routes in `backend/app/routes/feed.py` with 3 endpoints:
-  - `GET /feed/articles` - Paginated article feed with filtering (topic, source, political lean) and sorting (newest, oldest, sentiment)
-  - `GET /feed/topics` - Available topics with article counts
-  - `GET /feed/sources` - Available sources with article counts
-- Created article detail routes in `backend/app/routes/article_detail.py`:
-  - `GET /articles/{id}` - Full article analysis with verified statistics, framework positioning, related articles (cluster), and context
-- Registered new routers in `backend/app/main.py`
-- Response models include framework data, sentiment scores, political lean indicators
+```bash
+# Database
+DATABASE_URL=postgresql://postgres:password@db:5432/news_db
 
-### Frontend ✅
-- Extended API client (`frontend/src/lib/api.ts`) with feed and article detail methods:
-  - `getFeedArticles()`, `getFeedTopics()`, `getFeedSources()`
-  - `getArticleDetail()`
-- Created feed page (`frontend/src/app/feed/page.tsx`):
-  - Filter controls (topic, source, political lean, sort order)
-  - Article cards with sentiment, lean, framework positioning
-  - Pagination (20 articles per page)
-  - Clickable articles navigate to detail page
-- Created article detail page (`frontend/src/app/article/[id]/page.tsx`):
-  - Full article summary and metadata
-  - Sentiment & bias analysis with visual indicators
-  - Verified statistics with badges (verified/unverified/disputed/false)
-  - Framework positioning with axis visualization
-  - Related articles (coverage comparison) from same cluster
-  - Context sections (background, key players, timeline, significance)
+# AI (OpenAI)
+OPENAI_API_KEY=sk-proj-...
+AI_MODEL=gpt-4o-mini
 
-### Testing ⚠️
-- Created `test_feed.py` - 11 tests for feed endpoints
-- Created `test_article_detail.py` - 9 tests for article detail endpoint
-- **11/20 tests passing** (feed tests mostly passing, some article detail tests have fixture issues)
-- Fixed multiple field name mismatches between models and tests:
-  - `ai_explanation` (not `explanation`) in ArticleFrameworkLink
-  - `statistic_text` (not `statistic`) in StatisticVerification
-  - `confidence_score` (not `confidence`) in StatisticVerification
-  - Removed non-existent `read_time_minutes` field from responses
-  - Added required `axis_description` to Framework fixtures
+# Email (Resend)
+RESEND_API_KEY=re_...
+FROM_EMAIL=onboarding@resend.dev
+FROM_NAME=Pulse News
 
-### Bugs Fixed 🐞
-- Fixed field name mismatches in ArticleFrameworkLink model usage
-- Fixed StatisticVerification field names in article detail endpoint
-- Removed references to non-existent `read_time_minutes` field
-- Added missing required fields to test fixtures (Framework.axis_description)
+# Auth
+SECRET_KEY=your-secret-key
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=43200
 
-**Code References:**
-- Feed backend: [backend/app/routes/feed.py](backend/app/routes/feed.py)
-- Article detail backend: [backend/app/routes/article_detail.py](backend/app/routes/article_detail.py)
-- Feed UI: [frontend/src/app/feed/page.tsx](frontend/src/app/feed/page.tsx)
-- Article detail UI: [frontend/src/app/article/[id]/page.tsx](frontend/src/app/article/[id]/page.tsx)
-- Tests: [backend/tests/test_feed.py](backend/tests/test_feed.py), [backend/tests/test_article_detail.py](backend/tests/test_article_detail.py)
+# Fact-checking (Optional)
+GOOGLE_FACT_CHECK_API_KEY=...
+CLAIMBUSTER_API_KEY=...
+```
 
 ---
 
-## 2025-10-03 04:00
+## 🛠️ Tech Stack Summary
 
-**Frontend UI Fix: Preferences Page Tabs** 🐞
-
-### Issue
-- Sources and Settings tabs were not showing any UI
-- Only Topics tab was rendering content
-- Users couldn't see or interact with source preferences or settings
-
-### Fix
-- Added conditional rendering for all three tabs in preferences page
-- **Sources Tab**: Grid layout with checkboxes, trust scores, political lean badges
-- **Settings Tab**: Dropdowns for discovery mode, article ordering, slider for articles per topic
-- Each tab now has its own save button with proper handler
-
-**Code Reference:**
-- Fixed file: [frontend/src/app/preferences/page.tsx](frontend/src/app/preferences/page.tsx:252-499)
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| **Backend** | FastAPI | Latest |
+| **ORM** | SQLModel | 0.0.16 |
+| **Database** | PostgreSQL | 16 |
+| **Migrations** | Alembic | Latest |
+| **Jobs** | APScheduler | Latest |
+| **AI** | OpenAI GPT-4o-mini | Latest |
+| **Email** | Resend API | Latest |
+| **Frontend** | Next.js | 15.5.4 |
+| **UI** | React | 19.1.0 |
+| **Styling** | Tailwind CSS | 4 |
+| **Charts** | Recharts | Latest |
+| **Testing (BE)** | pytest | Latest |
+| **Testing (FE)** | Jest + RTL | Latest |
 
 ---
 
-## 2025-10-03 05:00
+## 🚨 Important Conventions
 
-**Frontend Testing Infrastructure** ✅
+### Code Organization
+- **Services**: Pure business logic, no FastAPI dependencies
+- **Routes**: API endpoints only, delegate to services
+- **Models**: SQLModel schemas with validation
+- **Tests**: One test file per service/route
 
-### Setup Complete
-- Installed testing libraries: Jest, React Testing Library, jest-dom, user-event
-- Created `jest.config.js` with Next.js integration
-- Created `jest.setup.js` with navigation mocks and window.matchMedia polyfill
-- Added test scripts to package.json: `test`, `test:watch`, `test:coverage`
-- Exported ApiClient class for testing
+### Naming Conventions
+- **Files**: `snake_case.py`
+- **Classes**: `PascalCase`
+- **Functions**: `snake_case()`
+- **Constants**: `UPPER_SNAKE_CASE`
 
-### Tests Created
-- **API Client Tests** (`src/lib/__tests__/api.test.ts`) - 15+ test cases:
-  - Authentication (login, register, token management)
-  - Preferences (get/update preferences, sources, settings)
-  - Analytics (user stats, sentiment over time)
-  - Feed (articles, filtering, article detail)
-  - Error handling
+### Git Workflow
+- **Main branch**: Always stable, CI must pass
+- **Feature branches**: `feature/description` or `fix/description`
+- **Commits**: Descriptive messages, reference issues if applicable
 
-- **Preferences Page Tests** (`src/app/preferences/__tests__/page.test.tsx`) - 15+ test cases:
-  - Loading state and data fetching
-  - Topic toggle and priority adjustment
-  - Sources tab (display, trust scores, subscription toggle)
-  - Settings tab (discovery mode, article ordering, articles per topic)
-  - Save functionality for all tabs
-  - Logout and auth error handling
+### Testing Standards
+- **Backend**: Aim for 100% coverage on services
+- **Frontend**: Test user interactions, not implementation details
+- **Fixtures**: Reuse test data across files
 
-### Test Infrastructure Ready
-- Can run tests with: `npm test`
-- Watch mode: `npm test:watch`
-- Coverage: `npm test:coverage`
+---
 
-### Database Seeded ✅
-- Ran `python -m app.seed_data` to populate database
-- **8 topics** created (general, politics, economics, technology, science, culture, world, environment)
-- **8 sources** created (AP, Reuters, NPR, BBC, NYT, Politico, Ars Technica, The Atlantic)
-- **10 frameworks** created (seed ethical debates)
-- Backend APIs confirmed working with curl tests
+## 📞 Quick References
 
-**Code References:**
-- Jest config: [frontend/jest.config.js](frontend/jest.config.js)
-- API tests: [frontend/src/lib/__tests__/api.test.ts](frontend/src/lib/__tests__/api.test.ts)
-- Preferences tests: [frontend/src/app/preferences/__tests__/page.test.tsx](frontend/src/app/preferences/__tests__/page.test.tsx)
+- **Interactive API Docs**: http://localhost:8000/docs
+- **Frontend Dev Server**: http://localhost:3000
+- **PostgreSQL**: localhost:5432
+- **Backend Container**: `news_backend`
+- **Database Container**: `news_db`
 
-**Next Steps** 🧠
-- Run full frontend test suite and fix any issues
-- Add tests for dashboard, feed, and article detail pages
-- Phase 4: Challenge System (weekly challenges, viewpoint tracking, reflections)
+---
+
+**Last Updated**: 2025-10-03
+**Status**: Phase 3 Complete (127 backend + 107 frontend tests passing ✅)
+**Maintained by**: AI assistants working on Pulse

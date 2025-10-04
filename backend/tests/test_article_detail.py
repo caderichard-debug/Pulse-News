@@ -74,7 +74,7 @@ def test_article(session: Session):
         topic_category="Politics",
         published_at=datetime.utcnow(),
         processing_status="completed",
-        content="This is test content for the article."
+        content_text="This is test content for the article."
     )
     session.add(article)
     session.commit()
@@ -140,10 +140,8 @@ def test_article(session: Session):
 
     # Create related article in same cluster
     cluster = ArticleCluster(
-        cluster_id="cluster-1",
-        representative_article_id=article.id,
-        article_count=2,
-        shared_themes="test theme"
+        cluster_hash="test-cluster-hash-123",
+        primary_topic="Politics"
     )
     session.add(cluster)
     session.commit()
@@ -152,7 +150,8 @@ def test_article(session: Session):
     # Add original article to cluster
     member1 = ArticleClusterMember(
         cluster_id=cluster.id,
-        article_id=article.id
+        article_id=article.id,
+        similarity_score=1.0
     )
     session.add(member1)
 
@@ -164,7 +163,7 @@ def test_article(session: Session):
         topic_category="Politics",
         published_at=datetime.utcnow(),
         processing_status="completed",
-        content="Related content"
+        content_text="Related content"
     )
     session.add(related_article)
     session.commit()
@@ -182,7 +181,8 @@ def test_article(session: Session):
     # Add related article to cluster
     member2 = ArticleClusterMember(
         cluster_id=cluster.id,
-        article_id=related_article.id
+        article_id=related_article.id,
+        similarity_score=0.85
     )
     session.add(member2)
     session.commit()
@@ -223,7 +223,8 @@ class TestArticleDetailEndpoints:
         """Test that article detail requires authentication."""
         article_id = test_article["article"].id
         response = client.get(f"/articles/{article_id}")
-        assert response.status_code == 401
+        # FastAPI returns 403 when auth dependency fails
+        assert response.status_code == 403
 
     def test_article_detail_includes_statistics(self, client, auth_token, test_article):
         """Test that article detail includes verified statistics."""

@@ -223,11 +223,11 @@ Runs:   Every 4 hours
 Input:  Articles with content, no analysis
 Process:
   - Batch 5 articles together
-  - Send to Claude Haiku API
+  - Send to OpenAI GPT-4o-mini API
   - Extract: summary, sentiment, lean, stats
 Output: ArticleAnalysis records
 Cost:   ~$0.002 per article
-Runs:   Every 4 hours (after extraction)
+Runs:   Every 6 hours
 ```
 
 #### 4. Framework Generator Service
@@ -236,9 +236,9 @@ Input:  Recent analyzed articles
 Process:
   - Map to existing frameworks
   - Calculate relevance & position
-  - Weekly: discover new frameworks
+  - Weekly (Sundays): discover new frameworks
 Output: ArticleFramework links
-Runs:   Daily at 2am
+Runs:   Daily at 2:00 AM
 ```
 
 #### 5. Newsletter Builder Service
@@ -250,27 +250,54 @@ Process:
   - Find related frameworks
   - Generate "Bigger Picture" section
   - Render Jinja2 template
-Output: HTML email content
-Runs:   Daily at 7am
+  - Send via Resend API
+Output: Newsletter records
+Runs:   Daily at 10:20 AM PST
+Rate:   3,000/month (free tier)
 ```
 
-#### 6. Email Sender Service
+#### 6. Statistics Verification Service
 ```python
-Input:  HTML email + user list
+Input:  Articles with unverified statistics
 Process:
-  - Send via Resend API
-  - Track delivery
-  - Log errors
-Output: Newsletter records
-Rate:   3,000/month (free tier)
-Runs:   Daily at 7am
+  - Extract statistics from article text
+  - Trace sources (V2 pipeline)
+  - Rate source credibility
+  - Check fact-checking APIs
+Output: StatisticVerification records
+Runs:   Every 6 hours
+```
+
+#### 7. Article Clustering Service
+```python
+Input:  Articles without cluster assignment
+Process:
+  - Compare article similarity (embedding-based)
+  - Group similar articles (same story, different sources)
+  - Create clusters for cross-source comparison
+Output: ArticleCluster + ArticleClusterMember records
+Runs:   Every 4 hours
+```
+
+#### 8. Context Generation Service
+```python
+Input:  High-priority articles without context
+Process:
+  - Generate background information
+  - Identify key players
+  - Create timeline
+  - Explain significance
+  - Use AI (OpenAI GPT-4o-mini)
+Output: ArticleContext records
+Runs:   Every 8 hours
+Cost:   Expensive (limited to 5 articles per run)
 ```
 
 ## 🔐 Authentication Flow
 
 ```
 User Registration:
-POST /auth/signup
+POST /auth/register
     ↓
 [Create User] → Hash password (bcrypt)
     ↓
@@ -390,7 +417,7 @@ Railway/Render (Free)
 
 External:
 ├── Resend (3k emails/month free)
-└── Anthropic Claude ($5 credit)
+└── OpenAI API ($5 credit)
 
 Cost: $0-5/month
 ```
@@ -405,7 +432,7 @@ DigitalOcean Droplet ($12/mo)
 
 External:
 ├── Resend (Paid tier ~$5/mo)
-└── Anthropic Claude (~$10-20/mo)
+└── OpenAI API (~$10-20/mo)
 
 Cost: $30-50/month
 ```
@@ -442,7 +469,7 @@ Cost: $100-300/month
 | **Scheduling** | APScheduler | Background jobs |
 | **Scraping** | feedparser | RSS feed parsing |
 | **Extraction** | trafilatura | Article content extraction |
-| **AI** | Anthropic Claude | Text analysis & generation |
+| **AI** | OpenAI GPT-4o-mini | Text analysis & generation |
 | **Email** | Resend | Email delivery |
 | **Templates** | Jinja2 | Email HTML rendering |
 | **Auth** | JWT | Stateless authentication |

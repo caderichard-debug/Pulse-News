@@ -35,7 +35,7 @@ over individual responsibility (loan repayment).
 - PostgreSQL for database
 - Alembic for migrations
 - APScheduler for jobs
-- Claude Haiku for AI analysis
+- OpenAI GPT-4o-mini for AI analysis
 
 **Scraping**
 - feedparser (RSS feeds)
@@ -74,7 +74,7 @@ users → newsletters
 ### Prerequisites
 
 - Docker & Docker Compose
-- Anthropic API key ([get one](https://console.anthropic.com/))
+- OpenAI API key ([get one](https://platform.openai.com/))
 - Resend API key ([get one](https://resend.com/))
 
 ### Setup
@@ -215,7 +215,7 @@ docker-compose exec backend alembic downgrade -1
 
 **AI Costs** (biggest expense):
 1. **Batch processing**: 5 articles per API call (60% savings)
-2. **Claude Haiku**: Cheapest option at $0.25/1M input tokens
+2. **OpenAI GPT-4o-mini**: Cost-effective at $0.150/1M input tokens, $0.600/1M output tokens
 3. **Smart caching**: Don't reprocess similar articles
 4. **Selective processing**: Only analyze articles for active topics
 
@@ -285,7 +285,7 @@ MIT License - see [LICENSE](LICENSE) file for details
 ## 🙏 Acknowledgments
 
 - News sources: AP, Reuters, NPR, BBC, NYT, Politico, Ars Technica, The Atlantic
-- AI: Anthropic Claude
+- AI: OpenAI GPT-4o-mini
 - Inspiration: The need for better news context and mental models
 
 ## 📞 Contact

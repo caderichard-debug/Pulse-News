@@ -38,7 +38,7 @@ Returns server health status.
 ### User Registration
 
 ```http
-POST /auth/signup
+POST /auth/register
 ```
 
 **Request Body:**
@@ -378,6 +378,594 @@ Authorization: Bearer <token>
       "email_opened": false
     }
   ]
+}
+```
+
+---
+
+### Extended Preferences Endpoints
+
+#### Get All Topics
+
+```http
+GET /preferences/topics
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "name": "Politics",
+    "description": "Political news and analysis",
+    "is_active_default": true
+  },
+  {
+    "id": 2,
+    "name": "Technology",
+    "description": "Tech industry news",
+    "is_active_default": true
+  }
+]
+```
+
+---
+
+#### Subscribe to Topic
+
+```http
+POST /preferences/topics/{topic_id}/subscribe
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "message": "Subscribed to topic successfully"
+}
+```
+
+---
+
+#### Unsubscribe from Topic
+
+```http
+POST /preferences/topics/{topic_id}/unsubscribe
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "message": "Unsubscribed from topic successfully"
+}
+```
+
+---
+
+#### Get Newsletter Preview
+
+```http
+GET /preferences/newsletter-preview
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "articles": [
+    {
+      "id": 1,
+      "title": "Article Title",
+      "source": "Reuters",
+      "summary": "Brief summary..."
+    }
+  ],
+  "topic_breakdown": {
+    "Politics": 3,
+    "Technology": 2
+  }
+}
+```
+
+---
+
+#### Get Source Preferences
+
+```http
+GET /preferences/sources
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+[
+  {
+    "source_id": 1,
+    "name": "Reuters",
+    "trust_score": 9.5,
+    "political_lean": "center",
+    "subscribed": true
+  },
+  {
+    "source_id": 2,
+    "name": "Fox News",
+    "trust_score": 6.2,
+    "political_lean": "right",
+    "subscribed": false
+  }
+]
+```
+
+---
+
+#### Update Source Preferences
+
+```http
+PUT /preferences/sources
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Request Body:**
+```json
+{
+  "source_ids": [1, 2, 3],
+  "discovery_mode": "some"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Source preferences updated"
+}
+```
+
+---
+
+#### Get User Settings
+
+```http
+GET /preferences/settings
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "article_order": "good_first",
+  "articles_per_topic": 5,
+  "discovery_mode": "some"
+}
+```
+
+---
+
+#### Update User Settings
+
+```http
+PUT /preferences/settings
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Request Body:**
+```json
+{
+  "article_order": "mixed",
+  "articles_per_topic": 7
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Settings updated successfully"
+}
+```
+
+---
+
+### Analytics Endpoints
+
+#### Get User Statistics
+
+```http
+GET /analytics/user-stats
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "articles_read": 127,
+  "newsletters_received": 42,
+  "topics_tracked": 5,
+  "avg_sentiment": -0.3
+}
+```
+
+---
+
+#### Get Sentiment Over Time
+
+```http
+GET /analytics/sentiment-over-time
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Query Parameters:**
+- `days` (int, optional) - Number of days to fetch (default: 30)
+- `topics` (str, optional) - Comma-separated topic IDs
+
+**Response:**
+```json
+[
+  {
+    "date": "2025-10-01",
+    "Politics": -2.3,
+    "Technology": 4.5,
+    "Climate": -1.2
+  },
+  {
+    "date": "2025-10-02",
+    "Politics": -1.8,
+    "Technology": 3.9,
+    "Climate": -0.5
+  }
+]
+```
+
+---
+
+#### Get Bias Distribution
+
+```http
+GET /analytics/bias-distribution
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Query Parameters:**
+- `weeks` (int, optional) - Number of weeks (default: 4)
+
+**Response:**
+```json
+[
+  {
+    "week": "2025-09-25",
+    "left": 35,
+    "center": 40,
+    "right": 25
+  },
+  {
+    "week": "2025-10-02",
+    "left": 30,
+    "center": 45,
+    "right": 25
+  }
+]
+```
+
+---
+
+#### Get Framework Heatmap
+
+```http
+GET /analytics/framework-heatmap
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Query Parameters:**
+- `framework1_id` (int, required) - First framework ID
+- `framework2_id` (int, required) - Second framework ID
+- `days` (int, optional) - Number of days (default: 30)
+
+**Response:**
+```json
+[
+  {
+    "x": -8,
+    "y": 6,
+    "article_count": 23,
+    "avg_sentiment": -4.2,
+    "sample_articles": [
+      {"id": 123, "title": "..."},
+      {"id": 124, "title": "..."}
+    ]
+  }
+]
+```
+
+---
+
+#### Get Available Frameworks
+
+```http
+GET /analytics/frameworks/available
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "name": "Individual Liberty vs. Collective Welfare",
+    "description": "Core tension between personal freedom and community benefit",
+    "article_count": 45
+  }
+]
+```
+
+---
+
+### Feed Endpoints
+
+#### Get Article Feed
+
+```http
+GET /feed/articles
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Query Parameters:**
+- `topic_ids` (str, optional) - Comma-separated topic IDs
+- `source_ids` (str, optional) - Comma-separated source IDs
+- `sentiment_min` (float, optional) - Minimum sentiment (-10 to 10)
+- `sentiment_max` (float, optional) - Maximum sentiment (-10 to 10)
+- `page` (int, optional) - Page number (default: 1)
+- `page_size` (int, optional) - Items per page (default: 20)
+
+**Response:**
+```json
+{
+  "articles": [
+    {
+      "id": 1,
+      "title": "Breaking News",
+      "source_name": "Reuters",
+      "published_at": "2025-10-04T08:00:00Z",
+      "sentiment_score": 2.3,
+      "political_lean": "center",
+      "summary": "Brief summary...",
+      "frameworks": [
+        {
+          "name": "Liberty vs Welfare",
+          "position": 6
+        }
+      ]
+    }
+  ],
+  "total": 150,
+  "page": 1,
+  "page_size": 20,
+  "total_pages": 8
+}
+```
+
+---
+
+#### Get Feed Topics
+
+```http
+GET /feed/topics
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "name": "Politics",
+    "article_count": 45
+  },
+  {
+    "id": 2,
+    "name": "Technology",
+    "article_count": 32
+  }
+]
+```
+
+---
+
+#### Get Feed Sources
+
+```http
+GET /feed/sources
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "name": "Reuters",
+    "article_count": 28
+  },
+  {
+    "id": 2,
+    "name": "BBC",
+    "article_count": 19
+  }
+]
+```
+
+---
+
+### Article Endpoints
+
+#### Get Analyzed Articles
+
+```http
+GET /articles/analyzed
+```
+
+**Query Parameters:**
+- `limit` (int, optional) - Number of articles (default: 10)
+- `offset` (int, optional) - Pagination offset (default: 0)
+
+**Response:**
+```json
+{
+  "total": 50,
+  "articles": [
+    {
+      "id": 1,
+      "title": "Article Title",
+      "url": "https://...",
+      "source": {
+        "name": "Reuters",
+        "url": "https://reuters.com"
+      },
+      "published_at": "2025-10-04T08:00:00Z",
+      "word_count": 850,
+      "analysis": {
+        "summary": "100-word summary...",
+        "sentiment_score": 2.3,
+        "political_lean": "center",
+        "bias_indicators": ["minimal loaded language"],
+        "key_stats": ["50% increase"],
+        "processed_at": "2025-10-04T09:00:00Z"
+      }
+    }
+  ]
+}
+```
+
+---
+
+#### Get Article Detail
+
+```http
+GET /articles/{article_id}
+```
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "title": "Article Title",
+  "url": "https://...",
+  "published_at": "2025-10-04T08:00:00Z",
+  "source_name": "Reuters",
+  "source_url": "https://reuters.com",
+  "topic_category": "Politics",
+  "content_preview": "First 500 characters...",
+  "summary": "100-word AI summary...",
+  "sentiment_score": 2.3,
+  "political_lean": "center",
+  "statistics": [
+    {
+      "statistic": "50% increase in crossings",
+      "verification_status": "verified",
+      "confidence": 0.85,
+      "source_name": "DHS",
+      "source_url": "https://...",
+      "source_credibility_score": 8.5,
+      "fact_check_status": "confirmed",
+      "fact_check_source": "FactCheck.org"
+    }
+  ],
+  "frameworks": [
+    {
+      "framework_id": 1,
+      "framework_name": "Liberty vs Welfare",
+      "left_position": "Individual rights",
+      "right_position": "Community welfare",
+      "position_on_axis": 6,
+      "relevance_score": 0.85,
+      "explanation": "Article emphasizes collective benefit..."
+    }
+  ],
+  "related_articles": [
+    {
+      "id": 2,
+      "title": "Related Coverage",
+      "source_name": "BBC",
+      "published_at": "2025-10-04T09:00:00Z",
+      "sentiment_score": -3.1,
+      "political_lean": "center",
+      "url": "https://..."
+    }
+  ],
+  "context": {
+    "background": "This issue dates back to...",
+    "key_players": "Biden, Congress...",
+    "timeline": "Jan 2024: Initial proposal...",
+    "significance": "This matters because..."
+  }
 }
 ```
 
