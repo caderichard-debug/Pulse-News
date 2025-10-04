@@ -30,15 +30,23 @@ openai_api = OpenAI(api_key=settings.openai_api_key) if settings.openai_api_key 
 logger = logging.getLogger(__name__)
 
 
-STATISTICS_EXTRACTION_PROMPT = """Analyze this article and extract all numerical claims and statistics.
+STATISTICS_EXTRACTION_PROMPT = """Analyze this article and extract ALL quantifiable claims, statistics, and factual assertions.
 
 Article Title: {title}
 Article Summary: {summary}
 Key Stats (if any): {existing_stats}
 
-For each statistic found, provide:
-1. exact_quote: The exact statistic as stated in the article
-2. context: Brief context explaining what the statistic refers to
+IMPORTANT: Extract ALL of the following types of claims:
+1. Numerical statistics (percentages, counts, amounts): "50% increase", "$2.5 billion", "10,000 people"
+2. Written numbers: "seven patients", "three months", "dozens of cases", "hundreds injured"
+3. Quantifiable outcomes: "deaths of seven patients", "killed 12 people", "injured dozens"
+4. Time-based claims: "within 24 hours", "over three years", "since 2020"
+5. Comparative claims: "twice as many", "half the cost", "tripled in size"
+6. Frequency claims: "daily", "every week", "once per month"
+
+For each claim found, provide:
+1. exact_quote: The EXACT claim as stated in the article (including written numbers)
+2. context: Brief context explaining what the claim refers to
 3. verifiable: Whether this can be fact-checked (true/false)
 4. confidence: Your confidence in accuracy (0.0 to 1.0)
 
@@ -47,10 +55,10 @@ Return a JSON array of statistics. If no statistics found, return empty array.
 Example format:
 [
   {{
-    "exact_quote": "50% increase in Q3",
-    "context": "Sales growth compared to previous quarter",
+    "exact_quote": "deaths of seven patients",
+    "context": "Patient fatalities attributed to medical failures",
     "verifiable": true,
-    "confidence": 0.8
+    "confidence": 0.9
   }}
 ]
 

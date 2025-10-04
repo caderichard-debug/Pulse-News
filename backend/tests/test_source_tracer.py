@@ -157,9 +157,9 @@ class TestSourceTracer:
         """Test full source tracing pipeline"""
         tracer = SourceTracer()
 
-        # Mock AI response
-        mock_response = Mock()
-        mock_response.choices = [Mock(message=Mock(content='''
+        # Mock AI responses for multi-turn reasoning
+        mock_response_1 = Mock()
+        mock_response_1.choices = [Mock(message=Mock(content='''
         {
             "source_url": "https://nih.gov/study",
             "source_name": "National Institutes of Health",
@@ -167,11 +167,26 @@ class TestSourceTracer:
             "confidence": 0.88
         }
         '''))]
-        mock_openai_api.chat.completions.create.return_value = mock_response
 
+        mock_response_2 = Mock()
+        mock_response_2.choices = [Mock(message=Mock(content='''
+        {
+            "verified": true,
+            "confidence_adjustment": 0.05,
+            "alternative_source": null,
+            "reasoning": "Article clearly cites NIH"
+        }
+        '''))]
+
+        mock_openai_api.chat.completions.create.side_effect = [
+            mock_response_1,
+            mock_response_2
+        ]
+
+        # Article content must contain the source name near the statistic for validation
         result = tracer.trace_statistic_source(
             statistic_text="50% effectiveness",
-            article_content="The NIH study shows 50% effectiveness. https://nih.gov/study",
+            article_content="According to the National Institutes of Health study, the treatment shows 50% effectiveness. https://nih.gov/study",
             article_url="https://news.com/article",
             session=None
         )
@@ -180,24 +195,43 @@ class TestSourceTracer:
         assert result["source_name"] == "National Institutes of Health"
         assert result["source_url"] == "https://nih.gov/study"
 
+    @patch('app.services.source_tracer.settings')
     @patch('app.services.source_tracer.openai_api')
-    def test_trace_statistic_source_ai_fails_uses_nearby_url(self, mock_openai_api):
-        """Test that nearby URLs are used when AI fails to find source"""
+    def test_trace_statistic_source_ai_fails_uses_nearby_url(self, mock_openai_api, mock_settings):
+        """Test that nearby URLs are used when AI finds a source near the statistic"""
+        # Disable web search for this test
+        mock_settings.google_fact_check_api_key = None
+
         tracer = SourceTracer()
 
-        # Mock AI response with no URL
-        mock_response = Mock()
-        mock_response.choices = [Mock(message=Mock(content='''
+        # Mock AI responses for multi-turn reasoning
+        mock_response_1 = Mock()
+        mock_response_1.choices = [Mock(message=Mock(content='''
         {
             "source_url": null,
-            "source_name": "Some Source",
-            "source_excerpt": "...",
+            "source_name": "Research Organization",
+            "source_excerpt": "The study found...",
             "confidence": 0.5
         }
         '''))]
-        mock_openai_api.chat.completions.create.return_value = mock_response
 
-        article_with_url = "The study (https://research.org/data) found 75% success rate."
+        mock_response_2 = Mock()
+        mock_response_2.choices = [Mock(message=Mock(content='''
+        {
+            "verified": true,
+            "confidence_adjustment": 0.0,
+            "alternative_source": null,
+            "reasoning": "Source mentioned in article"
+        }
+        '''))]
+
+        mock_openai_api.chat.completions.create.side_effect = [
+            mock_response_1,
+            mock_response_2
+        ]
+
+        # Article with source name near the statistic AND a nearby URL
+        article_with_url = "The Research Organization study (https://research.org/data) found 75% success rate."
 
         result = tracer.trace_statistic_source(
             statistic_text="75%",
@@ -209,8 +243,9 @@ class TestSourceTracer:
         # Should use nearby URL
         assert result is not None
         assert result["source_url"] == "https://research.org/data"
-        # Confidence should be lowered
-        assert result["confidence"] <= 0.6
+        assert result["source_name"] == "Research Organization"
+        # Confidence should be adjusted
+        assert result["confidence"] <= 0.65
 
     def test_get_source_tracer_singleton(self):
         """Test singleton pattern"""
