@@ -1,0 +1,195 @@
+"""
+Feed routes for home page article browsing.
+"""
+
+from fastapi import APIRouter, Depends, Query
+from sqlmodel import Session, select, func, or_
+from app.database import get_session
+from app.models import (
+    User, Article, ArticleAnalysis, ArticleFrameworkLink,
+    Framework, Source, Topic, UserTopicPreference,
+    UserSourceSubscription, PoliticalLean
+)
+from app.routes.auth import get_current_user
+from pydantic import BaseModel
+from typing import List, Optional, Dict
+from datetime import datetime
+import logging
+
+router = APIRouter(prefix="/feed", tags=["feed"])
+logger = logging.getLogger(__name__)
+
+
+# Response Models
+class ArticleFeedItem(BaseModel):
+    id: int
+    title: str
+    url: str
+    published_at: datetime
+    source_name: str
+    source_id: int
+    topic_category: Optional[str]
+
+    # Analysis data
+    summary: Optional[str]
+    sentiment_score: Optional[float]
+    political_lean: Optional[str]
+
+    # Framework positioning (top framework)
+    primary_framework: Optional[str]
+    framework_position: Optional[int]
+
+
+class FeedResponse(BaseModel):
+    articles: List[ArticleFeedItem]
+    total_count: int
+    page: int
+    page_size: int
+
+
+@router.get("/articles", response_model=FeedResponse)
+async def get_feed_articles(
+    current_user: User = Depends(get_current_user),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    topic: Optional[str] = Query(default=None, description="Filter by topic name"),
+    source_id: Optional[int] = Query(default=None, description="Filter by source ID"),
+    political_lean: Optional[str] = Query(default=None, description="Filter by political lean: left, center, right"),
+    sort_by: str = Query(default="newest", description="Sort order: newest, oldest, sentiment_high, sentiment_low"),
+    session: Session = Depends(get_session)
+):
+    """
+    Get personalized article feed with filtering and sorting.
+
+    Returns paginated list of articles with analysis data.
+    """
+    # Build base query
+    query = (
+        select(Article, ArticleAnalysis, Source)
+        .join(ArticleAnalysis, ArticleAnalysis.article_id == Article.id)
+        .join(Source, Source.id == Article.source_id)
+        .where(Article.processing_status == "completed")
+    )
+
+    # Apply filters
+    if topic:
+        query = query.where(Article.topic_category == topic)
+
+    if source_id:
+        query = query.where(Article.source_id == source_id)
+
+    if political_lean:
+        # Convert string to enum
+        lean_enum = PoliticalLean(political_lean)
+        query = query.where(ArticleAnalysis.political_lean == lean_enum)
+
+    # Get total count before pagination
+    count_query = select(func.count()).select_from(query.subquery())
+    total_count = session.exec(count_query).one()
+
+    # Apply sorting
+    if sort_by == "newest":
+        query = query.order_by(Article.published_at.desc())
+    elif sort_by == "oldest":
+        query = query.order_by(Article.published_at.asc())
+    elif sort_by == "sentiment_high":
+        query = query.order_by(ArticleAnalysis.sentiment_score.desc())
+    elif sort_by == "sentiment_low":
+        query = query.order_by(ArticleAnalysis.sentiment_score.asc())
+
+    # Apply pagination
+    offset = (page - 1) * page_size
+    query = query.offset(offset).limit(page_size)
+
+    results = session.exec(query).all()
+
+    # Get framework data for articles
+    article_ids = [article.id for article, _, _ in results]
+    framework_links = session.exec(
+        select(ArticleFrameworkLink, Framework)
+        .join(Framework, Framework.id == ArticleFrameworkLink.framework_id)
+        .where(ArticleFrameworkLink.article_id.in_(article_ids))
+        .order_by(ArticleFrameworkLink.relevance_score.desc())
+    ).all()
+
+    # Map frameworks to articles (get top framework per article)
+    article_frameworks: Dict[int, tuple] = {}
+    for link, framework in framework_links:
+        if link.article_id not in article_frameworks:
+            article_frameworks[link.article_id] = (framework.name, link.position_on_axis)
+
+    # Build response
+    articles = []
+    for article, analysis, source in results:
+        framework_data = article_frameworks.get(article.id)
+
+        articles.append(ArticleFeedItem(
+            id=article.id,
+            title=article.title,
+            url=article.url,
+            published_at=article.published_at,
+            source_name=source.name,
+            source_id=source.id,
+            topic_category=article.topic_category,
+            summary=analysis.summary,
+            sentiment_score=analysis.sentiment_score,
+            political_lean=analysis.political_lean.value if analysis.political_lean else None,
+            primary_framework=framework_data[0] if framework_data else None,
+            framework_position=framework_data[1] if framework_data else None
+        ))
+
+    return FeedResponse(
+        articles=articles,
+        total_count=total_count,
+        page=page,
+        page_size=page_size
+    )
+
+
+@router.get("/topics")
+async def get_available_topics(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Get list of topics that have articles available.
+    """
+    topics = session.exec(
+        select(Article.topic_category, func.count(Article.id).label('count'))
+        .where(Article.topic_category.isnot(None))
+        .where(Article.processing_status == "completed")
+        .group_by(Article.topic_category)
+        .order_by(func.count(Article.id).desc())
+    ).all()
+
+    return [
+        {"name": topic, "article_count": count}
+        for topic, count in topics
+    ]
+
+
+@router.get("/sources")
+async def get_available_sources(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Get list of sources that have articles available.
+    """
+    sources = session.exec(
+        select(Source, func.count(Article.id).label('count'))
+        .join(Article, Article.source_id == Source.id)
+        .where(Article.processing_status == "completed")
+        .group_by(Source.id)
+        .order_by(func.count(Article.id).desc())
+    ).all()
+
+    return [
+        {
+            "id": source.id,
+            "name": source.name,
+            "url": source.url,
+            "article_count": count
+        }
+        for source, count in sources
+    ]

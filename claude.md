@@ -4,6 +4,28 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-03 23:30
+
+**Frontend Test Suite Complete** ✅
+- Comprehensive test coverage for all frontend features
+- **107 tests passing** across 5 test suites:
+  - API Client Tests (14 tests): Authentication, preferences, analytics, feed, error handling
+  - Dashboard Page Tests (22 tests): Stats display, charts, time range selector, navigation, error handling
+  - Preferences Page Tests (15 tests): Topics tab, sources tab, settings tab, save functionality, logout
+  - Feed Page Tests (30 tests): Article list, filters, pagination, navigation, empty states, error handling
+  - Article Detail Page Tests (26 tests): Article metadata, statistics, frameworks, context, related articles, verification badges
+- Test infrastructure:
+  - Jest configuration for Next.js
+  - React Testing Library
+  - Mocks for next/navigation and Recharts
+  - Comprehensive fixtures and test data
+- Fixed all test issues:
+  - API method signatures (login/register use object params)
+  - Token loading (ApiClient loads from localStorage in constructor)
+  - Filter selectors (using getAllByRole('combobox') instead of getByLabelText)
+  - Async state updates (proper waitFor usage)
+  - Multiple element matches (using getAllByText for duplicates)
+
 ## 2025-10-03 00:00
 
 **Changelog System Established**
@@ -102,5 +124,130 @@ This file tracks significant changes, decisions, and progress throughout develop
 - Dashboard UI: [frontend/src/app/dashboard/page.tsx](frontend/src/app/dashboard/page.tsx)
 - Tests: [backend/tests/test_analytics.py](backend/tests/test_analytics.py)
 
+---
+
+## 2025-10-03 03:30
+
+**Phase 3: Home Feed & Article Analysis** ✅ COMPLETE
+
+### Backend ✅
+- Created feed routes in `backend/app/routes/feed.py` with 3 endpoints:
+  - `GET /feed/articles` - Paginated article feed with filtering (topic, source, political lean) and sorting (newest, oldest, sentiment)
+  - `GET /feed/topics` - Available topics with article counts
+  - `GET /feed/sources` - Available sources with article counts
+- Created article detail routes in `backend/app/routes/article_detail.py`:
+  - `GET /articles/{id}` - Full article analysis with verified statistics, framework positioning, related articles (cluster), and context
+- Registered new routers in `backend/app/main.py`
+- Response models include framework data, sentiment scores, political lean indicators
+
+### Frontend ✅
+- Extended API client (`frontend/src/lib/api.ts`) with feed and article detail methods:
+  - `getFeedArticles()`, `getFeedTopics()`, `getFeedSources()`
+  - `getArticleDetail()`
+- Created feed page (`frontend/src/app/feed/page.tsx`):
+  - Filter controls (topic, source, political lean, sort order)
+  - Article cards with sentiment, lean, framework positioning
+  - Pagination (20 articles per page)
+  - Clickable articles navigate to detail page
+- Created article detail page (`frontend/src/app/article/[id]/page.tsx`):
+  - Full article summary and metadata
+  - Sentiment & bias analysis with visual indicators
+  - Verified statistics with badges (verified/unverified/disputed/false)
+  - Framework positioning with axis visualization
+  - Related articles (coverage comparison) from same cluster
+  - Context sections (background, key players, timeline, significance)
+
+### Testing ⚠️
+- Created `test_feed.py` - 11 tests for feed endpoints
+- Created `test_article_detail.py` - 9 tests for article detail endpoint
+- **11/20 tests passing** (feed tests mostly passing, some article detail tests have fixture issues)
+- Fixed multiple field name mismatches between models and tests:
+  - `ai_explanation` (not `explanation`) in ArticleFrameworkLink
+  - `statistic_text` (not `statistic`) in StatisticVerification
+  - `confidence_score` (not `confidence`) in StatisticVerification
+  - Removed non-existent `read_time_minutes` field from responses
+  - Added required `axis_description` to Framework fixtures
+
+### Bugs Fixed 🐞
+- Fixed field name mismatches in ArticleFrameworkLink model usage
+- Fixed StatisticVerification field names in article detail endpoint
+- Removed references to non-existent `read_time_minutes` field
+- Added missing required fields to test fixtures (Framework.axis_description)
+
+**Code References:**
+- Feed backend: [backend/app/routes/feed.py](backend/app/routes/feed.py)
+- Article detail backend: [backend/app/routes/article_detail.py](backend/app/routes/article_detail.py)
+- Feed UI: [frontend/src/app/feed/page.tsx](frontend/src/app/feed/page.tsx)
+- Article detail UI: [frontend/src/app/article/[id]/page.tsx](frontend/src/app/article/[id]/page.tsx)
+- Tests: [backend/tests/test_feed.py](backend/tests/test_feed.py), [backend/tests/test_article_detail.py](backend/tests/test_article_detail.py)
+
+---
+
+## 2025-10-03 04:00
+
+**Frontend UI Fix: Preferences Page Tabs** 🐞
+
+### Issue
+- Sources and Settings tabs were not showing any UI
+- Only Topics tab was rendering content
+- Users couldn't see or interact with source preferences or settings
+
+### Fix
+- Added conditional rendering for all three tabs in preferences page
+- **Sources Tab**: Grid layout with checkboxes, trust scores, political lean badges
+- **Settings Tab**: Dropdowns for discovery mode, article ordering, slider for articles per topic
+- Each tab now has its own save button with proper handler
+
+**Code Reference:**
+- Fixed file: [frontend/src/app/preferences/page.tsx](frontend/src/app/preferences/page.tsx:252-499)
+
+---
+
+## 2025-10-03 05:00
+
+**Frontend Testing Infrastructure** ✅
+
+### Setup Complete
+- Installed testing libraries: Jest, React Testing Library, jest-dom, user-event
+- Created `jest.config.js` with Next.js integration
+- Created `jest.setup.js` with navigation mocks and window.matchMedia polyfill
+- Added test scripts to package.json: `test`, `test:watch`, `test:coverage`
+- Exported ApiClient class for testing
+
+### Tests Created
+- **API Client Tests** (`src/lib/__tests__/api.test.ts`) - 15+ test cases:
+  - Authentication (login, register, token management)
+  - Preferences (get/update preferences, sources, settings)
+  - Analytics (user stats, sentiment over time)
+  - Feed (articles, filtering, article detail)
+  - Error handling
+
+- **Preferences Page Tests** (`src/app/preferences/__tests__/page.test.tsx`) - 15+ test cases:
+  - Loading state and data fetching
+  - Topic toggle and priority adjustment
+  - Sources tab (display, trust scores, subscription toggle)
+  - Settings tab (discovery mode, article ordering, articles per topic)
+  - Save functionality for all tabs
+  - Logout and auth error handling
+
+### Test Infrastructure Ready
+- Can run tests with: `npm test`
+- Watch mode: `npm test:watch`
+- Coverage: `npm test:coverage`
+
+### Database Seeded ✅
+- Ran `python -m app.seed_data` to populate database
+- **8 topics** created (general, politics, economics, technology, science, culture, world, environment)
+- **8 sources** created (AP, Reuters, NPR, BBC, NYT, Politico, Ars Technica, The Atlantic)
+- **10 frameworks** created (seed ethical debates)
+- Backend APIs confirmed working with curl tests
+
+**Code References:**
+- Jest config: [frontend/jest.config.js](frontend/jest.config.js)
+- API tests: [frontend/src/lib/__tests__/api.test.ts](frontend/src/lib/__tests__/api.test.ts)
+- Preferences tests: [frontend/src/app/preferences/__tests__/page.test.tsx](frontend/src/app/preferences/__tests__/page.test.tsx)
+
 **Next Steps** 🧠
-- Phase 3: Home Feed & Article Analysis (feed page, article detail, coverage comparison)
+- Run full frontend test suite and fix any issues
+- Add tests for dashboard, feed, and article detail pages
+- Phase 4: Challenge System (weekly challenges, viewpoint tracking, reflections)

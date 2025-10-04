@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.database import create_db_and_tables
 from app.jobs.scheduler import start_scheduler, stop_scheduler
-from app.routes import admin, auth, preferences, articles, test_email, analytics
+from app.routes import admin, auth, preferences, articles, test_email, analytics, feed, article_detail
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -49,6 +49,8 @@ app.include_router(preferences.router)
 app.include_router(articles.router)
 app.include_router(test_email.router)
 app.include_router(analytics.router)
+app.include_router(feed.router)
+app.include_router(article_detail.router)
 
 
 @app.get("/")
