@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import Navbar from '@/components/Navbar';
 
 interface TopicPreference {
   id: number;
@@ -169,23 +170,17 @@ export default function PreferencesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between">
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-6xl mx-auto px-4 py-8">
+          {/* Header */}
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">⚡ Pulse</h1>
-              <p className="text-gray-600 mt-1">Your Personalized News Preferences</p>
+              <h1 className="text-3xl font-bold text-gray-900">⚙️ Preferences</h1>
+              <p className="text-gray-600 mt-1">Customize your news experience</p>
             </div>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
-            >
-              Logout
-            </button>
           </div>
-        </div>
 
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow-sm mb-6">
@@ -512,5 +507,6 @@ export default function PreferencesPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

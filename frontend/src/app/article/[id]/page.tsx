@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { api } from '@/lib/api';
+import Navbar from '@/components/Navbar';
 
 interface ArticleDetail {
   id: number;
@@ -120,38 +121,51 @@ export default function ArticleDetailPage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8 text-center">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <p className="mt-2 text-gray-600">Loading article...</p>
-      </div>
+      <>
+        <Navbar />
+        <div className="min-h-screen bg-gray-50">
+          <div className="max-w-4xl mx-auto px-4 py-8 text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+            <p className="mt-4 text-gray-600">Loading article...</p>
+          </div>
+        </div>
+      </>
     );
   }
 
   if (error || !article) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-          {error || 'Article not found'}
+      <>
+        <Navbar />
+        <div className="min-h-screen bg-gray-50">
+          <div className="max-w-4xl mx-auto px-4 py-8">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+              {error || 'Article not found'}
+            </div>
+            <button
+              onClick={() => router.push('/feed')}
+              className="mt-4 text-indigo-600 hover:underline"
+            >
+              ← Back to feed
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => router.push('/feed')}
-          className="mt-4 text-blue-600 hover:underline"
-        >
-          ← Back to feed
-        </button>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      {/* Back button */}
-      <button
-        onClick={() => router.push('/feed')}
-        className="mb-6 text-blue-600 hover:underline flex items-center gap-1"
-      >
-        ← Back to feed
-      </button>
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          {/* Back button */}
+          <button
+            onClick={() => router.push('/feed')}
+            className="mb-6 text-indigo-600 hover:underline flex items-center gap-1 transition-colors"
+          >
+            ← Back to feed
+          </button>
 
       {/* Article header */}
       <div className="mb-8">
@@ -359,6 +373,8 @@ export default function ArticleDetailPage() {
           </div>
         </div>
       )}
-    </div>
+        </div>
+      </div>
+    </>
   );
 }

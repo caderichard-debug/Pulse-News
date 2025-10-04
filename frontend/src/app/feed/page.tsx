@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import Navbar from '@/components/Navbar';
 
 interface Article {
   id: number;
@@ -110,24 +111,32 @@ export default function FeedPage() {
 
   if (error && !feedData) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-          {error}
+      <>
+        <Navbar />
+        <div className="min-h-screen bg-gray-50">
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+              {error}
+            </div>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Article Feed</h1>
-        <p className="text-gray-600">Explore news with AI-powered analysis</p>
-      </div>
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          {/* Header */}
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h1 className="text-3xl font-bold text-gray-900">📰 Article Feed</h1>
+            <p className="text-gray-600 mt-1">Explore news with AI-powered analysis</p>
+          </div>
 
-      {/* Filters */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+          {/* Filters */}
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Topic filter */}
           <div>
@@ -192,119 +201,122 @@ export default function FeedPage() {
               <option value="sentiment_low">Most Negative</option>
             </select>
           </div>
+            </div>
+          </div>
+
+          {/* Results count */}
+          {feedData && (
+            <div className="mb-4 text-sm font-medium text-gray-600">
+              Showing {((feedData.page - 1) * feedData.page_size) + 1} - {Math.min(feedData.page * feedData.page_size, feedData.total_count)} of {feedData.total_count} articles
+            </div>
+          )}
+
+          {/* Article list */}
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+              <p className="mt-4 text-gray-600">Loading articles...</p>
+            </div>
+          ) : feedData && feedData.articles.length > 0 ? (
+            <div className="space-y-4">
+              {feedData.articles.map((article) => (
+                <div
+                  key={article.id}
+                  className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer border-l-4 border-indigo-500"
+                  onClick={() => router.push(`/article/${article.id}`)}
+                >
+                  {/* Header */}
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                    <span className="font-medium text-indigo-600">{article.source_name}</span>
+                    {article.topic_category && (
+                      <>
+                        <span>•</span>
+                        <span>{article.topic_category}</span>
+                      </>
+                    )}
+                    <span>•</span>
+                    <span>{formatTimeAgo(article.published_at)}</span>
+                    {article.read_time_minutes && (
+                      <>
+                        <span>•</span>
+                        <span>{article.read_time_minutes} min read</span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Title */}
+                  <h2 className="text-xl font-semibold mb-3 text-gray-900 hover:text-indigo-600 transition-colors">
+                    {article.title}
+                  </h2>
+
+                  {/* Summary */}
+                  {article.summary && (
+                    <p className="text-gray-700 mb-4 line-clamp-2">{article.summary}</p>
+                  )}
+
+                  {/* Metadata */}
+                  <div className="flex flex-wrap items-center gap-4 text-sm">
+                    {article.sentiment_score !== null && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-gray-600">Sentiment:</span>
+                        <span className={`font-semibold ${getSentimentColor(article.sentiment_score)}`}>
+                          {article.sentiment_score > 0 ? '+' : ''}{article.sentiment_score.toFixed(1)}
+                        </span>
+                      </div>
+                    )}
+
+                    {article.political_lean && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-gray-600">Lean:</span>
+                        <span className={`font-semibold ${getLeanColor(article.political_lean)}`}>
+                          {article.political_lean.charAt(0).toUpperCase() + article.political_lean.slice(1)}
+                        </span>
+                      </div>
+                    )}
+
+                    {article.primary_framework && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-gray-600">Framework:</span>
+                        <span className="font-semibold text-purple-600">
+                          {article.primary_framework} ({article.framework_position > 0 ? '+' : ''}{article.framework_position})
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+              <p className="text-gray-600 text-lg">No articles found with these filters</p>
+              <p className="text-gray-500 text-sm mt-2">Try adjusting your filters or check back later for new content</p>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {feedData && feedData.total_count > feedData.page_size && (
+            <div className="mt-8 flex justify-center items-center gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-gray-700 transition-colors"
+              >
+                Previous
+              </button>
+              <span className="px-4 py-2 text-sm font-medium text-gray-700">
+                Page {page} of {Math.ceil(feedData.total_count / feedData.page_size)}
+              </span>
+              <button
+                onClick={() => setPage(p => p + 1)}
+                disabled={page >= Math.ceil(feedData.total_count / feedData.page_size)}
+                className="px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-gray-700 transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Results count */}
-      {feedData && (
-        <div className="mb-4 text-gray-600">
-          Showing {((feedData.page - 1) * feedData.page_size) + 1} - {Math.min(feedData.page * feedData.page_size, feedData.total_count)} of {feedData.total_count} articles
-        </div>
-      )}
-
-      {/* Article list */}
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-2 text-gray-600">Loading articles...</p>
-        </div>
-      ) : feedData && feedData.articles.length > 0 ? (
-        <div className="space-y-4">
-          {feedData.articles.map((article) => (
-            <div
-              key={article.id}
-              className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => router.push(`/article/${article.id}`)}
-            >
-              {/* Header */}
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                <span className="font-medium text-blue-600">{article.source_name}</span>
-                {article.topic_category && (
-                  <>
-                    <span>•</span>
-                    <span>{article.topic_category}</span>
-                  </>
-                )}
-                <span>•</span>
-                <span>{formatTimeAgo(article.published_at)}</span>
-                {article.read_time_minutes && (
-                  <>
-                    <span>•</span>
-                    <span>{article.read_time_minutes} min read</span>
-                  </>
-                )}
-              </div>
-
-              {/* Title */}
-              <h2 className="text-xl font-semibold mb-3 text-gray-900 hover:text-blue-600">
-                {article.title}
-              </h2>
-
-              {/* Summary */}
-              {article.summary && (
-                <p className="text-gray-700 mb-4 line-clamp-2">{article.summary}</p>
-              )}
-
-              {/* Metadata */}
-              <div className="flex flex-wrap items-center gap-4 text-sm">
-                {article.sentiment_score !== null && (
-                  <div className="flex items-center gap-1">
-                    <span className="text-gray-600">Sentiment:</span>
-                    <span className={`font-semibold ${getSentimentColor(article.sentiment_score)}`}>
-                      {article.sentiment_score > 0 ? '+' : ''}{article.sentiment_score.toFixed(1)}
-                    </span>
-                  </div>
-                )}
-
-                {article.political_lean && (
-                  <div className="flex items-center gap-1">
-                    <span className="text-gray-600">Lean:</span>
-                    <span className={`font-semibold ${getLeanColor(article.political_lean)}`}>
-                      {article.political_lean.charAt(0).toUpperCase() + article.political_lean.slice(1)}
-                    </span>
-                  </div>
-                )}
-
-                {article.primary_framework && (
-                  <div className="flex items-center gap-1">
-                    <span className="text-gray-600">Framework:</span>
-                    <span className="font-semibold text-purple-600">
-                      {article.primary_framework} ({article.framework_position > 0 ? '+' : ''}{article.framework_position})
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <p className="text-gray-600">No articles found with these filters</p>
-        </div>
-      )}
-
-      {/* Pagination */}
-      {feedData && feedData.total_count > feedData.page_size && (
-        <div className="mt-8 flex justify-center gap-2">
-          <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Previous
-          </button>
-          <span className="px-4 py-2">
-            Page {page} of {Math.ceil(feedData.total_count / feedData.page_size)}
-          </span>
-          <button
-            onClick={() => setPage(p => p + 1)}
-            disabled={page >= Math.ceil(feedData.total_count / feedData.page_size)}
-            className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Next
-          </button>
-        </div>
-      )}
-    </div>
+    </>
   );
 }
