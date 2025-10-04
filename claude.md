@@ -60,5 +60,47 @@ This file tracks significant changes, decisions, and progress throughout develop
 - Fixed `subscribed_count` to only count valid sources (not all requested)
 - Fixed test ordering issues by preserving article_ids order from newsletter
 
+---
+
+## 2025-10-03 01:30
+
+**Phase 2: Dashboard & Analytics** ✅ COMPLETE
+
+### Backend ✅
+- Created new analytics routes in `backend/app/routes/analytics.py` with 5 endpoints:
+  - `GET /analytics/user-stats` - Articles read, newsletters received, topics tracked, sources subscribed
+  - `GET /analytics/sentiment-over-time` - Daily sentiment scores by topic (multi-line chart data)
+  - `GET /analytics/bias-distribution` - Weekly political lean percentages (stacked area chart data)
+  - `GET /analytics/framework-heatmap` - 2D heatmap for framework positioning analysis
+  - `GET /analytics/frameworks/available` - List frameworks with article counts
+- Implemented database-agnostic date grouping (Python-based) for SQLite/PostgreSQL compatibility
+- Registered analytics router in `backend/app/main.py`
+
+### Frontend ✅
+- Installed `recharts` library for data visualization (`npm install recharts`)
+- Extended API client (`frontend/src/lib/api.ts`) with analytics methods:
+  - `getUserStats()`, `getSentimentOverTime()`, `getBiasDistribution()`
+  - `getFrameworkHeatmap()`, `getAvailableFrameworks()`
+- Created dashboard page (`frontend/src/app/dashboard/page.tsx`):
+  - User stats overview cards (articles read, newsletters received, etc.)
+  - Time range selector (7/30/90 days)
+  - Sentiment line chart (multi-topic sentiment trends using Recharts)
+  - Bias stacked area chart (political lean distribution using Recharts)
+  - Navigation buttons to preferences and home
+
+### Testing ✅
+- Created `test_analytics.py` - 10 tests covering all analytics endpoints
+- **All 36 tests passing** (10 analytics + 17 source preferences + 9 newsletter preferences)
+
+### Bugs Fixed 🐞
+- Fixed SQLite incompatibility: Replaced PostgreSQL-specific `date_trunc()` and `cast(Date)` with Python-based date grouping
+- Applied fix to both `get_sentiment_over_time` and `get_bias_distribution` endpoints
+- Now works with both SQLite (testing) and PostgreSQL (production)
+
+**Code References:**
+- Analytics backend: [backend/app/routes/analytics.py](backend/app/routes/analytics.py)
+- Dashboard UI: [frontend/src/app/dashboard/page.tsx](frontend/src/app/dashboard/page.tsx)
+- Tests: [backend/tests/test_analytics.py](backend/tests/test_analytics.py)
+
 **Next Steps** 🧠
-- Phase 2: Dashboard & Analytics (sentiment graphs, bias charts, heatmaps)
+- Phase 3: Home Feed & Article Analysis (feed page, article detail, coverage comparison)

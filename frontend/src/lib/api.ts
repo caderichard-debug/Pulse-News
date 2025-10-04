@@ -181,6 +181,54 @@ class ApiClient {
       body: JSON.stringify(settings),
     });
   }
+
+  // Analytics endpoints
+  async getUserStats() {
+    return this.request<{
+      articles_read: number;
+      newsletters_received: number;
+      topics_tracked: number;
+      sources_subscribed: number;
+      views_changed: number;
+    }>('/analytics/user-stats');
+  }
+
+  async getSentimentOverTime(days: number = 30, topicIds?: string) {
+    const params = new URLSearchParams({ days: days.toString() });
+    if (topicIds) params.append('topic_ids', topicIds);
+    return this.request<Array<{
+      date: string;
+      values: Record<string, number>;
+    }>>(`/analytics/sentiment-over-time?${params}`);
+  }
+
+  async getBiasDistribution(weeks: number = 4) {
+    return this.request<Array<{
+      week: string;
+      left: number;
+      center: number;
+      right: number;
+    }>>(`/analytics/bias-distribution?weeks=${weeks}`);
+  }
+
+  async getFrameworkHeatmap(framework1Id: number, framework2Id: number, days: number = 30) {
+    return this.request<Array<{
+      x: number;
+      y: number;
+      article_count: number;
+      avg_sentiment: number;
+      sample_articles: Array<{ id: string; title: string }>;
+    }>>(`/analytics/framework-heatmap?framework1_id=${framework1Id}&framework2_id=${framework2Id}&days=${days}`);
+  }
+
+  async getAvailableFrameworks() {
+    return this.request<Array<{
+      id: number;
+      name: string;
+      left_position: string;
+      right_position: string;
+    }>>('/analytics/frameworks/available');
+  }
 }
 
 export const api = new ApiClient(API_BASE_URL);
