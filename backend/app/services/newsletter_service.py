@@ -7,7 +7,8 @@ from sqlmodel import Session, select
 from app.models import (
     User, Article, ArticleAnalysis, Framework, ArticleFrameworkLink,
     UserTopicPreference, Newsletter, NewsletterArticle, Topic,
-    StatisticVerification, ArticleContext, ArticleCluster, ArticleClusterMember
+    StatisticVerification, ArticleContext, ArticleCluster, ArticleClusterMember,
+    UserSourceSubscription
 )
 from app.database import engine
 from app.config import settings
@@ -164,14 +165,39 @@ def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict
     # )
     # articles_with_analysis = session.exec(articles_query).all()
 
-    # NEW WAY: select random articles with analysis
+    # Get user's subscribed sources
+    user_source_subs = session.exec(
+        select(UserSourceSubscription)
+        .where(UserSourceSubscription.user_id == user.id)
+        .where(UserSourceSubscription.subscribed == True)
+    ).all()
+
+    subscribed_source_ids = [sub.source_id for sub in user_source_subs] if user_source_subs else None
+
+    # Build article query based on preferences
     from sqlalchemy import func
     articles_query = (
         select(Article, ArticleAnalysis)
         .join(ArticleAnalysis)
-        .order_by(func.random())
-        .limit(settings.max_articles_per_newsletter)
     )
+
+    # Filter by subscribed sources if user has specific subscriptions
+    if subscribed_source_ids:
+        articles_query = articles_query.where(Article.source_id.in_(subscribed_source_ids))
+
+    # Order by user preference (good_first, good_last, or mixed)
+    if user.article_order_preference == "good_first":
+        # Positive sentiment first
+        articles_query = articles_query.order_by(ArticleAnalysis.sentiment_score.desc())
+    elif user.article_order_preference == "good_last":
+        # Negative sentiment first (ascending order)
+        articles_query = articles_query.order_by(ArticleAnalysis.sentiment_score.asc())
+    else:  # "mixed" - random
+        articles_query = articles_query.order_by(func.random())
+
+    # Limit by user's preference
+    articles_query = articles_query.limit(user.articles_per_topic_default * len(preferred_topic_ids))
+
     articles_with_analysis = session.exec(articles_query).all()
 
     if not articles_with_analysis:

@@ -12,9 +12,31 @@ interface TopicPreference {
   is_active: boolean;
 }
 
+interface Source {
+  source_id: number;
+  name: string;
+  url: string;
+  trust_score: number;
+  political_lean: string | null;
+  subscribed: boolean;
+}
+
+interface Settings {
+  source_discovery_mode: string;
+  article_order_preference: string;
+  articles_per_topic_default: number;
+}
+
 export default function PreferencesPage() {
   const router = useRouter();
   const [preferences, setPreferences] = useState<TopicPreference[]>([]);
+  const [sources, setSources] = useState<Source[]>([]);
+  const [settings, setSettings] = useState<Settings>({
+    source_discovery_mode: 'some',
+    article_order_preference: 'mixed',
+    articles_per_topic_default: 5,
+  });
+  const [activeTab, setActiveTab] = useState<'topics' | 'sources' | 'settings'>('topics');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -26,8 +48,14 @@ export default function PreferencesPage() {
 
   const loadPreferences = async () => {
     try {
-      const response = await api.getPreferences();
-      setPreferences(response.topics);
+      const [prefsResponse, sourcesResponse, settingsResponse] = await Promise.all([
+        api.getPreferences(),
+        api.getSources(),
+        api.getSettings(),
+      ]);
+      setPreferences(prefsResponse.topics);
+      setSources(sourcesResponse);
+      setSettings(settingsResponse);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '';
       if (errorMessage.includes('401')) {
@@ -77,6 +105,43 @@ export default function PreferencesPage() {
     }
   };
 
+  const toggleSource = (sourceId: number) => {
+    setSources(
+      sources.map((source) =>
+        source.source_id === sourceId ? { ...source, subscribed: !source.subscribed } : source
+      )
+    );
+  };
+
+  const handleSaveSources = async () => {
+    setSaving(true);
+    setMessage(null);
+
+    try {
+      const subscribedSourceIds = sources.filter((s) => s.subscribed).map((s) => s.source_id);
+      await api.updateSourcePreferences(subscribedSourceIds);
+      setMessage({ type: 'success', text: 'Source preferences saved successfully!' });
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save sources' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    setSaving(true);
+    setMessage(null);
+
+    try {
+      await api.updateSettings(settings);
+      setMessage({ type: 'success', text: 'Settings saved successfully!' });
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save settings' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleLogout = () => {
     api.clearToken();
     router.push('/login');
@@ -94,16 +159,24 @@ export default function PreferencesPage() {
   }
 
   const activeTopics = preferences.filter((p) => p.is_active);
+  const subscribedSources = sources.filter((s) => s.subscribed);
+
+  const getPoliticalLeanColor = (lean: string | null) => {
+    if (!lean) return 'bg-gray-100 text-gray-700';
+    if (lean === 'left') return 'bg-blue-100 text-blue-700';
+    if (lean === 'right') return 'bg-red-100 text-red-700';
+    return 'bg-gray-100 text-gray-700';
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">⚡ Pulse</h1>
-              <p className="text-gray-600 mt-1">Your Newsletter Preferences</p>
+              <p className="text-gray-600 mt-1">Your Personalized News Preferences</p>
             </div>
             <button
               onClick={handleLogout}
@@ -111,6 +184,44 @@ export default function PreferencesPage() {
             >
               Logout
             </button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="bg-white rounded-lg shadow-sm mb-6">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex">
+              <button
+                onClick={() => setActiveTab('topics')}
+                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'topics'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Topics ({activeTopics.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('sources')}
+                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'sources'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Sources ({subscribedSources.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'settings'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Settings
+              </button>
+            </nav>
           </div>
         </div>
 

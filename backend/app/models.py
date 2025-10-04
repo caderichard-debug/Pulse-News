@@ -79,6 +79,16 @@ class UserTopicPreference(SQLModel, table=True):
     topic_id: int = Field(foreign_key="topics.id", primary_key=True)
     priority_level: int = Field(default=1, ge=1, le=5)  # 1-5 scale
     include_in_newsletter: bool = Field(default=True)
+    articles_per_topic: int = Field(default=5)
+
+
+class UserSourceSubscription(SQLModel, table=True):
+    __tablename__ = "user_source_subscriptions"
+
+    user_id: int = Field(foreign_key="users.id", primary_key=True)
+    source_id: int = Field(foreign_key="sources.id", primary_key=True)
+    subscribed: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 # Main Tables
@@ -232,6 +242,11 @@ class User(SQLModel, table=True):
     # Subscription
     subscription_tier: SubscriptionTier = Field(default=SubscriptionTier.FREE)
     is_active: bool = Field(default=True)
+
+    # Preferences
+    source_discovery_mode: str = Field(default="some", max_length=20)  # 'none', 'some', 'open'
+    article_order_preference: str = Field(default="mixed", max_length=20)  # 'good_first', 'good_last', 'mixed'
+    articles_per_topic_default: int = Field(default=5)
 
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)

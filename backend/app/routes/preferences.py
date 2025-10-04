@@ -5,7 +5,7 @@ User preferences routes: manage topic subscriptions and notification settings.
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select
 from app.database import get_session
-from app.models import User, UserTopicPreference, Topic
+from app.models import User, UserTopicPreference, Topic, Source, UserSourceSubscription, Article, ArticleAnalysis, PoliticalLean
 from app.routes.auth import get_current_user
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -273,3 +273,186 @@ def get_newsletter_preview(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to generate preview"
         )
+
+
+# Source Preference Models
+class SourcePreferenceInfo(BaseModel):
+    source_id: int
+    name: str
+    url: str
+    trust_score: float
+    political_lean: Optional[str]
+    subscribed: bool
+
+
+class UpdateSourcePreferencesRequest(BaseModel):
+    source_ids: List[int] = Field(description="List of source IDs to subscribe to")
+
+
+class UpdateUserSettingsRequest(BaseModel):
+    source_discovery_mode: Optional[str] = Field(None, description="'none', 'some', or 'open'")
+    article_order_preference: Optional[str] = Field(None, description="'good_first', 'good_last', or 'mixed'")
+    articles_per_topic_default: Optional[int] = Field(None, ge=1, le=10)
+
+
+@router.get("/sources", response_model=List[SourcePreferenceInfo])
+def get_source_preferences(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Get all sources with user's subscription status and aggregated political lean.
+
+    Returns:
+    - source_id, name, url, trust_score
+    - political_lean: aggregated from article_analysis
+    - subscribed: whether user is subscribed
+    """
+    # Get user's subscriptions
+    user_subs = session.exec(
+        select(UserSourceSubscription)
+        .where(UserSourceSubscription.user_id == current_user.id)
+    ).all()
+
+    subs_map = {sub.source_id: sub.subscribed for sub in user_subs}
+
+    # Get all sources
+    sources = session.exec(select(Source)).all()
+
+    result = []
+    for source in sources:
+        # Calculate aggregated political lean (most common lean from articles)
+        from sqlalchemy import func
+        lean_query = session.exec(
+            select(ArticleAnalysis.political_lean, func.count())
+            .join(Article)
+            .where(Article.source_id == source.id)
+            .group_by(ArticleAnalysis.political_lean)
+            .order_by(func.count().desc())
+        )
+
+        most_common_lean = None
+        for lean, count in lean_query:
+            most_common_lean = lean.value if lean else None
+            break
+
+        result.append(SourcePreferenceInfo(
+            source_id=source.id,
+            name=source.name,
+            url=source.url,
+            trust_score=source.trust_score,
+            political_lean=most_common_lean,
+            subscribed=subs_map.get(source.id, False)
+        ))
+
+    return result
+
+
+@router.put("/sources")
+def update_source_preferences(
+    request: UpdateSourcePreferencesRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Update user's source subscriptions.
+
+    Replaces all existing subscriptions with the provided list.
+    """
+    # Delete existing subscriptions
+    existing_subs = session.exec(
+        select(UserSourceSubscription)
+        .where(UserSourceSubscription.user_id == current_user.id)
+    ).all()
+
+    for sub in existing_subs:
+        session.delete(sub)
+
+    # Create new subscriptions
+    subscribed_count = 0
+    for source_id in request.source_ids:
+        # Verify source exists
+        source = session.get(Source, source_id)
+        if not source:
+            logger.warning(f"Source {source_id} not found, skipping")
+            continue
+
+        new_sub = UserSourceSubscription(
+            user_id=current_user.id,
+            source_id=source_id,
+            subscribed=True
+        )
+        session.add(new_sub)
+        subscribed_count += 1
+
+    session.commit()
+    logger.info(f"Updated source subscriptions for user {current_user.email}: {subscribed_count} sources")
+
+    return {
+        "message": "Source preferences updated successfully",
+        "subscribed_count": subscribed_count
+    }
+
+
+@router.put("/settings")
+def update_user_settings(
+    request: UpdateUserSettingsRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Update user's general preferences (discovery mode, article ordering, etc.).
+    """
+    updated_fields = []
+
+    if request.source_discovery_mode is not None:
+        if request.source_discovery_mode not in ['none', 'some', 'open']:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="source_discovery_mode must be 'none', 'some', or 'open'"
+            )
+        current_user.source_discovery_mode = request.source_discovery_mode
+        updated_fields.append("source_discovery_mode")
+
+    if request.article_order_preference is not None:
+        if request.article_order_preference not in ['good_first', 'good_last', 'mixed']:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="article_order_preference must be 'good_first', 'good_last', or 'mixed'"
+            )
+        current_user.article_order_preference = request.article_order_preference
+        updated_fields.append("article_order_preference")
+
+    if request.articles_per_topic_default is not None:
+        current_user.articles_per_topic_default = request.articles_per_topic_default
+        updated_fields.append("articles_per_topic_default")
+
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+
+    logger.info(f"Updated settings for user {current_user.email}: {updated_fields}")
+
+    return {
+        "message": "Settings updated successfully",
+        "updated_fields": updated_fields,
+        "settings": {
+            "source_discovery_mode": current_user.source_discovery_mode,
+            "article_order_preference": current_user.article_order_preference,
+            "articles_per_topic_default": current_user.articles_per_topic_default
+        }
+    }
+
+
+@router.get("/settings")
+def get_user_settings(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get user's general preference settings.
+    """
+    return {
+        "source_discovery_mode": current_user.source_discovery_mode,
+        "article_order_preference": current_user.article_order_preference,
+        "articles_per_topic_default": current_user.articles_per_topic_default
+    }

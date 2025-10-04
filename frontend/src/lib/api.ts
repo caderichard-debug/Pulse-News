@@ -142,6 +142,45 @@ class ApiClient {
       method: 'POST',
     });
   }
+
+  // Source preference endpoints
+  async getSources() {
+    return this.request<Array<{
+      source_id: number;
+      name: string;
+      url: string;
+      trust_score: number;
+      political_lean: string | null;
+      subscribed: boolean;
+    }>>('/preferences/sources');
+  }
+
+  async updateSourcePreferences(sourceIds: number[]) {
+    return this.request('/preferences/sources', {
+      method: 'PUT',
+      body: JSON.stringify({ source_ids: sourceIds }),
+    });
+  }
+
+  // User settings endpoints
+  async getSettings() {
+    return this.request<{
+      source_discovery_mode: string;
+      article_order_preference: string;
+      articles_per_topic_default: number;
+    }>('/preferences/settings');
+  }
+
+  async updateSettings(settings: {
+    source_discovery_mode?: string;
+    article_order_preference?: string;
+    articles_per_topic_default?: number;
+  }) {
+    return this.request('/preferences/settings', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  }
 }
 
 export const api = new ApiClient(API_BASE_URL);
