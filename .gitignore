@@ -62,3 +62,7 @@ logs/
 
 # Docker volumes
 postgres_data/
+.pulse_token
+
+# React Component Preview
+previewConfig.json
