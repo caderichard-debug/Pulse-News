@@ -1,11 +1,31 @@
 'use client';
 
+
 import { useRouter, usePathname } from 'next/navigation';
 import { api } from '@/lib/api';
+import React, { useEffect, useState } from 'react';
+
 
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
+  const [userName, setUserName] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    let mounted = true;
+    api.getCurrentUser()
+      .then((user) => {
+        if (mounted && user && typeof user.name === 'string') {
+          setUserName(user.name);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => { mounted = false; };
+  }, []);
 
   const handleLogout = () => {
     api.clearToken();
@@ -27,14 +47,14 @@ export default function Navbar() {
           <div className="flex items-center">
             <button
               onClick={() => router.push('/dashboard')}
-              className="text-2xl font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
+              className="text-2xl font-bold text-indigo-400 hover:text-indigo-700 transition-colors"
             >
               Pulse
             </button>
           </div>
 
           {/* Navigation Links */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 absolute left-1/2 transform -translate-x-1/2 flex items-center gap-1">
             {navItems.map((item) => (
               <button
                 key={item.path}
@@ -51,13 +71,23 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* Logout Button */}
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            Logout
-          </button>
+          {/* User name and Logout Button */}
+          <div className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900">
+            <button
+              onClick={() => router.push('/preferences')}
+              className="ml-1 pl-1 hover:text-gray-600 transition-colors"
+            >
+            {loading ? null : userName && (
+              <span>{userName}</span>
+            )}
+            </button>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 rounded-md text-sm font-medium transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </div>
     </nav>
