@@ -266,14 +266,14 @@ def article_clustering_job(session: Session = None):
         logger.info("Starting scheduled article clustering job")
         logger.info("=" * 60)
 
-        from app.services.article_clusterer import process_pending_clustering
+        from app.services.article_clusterer import process_article_clustering
 
         if session is None:
             with Session(engine) as session:
                 # Process up to 20 articles per run
-                stats = process_pending_clustering(session, limit=20)
+                stats = process_article_clustering(session, limit=20)
         else:
-            stats = process_pending_clustering(session, limit=20)
+            stats = process_article_clustering(session, limit=20)
 
         logger.info("=" * 60)
         logger.info(

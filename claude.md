@@ -1,191 +1,212 @@
-# Claude Context - Pulse News Aggregator
+# Pulse - AI-Powered News Aggregator
 
-> **AI-powered news aggregation with ethical framework mapping to help build context and connect headlines into coherent mental models.**
+> **Project Context for AI Assistants**
+> This document helps new Claude sessions quickly understand the Pulse codebase, navigate to relevant files, and maintain documentation standards.
 
-## 🎯 Project Overview
+---
 
-**Pulse** aggregates news from trusted sources and uses AI to:
-- Summarize articles (100 words)
-- Analyze sentiment and political bias
-- Extract and verify key statistics with source tracing
-- **Map articles to underlying ethical debates** (competitive edge)
-- Generate daily newsletters that connect the dots
+## 📋 Quick Start for New Sessions
 
-### Example Framework Mapping
-```
-Article: "Biden Cancels Student Loan Debt"
-Framework: Individual Liberty vs. Collective Welfare
-Position: +6 (leans toward collective welfare)
-Explanation: Policy prioritizes community benefit over individual responsibility
-```
+### What is Pulse?
 
-## 🏗️ Tech Stack
+**Pulse** is an AI-powered news aggregation platform that:
+- Scrapes articles from trusted news sources via RSS feeds
+- Uses AI (OpenAI GPT-4o-mini) to analyze sentiment, bias, and ethical frameworks
+- Verifies statistics with source tracing and fact-checking
+- Generates personalized daily newsletters
+- Provides a **"Lens on Discourse"** - helping users understand how news shapes conversation through data visualizations
 
-### Backend (Python 3.11)
-- **FastAPI** - REST API framework
-- **SQLModel 0.0.16** - ORM with Pydantic validation
-- **PostgreSQL** - Relational database
-- **Alembic** - Database migrations
-- **APScheduler** - Background job scheduling
-- **OpenAI GPT-4o-mini** - AI analysis (cheapest GPT-4 model)
+### Project Status
 
-### Services
-- **feedparser** - RSS feed parsing
-- **trafilatura** - Article content extraction (primary)
-- **readability-lxml** - Fallback extractor
-- **Resend API** - Email delivery
-- **Jinja2** - Email template rendering
+**Current Phase**: Phase 3 Complete ✅
+- ✅ Backend: All core services operational (127 backend tests passing)
+- ✅ Frontend: Phase 1-3 complete (107 frontend tests passing)
+  - Enhanced preferences (topics, sources, settings)
+  - Dashboard with analytics visualizations
+  - Article feed with filtering and detail pages
+  - Comprehensive test coverage
+- 🔨 Next: Phase 4 (Challenge System) - Weekly viewpoint engagement tracking
 
-### Frontend
-- **Next.js 15.5.4** (React 19.1.0, TypeScript 5)
-- **Tailwind CSS 4** with PostCSS
-- **Turbopack** - Fast bundler (dev & build)
+---
 
-### Infrastructure
-- **Docker & Docker Compose**
-- **Railway/Render** (free tier MVP)
+## 🗂️ Project Structure Navigator
 
-## 📊 Database Schema
+### Backend (`/backend/app/`)
 
-```
-sources → articles → article_analysis
-   ↓                       ↓
-topics              article_frameworks → frameworks
-   ↓                                           ↑
-user_topic_preferences              (AI-generated debates)
-   ↓
-users → newsletters
+#### Core Configuration
+- **[models.py](backend/app/models.py)** - SQLModel database schemas (all tables)
+- **[config.py](backend/app/config.py)** - Environment settings
+- **[database.py](backend/app/database.py)** - Database session management
+- **[main.py](backend/app/main.py)** - FastAPI app entry point & router registration
 
-Enhancement Tables (V2):
-- statistic_verifications (with V2 source tracing fields)
-- source_credibility_ratings
-- article_clusters & article_cluster_members
-- article_context
-```
+#### API Routes (`/backend/app/routes/`)
+- **[auth.py](backend/app/routes/auth.py)** - User registration, login (JWT)
+- **[preferences.py](backend/app/routes/preferences.py)** - User preferences (topics, sources, settings)
+- **[analytics.py](backend/app/routes/analytics.py)** - Dashboard analytics endpoints
+- **[feed.py](backend/app/routes/feed.py)** - Article feed with filtering
+- **[article_detail.py](backend/app/routes/article_detail.py)** - Full article analysis
+- **[articles.py](backend/app/routes/articles.py)** - Public article browsing
+- **[admin.py](backend/app/routes/admin.py)** - Admin controls & job triggers
+- **[test_email.py](backend/app/routes/test_email.py)** - Email testing endpoints
 
-### Key Models
-
+#### Services (`/backend/app/services/`)
 **Article Pipeline:**
-- `Article` - Scraped articles (content, metadata, processing status)
-- `ArticleAnalysis` - AI analysis (summary, sentiment, political lean, key stats)
-- `ArticleFramework` - Link between articles and ethical frameworks
+- **[rss_scraper.py](backend/app/services/rss_scraper.py)** - Fetch articles from RSS feeds
+- **[article_extractor.py](backend/app/services/article_extractor.py)** - Extract full content (trafilatura + readability)
+- **[ai_analyzer.py](backend/app/services/ai_analyzer.py)** - AI analysis (summary, sentiment, bias)
+- **[framework_generator.py](backend/app/services/framework_generator.py)** - Map articles to ethical frameworks
 
-**Statistics Verification V2:**
-- `StatisticVerification` - Extracted stats with source tracing and fact-checking
-  - V2 fields: `source_url`, `source_name`, `source_credibility_score`
-  - Fact-check: `fact_check_status`, `fact_check_source`, `fact_check_url`
-- `SourceCredibilityRating` - Cached credibility scores for domains
+**Statistics Verification (V2 - 3-stage pipeline):**
+- **[statistics_verifier.py](backend/app/services/statistics_verifier.py)** - Orchestrator
+- **[source_tracer.py](backend/app/services/source_tracer.py)** - Extract source URLs/names
+- **[credibility_rater.py](backend/app/services/credibility_rater.py)** - Rate source credibility
+- **[fact_check_integrator.py](backend/app/services/fact_check_integrator.py)** - External fact-checking APIs
 
-**User & Newsletters:**
-- `User` - Authentication, preferences, subscription tier
-- `Newsletter` - Generated emails with article/framework references
+**Enhancement Services:**
+- **[article_clusterer.py](backend/app/services/article_clusterer.py)** - Group similar articles
+- **[context_generator.py](backend/app/services/context_generator.py)** - Generate article context
+- **[newsletter_service.py](backend/app/services/newsletter_service.py)** - Build & send newsletters
 
-## 🔄 Data Flow
+#### Background Jobs (`/backend/app/jobs/`)
+- **[scheduler.py](backend/app/jobs/scheduler.py)** - APScheduler configuration
+- **[tasks.py](backend/app/jobs/tasks.py)** - Job definitions
 
-### 1. Article Ingestion Pipeline
-```
-RSS Feeds → Scraper (every 3h) → Articles (PENDING)
-                ↓
-        Extractor (every 4h) → Full content
-                ↓
-        AI Analyzer (OpenAI GPT-4o-mini) → Analysis
-                ↓
-        Framework Mapper → Article-Framework links
-                ↓
-        Stats Verifier V2 → Verified statistics
-```
+#### Testing (`/backend/tests/`)
+- 127 tests, 100% passing
+- Key test files:
+  - `test_analytics.py` - Analytics endpoints
+  - `test_feed.py` - Feed filtering/pagination
+  - `test_article_detail.py` - Article detail endpoint
+  - `test_source_preferences.py` - Source management
+  - `test_newsletter_preferences.py` - Newsletter filtering
+  - `test_statistics_verifier.py` - V2 verification pipeline
 
-### 2. Statistics Verification V2 (Three-Stage Pipeline)
-```
-1. Source Tracing (AI-powered)
-   - Extract source URLs/names from article content
-   - Identify citations and references
+### Frontend (`/frontend/src/`)
 
-2. Credibility Rating
-   - Rate source credibility (0.0-1.0)
-   - Cache ratings by domain
-   - Heuristics: .gov (+0.3), .edu (+0.3), universities (+0.2)
+#### Pages (`/frontend/src/app/`)
+- **[page.tsx](frontend/src/app/page.tsx)** - Landing page (hero, features)
+- **[login/](frontend/src/app/login/)** - Login page
+- **[signup/](frontend/src/app/signup/)** - Registration page
+- **[preferences/](frontend/src/app/preferences/)** - Topic/source/settings management
+- **[dashboard/](frontend/src/app/dashboard/)** - Analytics dashboard
+- **[feed/](frontend/src/app/feed/)** - Article feed with filters
+- **[article/[id]/](frontend/src/app/article/[id]/)** - Article detail page
 
-3. Fact-Checking
-   - Query external APIs (Google Fact Check, ClaimBuster)
-   - Return verification status: verified, false, mixed, unverifiable
-```
+#### Components (`/frontend/src/components/`)
+- **[Navbar.tsx](frontend/src/components/Navbar.tsx)** - Global navigation bar
 
-### 3. Newsletter Generation
-```
-User Preferences → Topic Filtering → Top 5 Articles
-                ↓
-        Related Frameworks
-                ↓
-        Template Rendering (Jinja2)
-                ↓
-        HTML Email → Resend API → User Inbox
-```
+#### API Client (`/frontend/src/lib/`)
+- **[api.ts](frontend/src/lib/api.ts)** - Centralized API client with all endpoints
 
-## 📁 Project Structure
+#### Testing (`/frontend/src/`)
+- 107 tests passing
+- Test suites:
+  - `lib/__tests__/api.test.ts` - API client tests
+  - `app/dashboard/__tests__/page.test.tsx` - Dashboard tests
+  - `app/preferences/__tests__/page.test.tsx` - Preferences tests
+  - `app/feed/__tests__/page.test.tsx` - Feed tests
+  - `app/article/__tests__/page.test.tsx` - Article detail tests
 
-```
-Pulse/
-├── backend/
-│   ├── alembic/              # Database migrations
-│   ├── app/
-│   │   ├── main.py          # FastAPI app
-│   │   ├── config.py        # Settings (env vars)
-│   │   ├── database.py      # DB session management
-│   │   ├── models.py        # SQLModel schemas
-│   │   ├── seed_data.py     # Initial data seeding
-│   │   ├── routes/          # API endpoints
-│   │   │   ├── admin.py     # Admin routes
-│   │   │   ├── articles.py  # Article CRUD
-│   │   │   ├── auth.py      # Authentication
-│   │   │   ├── preferences.py
-│   │   │   └── test_email.py
-│   │   ├── services/        # Business logic
-│   │   │   ├── ai_analyzer.py
-│   │   │   ├── article_extractor.py
-│   │   │   ├── rss_scraper.py
-│   │   │   ├── framework_generator.py
-│   │   │   ├── newsletter_service.py
-│   │   │   ├── statistics_verifier.py  # V2 orchestrator
-│   │   │   ├── source_tracer.py        # V2: Stage 1
-│   │   │   ├── credibility_rater.py    # V2: Stage 2
-│   │   │   ├── fact_check_integrator.py # V2: Stage 3
-│   │   │   ├── article_clusterer.py
-│   │   │   └── context_generator.py
-│   │   ├── jobs/            # Scheduled tasks
-│   │   │   ├── scheduler.py
-│   │   │   └── tasks.py
-│   │   ├── templates/       # Email templates (Jinja2)
-│   │   │   └── newsletter.html  # Main newsletter template
-│   │   └── utils/           # Helpers (auth, OpenAI client)
-│   ├── tests/               # Test suite (127 tests, 100% passing)
-│   └── trace_all_statistics.py  # Script to analyze all stats
-├── frontend/                # Next.js app
-├── docs/                    # Documentation
-│   ├── ARCHITECTURE.md
-│   ├── STATISTICS_VERIFICATION_V2_PLAN.md
-│   ├── HOW_TO_SEND_TEST_EMAIL.md
-│   └── README.md
-├── docker-compose.yml
-├── dockerfile
-└── requirements.txt
-```
+---
 
-## 🔧 Common Development Commands
+## 📚 Documentation Index
 
-### Docker Operations
+### Core Documentation (`/docs/`)
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture, data flow, deployment
+- **[API.md](docs/API.md)** - Complete API reference with examples
+- **[FRONTEND_ARCHITECTURE_PLAN.md](docs/FRONTEND_ARCHITECTURE_PLAN.md)** - 16-week frontend roadmap (Phases 1-6)
+- **[STATISTICS_VERIFICATION_V2_PLAN.md](docs/STATISTICS_VERIFICATION_V2_PLAN.md)** - V2 verification design
+
+### Guides
+- **[SETUP.md](docs/SETUP.md)** - Installation & configuration
+- **[DEVELOPMENT_GUIDE.md](docs/DEVELOPMENT_GUIDE.md)** - Development workflows
+- **[TESTING.md](docs/TESTING.md)** - Test patterns & commands
+- **[HOW_TO_RUN_TESTS.md](docs/HOW_TO_RUN_TESTS.md)** - Quick test reference
+- **[GIT_WORKFLOW_CHEATSHEET.md](docs/GIT_WORKFLOW_CHEATSHEET.md)** - Git commands
+
+### Email Testing
+- **[HOW_TO_SEND_TEST_EMAIL.md](docs/HOW_TO_SEND_TEST_EMAIL.md)** - Email testing guide
+- **[QUICK_EMAIL_TEST.md](docs/QUICK_EMAIL_TEST.md)** - Quick email reference
+
+### Project Context
+- **[CHANGELOG.md](CHANGELOG.md)** - Complete development history (all changes)
+- **[README.md](README.md)** - Project overview & quick start
+
+---
+
+## 🧭 Finding Code by Feature
+
+### "I need to work on [X]"
+
+#### Authentication & Users
+- **Models**: `User` in [models.py](backend/app/models.py:30)
+- **Routes**: [auth.py](backend/app/routes/auth.py)
+- **Frontend**: [login/](frontend/src/app/login/), [signup/](frontend/src/app/signup/)
+
+#### Article Scraping & Extraction
+- **Scraper**: [rss_scraper.py](backend/app/services/rss_scraper.py)
+- **Extractor**: [article_extractor.py](backend/app/services/article_extractor.py)
+- **Models**: `Article` in [models.py](backend/app/models.py:80)
+- **Jobs**: [tasks.py](backend/app/jobs/tasks.py) - `scrape_rss_feeds()`, `extract_articles()`
+
+#### AI Analysis & Frameworks
+- **Analyzer**: [ai_analyzer.py](backend/app/services/ai_analyzer.py)
+- **Framework Generator**: [framework_generator.py](backend/app/services/framework_generator.py)
+- **Models**: `ArticleAnalysis`, `Framework`, `ArticleFrameworkLink` in [models.py](backend/app/models.py)
+
+#### Statistics Verification
+- **Orchestrator**: [statistics_verifier.py](backend/app/services/statistics_verifier.py)
+- **Stage 1 (Tracing)**: [source_tracer.py](backend/app/services/source_tracer.py)
+- **Stage 2 (Credibility)**: [credibility_rater.py](backend/app/services/credibility_rater.py)
+- **Stage 3 (Fact-checking)**: [fact_check_integrator.py](backend/app/services/fact_check_integrator.py)
+- **Models**: `StatisticVerification`, `SourceCredibilityRating` in [models.py](backend/app/models.py)
+
+#### User Preferences
+- **Backend**: [preferences.py](backend/app/routes/preferences.py) - topics, sources, settings
+- **Frontend**: [preferences/](frontend/src/app/preferences/)
+- **Models**: `UserTopicPreference`, `UserSourceSubscription` in [models.py](backend/app/models.py)
+- **Tests**: [test_source_preferences.py](backend/tests/test_source_preferences.py)
+
+#### Analytics & Dashboard
+- **Backend**: [analytics.py](backend/app/routes/analytics.py) - sentiment, bias, heatmaps
+- **Frontend**: [dashboard/](frontend/src/app/dashboard/)
+- **Visualizations**: Recharts (sentiment line chart, bias stacked area)
+- **Tests**: [test_analytics.py](backend/tests/test_analytics.py)
+
+#### Article Feed
+- **Backend**: [feed.py](backend/app/routes/feed.py) - filtering, pagination
+- **Frontend**: [feed/](frontend/src/app/feed/)
+- **Article Detail**: [article_detail.py](backend/app/routes/article_detail.py)
+- **Tests**: [test_feed.py](backend/tests/test_feed.py), [test_article_detail.py](backend/tests/test_article_detail.py)
+
+#### Newsletters
+- **Service**: [newsletter_service.py](backend/app/services/newsletter_service.py)
+- **Template**: [newsletter.html](backend/app/templates/newsletter.html)
+- **Models**: `Newsletter` in [models.py](backend/app/models.py)
+- **Tests**: [test_newsletter_preferences.py](backend/tests/test_newsletter_preferences.py)
+
+#### Background Jobs
+- **Scheduler**: [scheduler.py](backend/app/jobs/scheduler.py)
+- **Tasks**: [tasks.py](backend/app/jobs/tasks.py)
+- **Admin Triggers**: [admin.py](backend/app/routes/admin.py)
+
+---
+
+## 🔧 Common Development Tasks
+
+### Running Tests
 ```bash
-# Start all services
-docker-compose up --build
+# Backend (all tests)
+docker-compose exec backend pytest
 
-# Restart backend only
-docker-compose restart backend
+# Backend (specific file)
+docker-compose exec backend pytest tests/test_analytics.py -v
 
-# View logs
-docker logs news_backend -f
+# Frontend (all tests)
+cd frontend && npm test
 
-# Stop all
-docker-compose down
+# Frontend (watch mode)
+cd frontend && npm run test:watch
 ```
 
 ### Database Migrations
@@ -200,29 +221,146 @@ docker-compose exec backend alembic upgrade head
 docker-compose exec backend alembic downgrade -1
 ```
 
-### Running Tests
+### Manual Job Triggers
 ```bash
-# All tests
-docker-compose exec backend pytest
+# Get auth token
+TOKEN=$(curl -s -X POST http://localhost:8000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password"}' \
+  | jq -r '.access_token')
 
-# Specific test file
-docker-compose exec backend pytest tests/test_statistics_verifier.py
+# Trigger scraping
+curl -X POST http://localhost:8000/admin/jobs/scrape
 
-# With verbose output
-docker-compose exec backend pytest -vv
+# Trigger analysis
+curl -X POST http://localhost:8000/admin/jobs/analyze
 
-# With coverage
-docker-compose exec backend pytest --cov=app
+# Check job status
+curl http://localhost:8000/admin/scheduler/status
 ```
 
-### Manual Tasks
+### Docker Operations
 ```bash
-# Seed initial data
-docker-compose exec backend python -m app.seed_data
+# Start all services
+docker-compose up --build
 
-# Run statistics tracing script
-docker-compose exec backend python trace_all_statistics.py
+# Restart backend
+docker-compose restart backend
+
+# View logs
+docker logs news_backend -f
+
+# Stop all
+docker-compose down
 ```
+
+---
+
+## 🗄️ Database Schema Quick Reference
+
+### Key Tables
+```
+users
+├── UserTopicPreference (topics subscribed, priority)
+└── UserSourceSubscription (sources subscribed)
+
+sources
+├── Articles
+│   ├── ArticleAnalysis (AI summary, sentiment, bias)
+│   ├── ArticleFrameworkLink → Frameworks
+│   ├── StatisticVerification (V2 with source tracing)
+│   ├── ArticleClusterMember → ArticleCluster
+│   └── ArticleContext (background, timeline, significance)
+└── SourceCredibilityRating (cached credibility scores)
+
+topics
+└── UserTopicPreference
+
+newsletters
+```
+
+See [ARCHITECTURE.md](docs/ARCHITECTURE.md#database-schema) for full schema with field details.
+
+---
+
+## 🎯 Current Implementation Status
+
+### ✅ Completed (Backend)
+- Core article pipeline (scrape → extract → analyze → frameworks)
+- Statistics verification V2 (source tracing, credibility, fact-checking)
+- Article clustering & context generation
+- Newsletter generation & email delivery
+- User authentication & preferences
+- Admin controls & job scheduling
+- **All 127 backend tests passing**
+
+### ✅ Completed (Frontend - Phases 1-3)
+- **Phase 1**: Enhanced preferences (topics, sources, settings)
+- **Phase 2**: Dashboard with analytics visualizations
+- **Phase 3**: Article feed & detail pages
+- Global navigation bar
+- **All 107 frontend tests passing**
+
+### 🔜 Upcoming (Phase 4-6)
+- **Phase 4**: Challenge system (weekly viewpoint tracking)
+- **Phase 5**: Advanced analytics (claim recurrence, heatmap animations)
+- **Phase 6**: Polish & optimization (React Query, virtualization, dark mode)
+
+See [FRONTEND_ARCHITECTURE_PLAN.md](docs/FRONTEND_ARCHITECTURE_PLAN.md) for full roadmap.
+
+---
+
+## 📝 Documentation Workflow for AI Sessions
+
+### When Working on Any Feature/Bug/Test:
+
+1. **ALWAYS update [CHANGELOG.md](CHANGELOG.md)** with:
+   - Timestamp (format: `## YYYY-MM-DD HH:MM`)
+   - Feature/bug name with status emoji (✅ 🔨 🐞 ⚠️)
+   - What was changed (bullet points)
+   - Code references using markdown links: `[file.py](path/to/file.py:line)`
+   - Test results if applicable
+
+2. **Update this file (claude.md)** if:
+   - Project structure changes (new folders, major refactors)
+   - New major features are completed (update "Current Implementation Status")
+   - Documentation references change
+   - New common tasks are established
+
+3. **Update relevant docs/** files if:
+   - API endpoints change → Update [API.md](docs/API.md)
+   - Architecture changes → Update [ARCHITECTURE.md](docs/ARCHITECTURE.md)
+   - New setup steps → Update [SETUP.md](docs/SETUP.md)
+   - Test patterns change → Update [TESTING.md](docs/TESTING.md)
+
+### Changelog Entry Format
+
+```markdown
+## YYYY-MM-DD HH:MM
+
+**Feature Name** ✅ / 🔨 / 🐞 / ⚠️
+
+### What Changed
+- Implemented X in [file.py](path/to/file.py:line)
+- Fixed Y by modifying Z
+- Added tests in [test_file.py](path/to/test_file.py)
+
+### Test Results
+- X tests passing
+- Issues: [if any]
+
+**Code References:**
+- Main file: [file.py](path/to/file.py)
+- Tests: [test_file.py](path/to/test_file.py)
+```
+
+### Status Emojis
+- ✅ Complete
+- 🔨 In Progress
+- 🐞 Bug Fix
+- ⚠️ Partial/Blocked
+
+---
 
 ## 🔐 Environment Variables
 
@@ -236,13 +374,13 @@ DATABASE_URL=postgresql://postgres:password@db:5432/news_db
 OPENAI_API_KEY=sk-proj-...
 AI_MODEL=gpt-4o-mini
 
-# Email
+# Email (Resend)
 RESEND_API_KEY=re_...
-FROM_EMAIL=onboarding@resend.dev  # Resend test domain (no verification needed)
+FROM_EMAIL=onboarding@resend.dev
 FROM_NAME=Pulse News
 
 # Auth
-SECRET_KEY=your-secret-key-here
+SECRET_KEY=your-secret-key
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=43200
 
@@ -251,332 +389,64 @@ GOOGLE_FACT_CHECK_API_KEY=...
 CLAIMBUSTER_API_KEY=...
 ```
 
-## 📝 API Endpoints
+---
 
-### Public Routes
-- `GET /health` - Health check
-- `POST /auth/register` - User registration
-- `POST /auth/login` - Login (returns JWT)
-- `GET /articles` - Browse articles
+## 🛠️ Tech Stack Summary
 
-### Protected Routes (require JWT)
-- `GET /auth/me` - Current user
-- `PUT /preferences` - Update topic preferences
-- `GET /preferences/newsletter-preview` - Preview newsletter
-- `GET /newsletters/latest` - Latest newsletter
-
-### Admin Routes
-- `GET /admin/stats` - System statistics
-- `GET /admin/scheduler/status` - Job scheduler status
-- `POST /admin/jobs/scrape` - Manually trigger RSS scrape
-- `POST /admin/jobs/extract` - Manually trigger article extraction
-- `POST /admin/jobs/analyze` - Manually trigger AI analysis
-- `POST /admin/jobs/frameworks` - Manually trigger framework updates
-- `POST /admin/jobs/verify-statistics` - Manually trigger stats verification
-- `POST /admin/jobs/cluster-articles` - Manually trigger article clustering
-- `POST /admin/jobs/generate-context` - Manually trigger context generation
-- `GET /admin/articles/recent` - Get recent articles
-- `GET /admin/sources/status` - Get source statistics
-
-### Testing Routes
-- `GET /test/email-config` - Check email configuration
-- `POST /test/send-email` - Send test email
-
-**Interactive Docs:** http://localhost:8000/docs
-
-## 🧪 Testing Strategy
-
-### Current Test Coverage
-- **127 tests, 100% passing**
-- Unit tests for all services
-- Integration tests for API routes
-- Database relationship tests
-- V2 statistics verification tests
-
-### Key Test Files
-- `test_statistics_verifier.py` - V2 verification pipeline
-- `test_source_tracer.py` - Source extraction
-- `test_credibility_rater.py` - Credibility scoring
-- `test_fact_check_integrator.py` - Fact-check APIs
-- `test_newsletter_service_simple.py` - Email generation
-
-## 🎨 Frontend Structure
-
-The frontend is built with Next.js 15 using the App Router pattern:
-
-### Pages
-- **`/` (Landing Page)** - Hero section, features, trusted sources, CTA
-- **`/login`** - User login with JWT authentication
-- **`/signup`** - New user registration
-- **`/preferences`** - Topic preference management
-
-### API Client (`src/lib/api.ts`)
-- Centralized API communication
-- JWT token management (localStorage)
-- TypeScript interfaces for type safety
-- Methods for auth, preferences, topics
-
-### Tech Details
-- **React 19.1.0** - Latest React with new features
-- **Turbopack** - Next.js's fast bundler for dev and production
-- **Tailwind CSS 4** - Utility-first CSS with PostCSS
-- **TypeScript 5** - Full type safety
-
-### Running Frontend
-```bash
-# Development mode
-cd frontend && npm run dev
-
-# Production build
-npm run build && npm start
-```
-
-## 📧 Sending Test Newsletters
-
-### Quick Test
-```bash
-# 1. Get auth token
-TOKEN=$(curl -s -X POST http://localhost:8000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password"}' \
-  | jq -r '.access_token')
-
-# 2. Send test email
-curl -X POST http://localhost:8000/test/send-email \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"to_email":"your-email@example.com","subject":"Test","message":"Testing!"}'
-```
-
-### Using Admin UI
-1. Navigate to http://localhost:8000/docs
-2. Click "Authorize" → Enter: `Bearer YOUR_TOKEN`
-3. Go to `/test/send-email` endpoint
-4. Try it out
-
-**Note:** Uses `onboarding@resend.dev` (Resend's test domain) - no verification needed!
-
-## 🚀 Background Jobs (APScheduler)
-
-Configured in `backend/app/jobs/scheduler.py`:
-
-1. **RSS Scraping** - Every 3 hours
-2. **Article Extraction** - Every 4 hours
-3. **AI Analysis** - Every 6 hours
-4. **Framework Mapping** - Daily at 2am (discovers new frameworks on Sundays)
-5. **Newsletter Generation** - Daily at 10:20 AM PST
-6. **Statistics Verification V2** - Every 6 hours
-7. **Article Clustering** - Every 4 hours
-8. **Context Generation** - Every 8 hours
-
-## 📊 Statistics Verification V2
-
-### Architecture
-Three-stage pipeline for comprehensive verification:
-
-1. **Source Tracing** (`source_tracer.py`)
-   - AI extracts source URLs/names from article content
-   - Stores: `source_url`, `source_name`, `source_excerpt`
-
-2. **Credibility Rating** (`credibility_rater.py`)
-   - Rates source credibility (0.0-1.0)
-   - Heuristics: .gov +0.3, .edu +0.3, universities +0.2
-   - Caches ratings in `source_credibility_ratings` table
-
-3. **Fact-Checking** (`fact_check_integrator.py`)
-   - Queries external APIs (Google Fact Check, ClaimBuster)
-   - Returns: `fact_check_status`, `fact_check_source`, `fact_check_url`
-
-### Final Status Determination
-- `fact_check_status == "false"` → FALSE
-- `fact_check_status == "verified" AND credibility >= 0.6` → VERIFIED
-- `source_credibility >= 0.7 AND no contradiction` → VERIFIED
-- `fact_check_status == "mixed"` → DISPUTED
-- Otherwise → UNVERIFIED
-
-### Newsletter Badge Display
-- ✓ Verified (green)
-- ⚠️ Disputed (orange)
-- ❌ False (red)
-- ⏳ Unverified (gray)
-- ⭐⭐⭐⭐⭐ Credibility stars (1-5)
-- Source link with name
-- Confidence percentage
-
-## 🔍 Common Tasks & Solutions
-
-### Task: Analyze All Statistics in Database
-```bash
-# Run the tracing script
-docker-compose exec backend python trace_all_statistics.py
-```
-
-### Task: Send Test Newsletter
-```bash
-# Preview newsletter (no send)
-curl -X GET http://localhost:8000/preferences/newsletter-preview \
-  -H "Authorization: Bearer $TOKEN"
-
-# Send actual newsletter
-curl -X POST http://localhost:8000/admin/send-newsletter \
-  -H "Authorization: Bearer $TOKEN"
-```
-
-### Task: Manually Trigger Jobs
-```bash
-# Trigger RSS scrape
-curl -X POST http://localhost:8000/admin/jobs/scrape
-
-# Trigger article extraction
-curl -X POST http://localhost:8000/admin/jobs/extract
-
-# Trigger AI analysis
-curl -X POST http://localhost:8000/admin/jobs/analyze
-
-# Trigger statistics verification
-curl -X POST http://localhost:8000/admin/jobs/verify-statistics
-
-# Check scheduler status
-curl -X GET http://localhost:8000/admin/scheduler/status
-```
-
-### Task: Debug Failed Tests
-```bash
-# Run with verbose output and stop at first failure
-docker-compose exec backend pytest -vvv -x
-
-# Run specific test
-docker-compose exec backend pytest tests/test_file.py::TestClass::test_method -vv
-```
-
-### Task: Check Database State
-```bash
-# Connect to PostgreSQL
-docker-compose exec db psql -U postgres -d news_db
-
-# Useful queries
-SELECT COUNT(*) FROM articles;
-SELECT COUNT(*) FROM statistic_verifications;
-SELECT * FROM statistic_verifications WHERE verification_status = 'verified';
-```
-
-## 💡 Key Design Decisions
-
-1. **Batch AI Processing** - Process 5 articles per API call (60% cost savings)
-2. **Dual Extraction Methods** - trafilatura (primary) + readability (fallback) = 95% success rate
-3. **Framework Evolution** - Start with 10 seed frameworks, AI discovers new ones from clusters
-4. **V2 Verification** - Source tracing + credibility rating + fact-checking (more robust than cross-reference)
-5. **Email-Compatible Templates** - Inline styles, table layouts for maximum compatibility
-
-## 📈 Current Status
-
-### ✅ Completed
-- Core pipeline (scraping → extraction → analysis → frameworks)
-- V2 statistics verification with source tracing
-- Newsletter generation & email delivery
-- User authentication & preferences
-- Comprehensive test suite (127 tests passing)
-- Background job scheduling
-
-### 🔄 In Progress
-- **Frontend UI** (Next.js 15 with React 19)
-  - ✅ Landing page with hero, features, and CTA
-  - ✅ Login page (`/login`)
-  - ✅ Signup page (`/signup`)
-  - ✅ Preferences page (`/preferences`)
-  - ✅ API client with authentication
-- Email analytics & tracking
-
-### 📅 Upcoming
-- Framework discovery optimization
-- Real-time updates
-- Mobile app
-- Premium features
-
-## 📚 Key Documentation References
-
-- **Full Architecture:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- **V2 Verification Plan:** [docs/STATISTICS_VERIFICATION_V2_PLAN.md](docs/STATISTICS_VERIFICATION_V2_PLAN.md)
-- **Email Testing:** [docs/HOW_TO_SEND_TEST_EMAIL.md](docs/HOW_TO_SEND_TEST_EMAIL.md)
-- **API Reference:** http://localhost:8000/docs (when running)
-
-## 🐛 Common Issues & Solutions
-
-### Issue: Email not sending
-**Solution:**
-1. Check `RESEND_API_KEY` in `.env`
-2. Use `onboarding@resend.dev` as `FROM_EMAIL`
-3. Restart backend: `docker-compose restart backend`
-4. Check logs: `docker logs news_backend`
-
-### Issue: Tests failing
-**Solution:**
-1. Ensure test database is clean: `docker-compose exec backend pytest --create-db`
-2. Check for stale migrations: `alembic upgrade head`
-3. Review logs for specific errors
-
-### Issue: Statistics not being verified
-**Solution:**
-1. Check if job is running: Look for "Statistics verification" in logs
-2. Verify API keys are set (OPENAI_API_KEY for AI extraction)
-3. Run manual trace: `docker-compose exec backend python trace_all_statistics.py`
-
-### Issue: Docker build fails
-**Solution:**
-1. Clear cache: `docker-compose build --no-cache`
-2. Remove volumes: `docker-compose down -v`
-3. Rebuild: `docker-compose up --build`
-
-## 💰 Cost Optimization
-
-**AI Costs** (OpenAI GPT-4o-mini):
-- $0.150 per 1M input tokens, $0.600 per 1M output tokens
-- Batch processing (5 articles/call) = 60% savings
-- Estimated: $2-5/month for 50 users
-
-**Email Costs** (Resend):
-- Free tier: 3,000 emails/month
-- Paid tier: ~$5/month for 5,000 users
-
-**Scaling Targets:**
-- 50 users: $0-5/month
-- 500 users: $30-50/month
-- 5,000 users: $100-300/month
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| **Backend** | FastAPI | Latest |
+| **ORM** | SQLModel | 0.0.16 |
+| **Database** | PostgreSQL | 16 |
+| **Migrations** | Alembic | Latest |
+| **Jobs** | APScheduler | Latest |
+| **AI** | OpenAI GPT-4o-mini | Latest |
+| **Email** | Resend API | Latest |
+| **Frontend** | Next.js | 15.5.4 |
+| **UI** | React | 19.1.0 |
+| **Styling** | Tailwind CSS | 4 |
+| **Charts** | Recharts | Latest |
+| **Testing (BE)** | pytest | Latest |
+| **Testing (FE)** | Jest + RTL | Latest |
 
 ---
 
-## 🎯 Quick Start Checklist
+## 🚨 Important Conventions
 
-When starting a new session:
-1. ✅ Check if Docker services are running: `docker ps`
-2. ✅ Verify database is accessible: `docker-compose exec db psql -U postgres -d news_db`
-3. ✅ Check API is responding: `curl http://localhost:8000/health`
-4. ✅ Review recent logs: `docker logs news_backend --tail 50`
-5. ✅ Run tests to ensure stability: `docker-compose exec backend pytest`
+### Code Organization
+- **Services**: Pure business logic, no FastAPI dependencies
+- **Routes**: API endpoints only, delegate to services
+- **Models**: SQLModel schemas with validation
+- **Tests**: One test file per service/route
 
----
+### Naming Conventions
+- **Files**: `snake_case.py`
+- **Classes**: `PascalCase`
+- **Functions**: `snake_case()`
+- **Constants**: `UPPER_SNAKE_CASE`
 
-## 📋 Summary
+### Git Workflow
+- **Main branch**: Always stable, CI must pass
+- **Feature branches**: `feature/description` or `fix/description`
+- **Commits**: Descriptive messages, reference issues if applicable
 
-**Pulse** is a fully-functional AI-powered news aggregator with:
-- ✅ 8 automated background jobs for content pipeline
-- ✅ OpenAI GPT-4o-mini integration for article analysis
-- ✅ V2 statistics verification with 3-stage pipeline (source tracing, credibility rating, fact-checking)
-- ✅ Framework mapping to connect articles to ethical debates
-- ✅ Email newsletters via Resend API
-- ✅ Next.js 15 frontend with authentication
-- ✅ Comprehensive test suite (127 tests, 100% passing)
-
-**Key Files to Know:**
-- `backend/app/main.py` - FastAPI app entry point
-- `backend/app/models.py` - Database schema (SQLModel)
-- `backend/app/jobs/scheduler.py` - Background job configuration
-- `backend/app/services/statistics_verifier.py` - V2 verification orchestrator
-- `frontend/src/lib/api.ts` - API client for frontend
+### Testing Standards
+- **Backend**: Aim for 100% coverage on services
+- **Frontend**: Test user interactions, not implementation details
+- **Fixtures**: Reuse test data across files
 
 ---
 
-**Last Updated:** 2025-10-02
-**Status:** 127/127 tests passing ✅
-**AI Provider:** OpenAI GPT-4o-mini
-**Frontend:** Next.js 15 (React 19, Turbopack, Tailwind 4)
+## 📞 Quick References
+
+- **Interactive API Docs**: http://localhost:8000/docs
+- **Frontend Dev Server**: http://localhost:3000
+- **PostgreSQL**: localhost:5432
+- **Backend Container**: `news_backend`
+- **Database Container**: `news_db`
+
+---
+
+**Last Updated**: 2025-10-03
+**Status**: Phase 3 Complete (127 backend + 107 frontend tests passing ✅)
+**Maintained by**: AI assistants working on Pulse
