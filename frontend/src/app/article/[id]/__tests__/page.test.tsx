@@ -18,6 +18,7 @@ jest.mock('next/navigation', () => ({
     push: mockPush,
   }),
   useParams: () => mockParams,
+  usePathname: () => '/article/1',
 }));
 
 describe('ArticleDetailPage', () => {
@@ -236,12 +237,20 @@ describe('ArticleDetailPage', () => {
     });
   });
 
-  describe('Framework Positioning', () => {
-    it('should display frameworks section', async () => {
+  describe('Ethical Framework Analysis', () => {
+    it('should display ethical framework section header', async () => {
       render(<ArticleDetailPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Framework Positioning')).toBeInTheDocument();
+        expect(screen.getByText('Ethical Framework Analysis')).toBeInTheDocument();
+      });
+    });
+
+    it('should display framework introduction text', async () => {
+      render(<ArticleDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/understanding these frameworks helps you think critically/i)).toBeInTheDocument();
       });
     });
 
@@ -255,11 +264,11 @@ describe('ArticleDetailPage', () => {
       });
     });
 
-    it('should display relevance score', async () => {
+    it('should display relevance percentage badge', async () => {
       render(<ArticleDetailPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Relevance: 85%')).toBeInTheDocument();
+        expect(screen.getByText('85% relevant')).toBeInTheDocument();
       });
     });
 
@@ -271,25 +280,54 @@ describe('ArticleDetailPage', () => {
       });
     });
 
-    it('should display position on axis', async () => {
+    it('should display position on axis with label', async () => {
       render(<ArticleDetailPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('+3')).toBeInTheDocument();
+        expect(screen.getByText(/Position: \+3/)).toBeInTheDocument();
+      });
+    });
+
+    it('should display position interpretation for right-leaning position', async () => {
+      render(<ArticleDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Strongly aligned with Collective Welfare/i)).toBeInTheDocument();
+      });
+    });
+
+    it('should display gradient visual axis', async () => {
+      render(<ArticleDetailPage />);
+
+      await waitFor(() => {
+        const framework = screen.getByText('Individual Liberty vs Collective Welfare');
+        const container = framework.closest('.bg-gradient-to-br');
+        expect(container).toBeInTheDocument();
       });
     });
   });
 
-  describe('Context Section', () => {
-    it('should display context section with all subsections', async () => {
+  describe('Background & Context Section', () => {
+    it('should display context section with blue theme', async () => {
       render(<ArticleDetailPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Context')).toBeInTheDocument();
+        expect(screen.getByText('Background & Context')).toBeInTheDocument();
+      });
+    });
+
+    it('should display all subsection headers with emojis', async () => {
+      render(<ArticleDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/📖/)).toBeInTheDocument();
         expect(screen.getByText('Background')).toBeInTheDocument();
+        expect(screen.getByText(/👥/)).toBeInTheDocument();
         expect(screen.getByText('Key Players')).toBeInTheDocument();
+        expect(screen.getByText(/⏱️/)).toBeInTheDocument();
         expect(screen.getByText('Timeline')).toBeInTheDocument();
-        expect(screen.getByText('Significance')).toBeInTheDocument();
+        expect(screen.getByText(/💡/)).toBeInTheDocument();
+        expect(screen.getByText('Why This Matters')).toBeInTheDocument();
       });
     });
 
@@ -303,14 +341,42 @@ describe('ArticleDetailPage', () => {
         expect(screen.getByText(/this matters because/i)).toBeInTheDocument();
       });
     });
-  });
 
-  describe('Related Articles', () => {
-    it('should display related articles section', async () => {
+    it('should render timeline with visual elements', async () => {
       render(<ArticleDetailPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('How Other Sources Covered This Story')).toBeInTheDocument();
+        const timeline = screen.getByText(/key events in chronological order/i);
+        expect(timeline).toBeInTheDocument();
+        const container = timeline.closest('div');
+        expect(container).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Cross-Source Coverage (Coverage Comparison)', () => {
+    it('should display coverage comparison section with header', async () => {
+      render(<ArticleDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Cross-Source Coverage')).toBeInTheDocument();
+      });
+    });
+
+    it('should display source count description', async () => {
+      render(<ArticleDetailPage />);
+
+      await waitFor(() => {
+        // 2 related + 1 current = 3 sources
+        expect(screen.getByText(/this story is being covered by 3 sources/i)).toBeInTheDocument();
+      });
+    });
+
+    it('should display coverage comparison intro text', async () => {
+      render(<ArticleDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/compare how different outlets frame the same story/i)).toBeInTheDocument();
       });
     });
 
@@ -325,12 +391,21 @@ describe('ArticleDetailPage', () => {
       });
     });
 
-    it('should display sentiment scores for related articles', async () => {
+    it('should display sentiment scores for related articles as badges', async () => {
       render(<ArticleDetailPage />);
 
       await waitFor(() => {
         expect(screen.getByText('-2.5')).toBeInTheDocument();
         expect(screen.getByText('+1.2')).toBeInTheDocument();
+      });
+    });
+
+    it('should display political lean badges for related articles', async () => {
+      render(<ArticleDetailPage />);
+
+      await waitFor(() => {
+        const leanBadges = screen.getAllByText(/left|center/i);
+        expect(leanBadges.length).toBeGreaterThan(0);
       });
     });
 
@@ -348,6 +423,16 @@ describe('ArticleDetailPage', () => {
       }
 
       expect(mockPush).toHaveBeenCalledWith('/article/2');
+    });
+
+    it('should apply purple theme styling to coverage section', async () => {
+      render(<ArticleDetailPage />);
+
+      await waitFor(() => {
+        const coverageHeader = screen.getByText('Cross-Source Coverage');
+        const container = coverageHeader.closest('.bg-purple-50');
+        expect(container).toBeInTheDocument();
+      });
     });
   });
 
@@ -403,7 +488,7 @@ describe('ArticleDetailPage', () => {
         expect(screen.getByText('Test Article Title')).toBeInTheDocument();
       });
 
-      expect(screen.queryByText('Framework Positioning')).not.toBeInTheDocument();
+      expect(screen.queryByText('Ethical Framework Analysis')).not.toBeInTheDocument();
     });
 
     it('should not render related articles section when empty', async () => {
@@ -418,7 +503,7 @@ describe('ArticleDetailPage', () => {
         expect(screen.getByText('Test Article Title')).toBeInTheDocument();
       });
 
-      expect(screen.queryByText('How Other Sources Covered This Story')).not.toBeInTheDocument();
+      expect(screen.queryByText('Cross-Source Coverage')).not.toBeInTheDocument();
     });
 
     it('should not render context section when null', async () => {
@@ -433,7 +518,7 @@ describe('ArticleDetailPage', () => {
         expect(screen.getByText('Test Article Title')).toBeInTheDocument();
       });
 
-      expect(screen.queryByText('Context')).not.toBeInTheDocument();
+      expect(screen.queryByText('Background & Context')).not.toBeInTheDocument();
     });
   });
 
@@ -523,6 +608,104 @@ describe('ArticleDetailPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText('False')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Timeline Visualization', () => {
+    it('should render timeline with visual dots when timeline data exists', async () => {
+      (api.getArticleDetail as jest.Mock).mockResolvedValue({
+        ...mockArticleDetail,
+        context: {
+          background: 'Background text',
+          key_players: null,
+          timeline: 'Event 1: First thing happened\nEvent 2: Second thing happened\nEvent 3: Third thing happened',
+          significance: 'Significance text',
+        },
+      });
+
+      render(<ArticleDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Event 1: First thing happened/i)).toBeInTheDocument();
+        expect(screen.getByText(/Event 2: Second thing happened/i)).toBeInTheDocument();
+        expect(screen.getByText(/Event 3: Third thing happened/i)).toBeInTheDocument();
+      });
+    });
+
+    it('should split timeline by newlines', async () => {
+      (api.getArticleDetail as jest.Mock).mockResolvedValue({
+        ...mockArticleDetail,
+        context: {
+          background: null,
+          key_players: null,
+          timeline: '2020: First event\n2021: Second event\n2022: Third event',
+          significance: null,
+        },
+      });
+
+      render(<ArticleDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/2020: First event/i)).toBeInTheDocument();
+        expect(screen.getByText(/2021: Second event/i)).toBeInTheDocument();
+        expect(screen.getByText(/2022: Third event/i)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Framework Position Interpretation', () => {
+    it('should show "Balanced perspective" for position 0', async () => {
+      (api.getArticleDetail as jest.Mock).mockResolvedValue({
+        ...mockArticleDetail,
+        frameworks: [
+          {
+            ...mockArticleDetail.frameworks[0],
+            position_on_axis: 0,
+          },
+        ],
+      });
+
+      render(<ArticleDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Balanced perspective/i)).toBeInTheDocument();
+      });
+    });
+
+    it('should show left lean for negative positions', async () => {
+      (api.getArticleDetail as jest.Mock).mockResolvedValue({
+        ...mockArticleDetail,
+        frameworks: [
+          {
+            ...mockArticleDetail.frameworks[0],
+            position_on_axis: -2,
+          },
+        ],
+      });
+
+      render(<ArticleDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Leans toward Individual Liberty/i)).toBeInTheDocument();
+      });
+    });
+
+    it('should show strongly left for very negative positions', async () => {
+      (api.getArticleDetail as jest.Mock).mockResolvedValue({
+        ...mockArticleDetail,
+        frameworks: [
+          {
+            ...mockArticleDetail.frameworks[0],
+            position_on_axis: -5,
+          },
+        ],
+      });
+
+      render(<ArticleDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Strongly aligned with Individual Liberty/i)).toBeInTheDocument();
       });
     });
   });
