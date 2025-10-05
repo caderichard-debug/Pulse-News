@@ -269,107 +269,195 @@ export default function ArticleDetailPage() {
         </div>
       )}
 
-      {/* Framework Positioning */}
+      {/* Ethical Framework Analysis */}
       {article.frameworks.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">Framework Positioning</h2>
-          <div className="space-y-3">
+          <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+            <span>⚖️</span>
+            <span>Ethical Framework Analysis</span>
+          </h2>
+          <p className="text-gray-600 mb-4">
+            This article relates to underlying ethical debates. Understanding these frameworks helps you think critically about the issues.
+          </p>
+          <div className="space-y-4">
             {article.frameworks.map((fw) => (
-              <div key={fw.framework_id} className="bg-white border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-gray-900">{fw.framework_name}</h3>
-                  <span className="text-sm text-gray-600">
-                    Relevance: {(fw.relevance_score * 100).toFixed(0)}%
+              <div key={fw.framework_id} className="bg-gradient-to-br from-purple-600 to-indigo-700 text-white rounded-lg p-6 shadow-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xl font-semibold">{fw.framework_name}</h3>
+                  <span className="text-xs bg-white/20 px-3 py-1 rounded-full">
+                    {(fw.relevance_score * 100).toFixed(0)}% relevant
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                  <span>{fw.left_position}</span>
-                  <div className="flex-1 h-2 bg-gray-200 rounded-full relative">
+
+                {fw.explanation && (
+                  <p className="text-purple-100 mb-4 text-sm leading-relaxed">{fw.explanation}</p>
+                )}
+
+                <div className="flex items-center gap-3 text-sm mb-3">
+                  <span className="font-medium">{fw.left_position}</span>
+                  <div className="flex-1 h-2 bg-white/30 rounded-full relative overflow-hidden">
                     <div
-                      className="absolute top-0 h-2 w-2 bg-blue-600 rounded-full transform -translate-x-1/2"
+                      className="absolute inset-0 bg-gradient-to-r from-red-400 via-white to-blue-400 opacity-60"
+                    ></div>
+                    <div
+                      className="absolute top-0 h-4 w-4 -mt-1 bg-white rounded-full shadow-lg transform -translate-x-1/2 border-2 border-purple-300"
                       style={{ left: `${((fw.position_on_axis + 10) / 20) * 100}%` }}
                     ></div>
                   </div>
-                  <span>{fw.right_position}</span>
+                  <span className="font-medium">{fw.right_position}</span>
                 </div>
-                <div className="text-center text-lg font-semibold text-blue-600">
-                  {fw.position_on_axis > 0 ? '+' : ''}{fw.position_on_axis}
+
+                <div className="text-center">
+                  <span className="inline-block bg-white/20 px-4 py-2 rounded-lg text-lg font-bold">
+                    Position: {fw.position_on_axis > 0 ? '+' : ''}{fw.position_on_axis}
+                  </span>
+                  <p className="text-xs text-purple-200 mt-2">
+                    {fw.position_on_axis < -3 ? 'Strongly aligned with ' + fw.left_position :
+                     fw.position_on_axis < 0 ? 'Leans toward ' + fw.left_position :
+                     fw.position_on_axis === 0 ? 'Balanced perspective' :
+                     fw.position_on_axis < 3 ? 'Leans toward ' + fw.right_position :
+                     'Strongly aligned with ' + fw.right_position}
+                  </p>
                 </div>
-                {fw.explanation && (
-                  <p className="text-sm text-gray-700 mt-2">{fw.explanation}</p>
-                )}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Context */}
+      {/* Background & Context */}
       {article.context && (
         <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">Context</h2>
-          <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
-            {article.context.background && (
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Background</h3>
-                <p className="text-gray-700">{article.context.background}</p>
-              </div>
-            )}
-            {article.context.key_players && (
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Key Players</h3>
-                <p className="text-gray-700">{article.context.key_players}</p>
-              </div>
-            )}
-            {article.context.timeline && (
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Timeline</h3>
-                <p className="text-gray-700">{article.context.timeline}</p>
-              </div>
-            )}
-            {article.context.significance && (
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Significance</h3>
-                <p className="text-gray-700">{article.context.significance}</p>
-              </div>
-            )}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg overflow-hidden">
+            <div className="bg-blue-100 border-b border-blue-200 px-6 py-4">
+              <h2 className="text-2xl font-semibold text-blue-900 flex items-center gap-2">
+                <span>📚</span>
+                <span>Background & Context</span>
+              </h2>
+            </div>
+            <div className="p-6 space-y-6">
+              {article.context.background && (
+                <div>
+                  <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                    <span>📖</span>
+                    <span>Background</span>
+                  </h3>
+                  <p className="text-gray-700 leading-relaxed">{article.context.background}</p>
+                </div>
+              )}
+              {article.context.key_players && (
+                <div>
+                  <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                    <span>👥</span>
+                    <span>Key Players</span>
+                  </h3>
+                  {(() => {
+                    try {
+                      const players = JSON.parse(article.context.key_players);
+                      if (Array.isArray(players)) {
+                        return (
+                          <ul className="list-disc list-inside text-gray-700 leading-relaxed space-y-1">
+                            {players.map((player: string, idx: number) => (
+                              <li key={idx}>{player}</li>
+                            ))}
+                          </ul>
+                        );
+                      }
+                    } catch {
+                      // Fall back to plain text if not JSON
+                    }
+                    return <p className="text-gray-700 leading-relaxed">{article.context.key_players}</p>;
+                  })()}
+                </div>
+              )}
+              {article.context.timeline && (
+                <div>
+                  <h3 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                    <span>⏱️</span>
+                    <span>Timeline</span>
+                  </h3>
+                  <div className="relative border-l-2 border-blue-300 pl-6 ml-3 space-y-4">
+                    {(() => {
+                      try {
+                        const timelineData = JSON.parse(article.context.timeline);
+                        if (Array.isArray(timelineData)) {
+                          return timelineData.reverse().map((item: { date: string; event: string }, idx: number) => (
+                            <div key={idx} className="relative">
+                              <div className="absolute -left-[1.6rem] top-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-blue-50"></div>
+                              <p className="text-gray-700 text-sm leading-relaxed">
+                                <strong className="text-blue-800">{item.date}:</strong> {item.event}
+                              </p>
+                            </div>
+                          ));
+                        }
+                      } catch {
+                        // Fall back to splitting by newlines if not JSON
+                        return article.context.timeline.split('\n').filter(line => line.trim()).reverse().map((event, idx) => (
+                          <div key={idx} className="relative">
+                            <div className="absolute -left-[1.6rem] top-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-blue-50"></div>
+                            <p className="text-gray-700 text-sm leading-relaxed">{event}</p>
+                          </div>
+                        ));
+                      }
+                    })()}
+                  </div>
+                </div>
+              )}
+              {article.context.significance && (
+                <div>
+                  <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                    <span>💡</span>
+                    <span>Why This Matters</span>
+                  </h3>
+                  <p className="text-gray-700 leading-relaxed">{article.context.significance}</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Related Articles (Coverage Comparison) */}
+      {/* Coverage Comparison */}
       {article.related_articles.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">How Other Sources Covered This Story</h2>
-          <div className="space-y-3">
-            {article.related_articles.map((related) => (
-              <div
-                key={related.id}
-                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => router.push(`/article/${related.id}`)}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900 mb-1">{related.title}</p>
-                    <p className="text-sm text-gray-600">
-                      {related.source_name} • {new Date(related.published_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="ml-4 text-right text-sm">
-                    {related.sentiment_score !== null && (
-                      <p className={getSentimentColor(related.sentiment_score)}>
-                        {related.sentiment_score > 0 ? '+' : ''}{related.sentiment_score.toFixed(1)}
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
+            <h2 className="text-2xl font-semibold mb-2 flex items-center gap-2">
+              <span>🔗</span>
+              <span>Cross-Source Coverage</span>
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              This story is being covered by {article.related_articles.length + 1} sources. Compare how different outlets frame the same story.
+            </p>
+            <div className="space-y-3">
+              {article.related_articles.map((related) => (
+                <div
+                  key={related.id}
+                  className="bg-white border border-purple-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => router.push(`/article/${related.id}`)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 mb-1">{related.title}</p>
+                      <p className="text-sm text-gray-600">
+                        {related.source_name} • {new Date(related.published_at).toLocaleDateString()}
                       </p>
-                    )}
-                    {related.political_lean && (
-                      <p className={getLeanColor(related.political_lean)}>
-                        {related.political_lean}
-                      </p>
-                    )}
+                    </div>
+                    <div className="ml-4 text-right text-sm flex flex-col gap-1">
+                      {related.sentiment_score !== null && (
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${getSentimentColor(related.sentiment_score)}`}>
+                          {related.sentiment_score > 0 ? '+' : ''}{related.sentiment_score.toFixed(1)}
+                        </span>
+                      )}
+                      {related.political_lean && (
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${getLeanColor(related.political_lean)}`}>
+                          {related.political_lean}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       )}

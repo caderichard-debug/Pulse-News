@@ -16,6 +16,7 @@ export default function Navbar() {
     { name: 'Dashboard', path: '/dashboard', icon: '📊' },
     { name: 'Feed', path: '/feed', icon: '📰' },
     { name: 'Preferences', path: '/preferences', icon: '⚙️' },
+    { name: 'How It Works', path: '/how-it-works', icon: '💡' },
   ];
 
   return (
