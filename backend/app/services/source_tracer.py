@@ -118,8 +118,8 @@ class SourceTracer:
         Trace a statistic to its original source using multiple methods.
 
         Priority order:
-        1. Within article content (AI + URL extraction)
-        2. Web search for the statistic
+        1. Within article content (AI + URL extraction + references section)
+        2. Web search for the statistic (improved with better validation)
         3. Cross-article database search
 
         Args:
@@ -133,17 +133,22 @@ class SourceTracer:
             Returns None if all tracing methods fail
         """
         try:
-            # Method 1: Try to find source within the article
+            # Method 1: Try to find source within the article (enhanced with smart chunking)
             result = self._trace_within_article(statistic_text, article_content, article_url)
 
             if result and result.get("source_name"):
-                result["method"] = "article_content"
-                logger.info(f"Found source in article: {result.get('source_name')}")
-                return result
+                # Validate that the source is actually related to this statistic
+                if self._validate_source_relevance(statistic_text, result, article_content):
+                    result["method"] = "article_content"
+                    logger.info(f"Found source in article: {result.get('source_name')}")
+                    return result
+                else:
+                    logger.warning(f"Source '{result.get('source_name')}' doesn't match statistic, trying web search")
+                    result = None
 
-            # Method 2: Try web search
-            if settings.google_fact_check_api_key:  # Reuse the Google API key if available
-                web_result = self._trace_via_web_search(statistic_text)
+            # Method 2: Try improved web search
+            if settings.google_fact_check_api_key and hasattr(settings, 'google_search_engine_id'):
+                web_result = self._trace_via_web_search_improved(statistic_text, article_url)
                 if web_result and web_result.get("source_name"):
                     web_result["method"] = "web_search"
                     logger.info(f"Found source via web search: {web_result.get('source_name')}")
@@ -162,6 +167,7 @@ class SourceTracer:
                 result["method"] = "article_content"
                 return result
 
+            logger.debug(f"No source found for statistic: {statistic_text[:50]}")
             return None
 
         except Exception as e:
@@ -345,12 +351,92 @@ class SourceTracer:
             return None
 
 
-    def _trace_via_web_search(self, statistic_text: str) -> Optional[Dict]:
+
+    def _validate_source_relevance(
+        self,
+        statistic_text: str,
+        source_result: Dict,
+        article_content: str
+    ) -> bool:
         """
-        Trace source via web search using Google Custom Search API.
+        Validate that the extracted source is actually related to this statistic.
+
+        Prevents mismatches like "10 year sentence" getting attributed to
+        an unrelated "necrophilia" article linked in the text.
+
+        Args:
+            statistic_text: The statistic being traced
+            source_result: The source extraction result
+            article_content: Full article content
+
+        Returns:
+            True if source is relevant, False otherwise
+        """
+        try:
+            source_excerpt = source_result.get('source_excerpt', '')
+            source_name = source_result.get('source_name', '')
+
+            if not source_excerpt and not source_name:
+                return True  # Can't validate, assume OK
+
+            # Extract context window around the statistic
+            stat_lower = statistic_text.lower()
+            content_lower = article_content.lower()
+
+            position = content_lower.find(stat_lower)
+            if position == -1:
+                # Try partial match
+                if len(stat_lower) > 20:
+                    position = content_lower.find(stat_lower[:20])
+
+            if position == -1:
+                return True  # Can't find statistic, assume OK
+
+            # Get 300 chars before and after
+            start = max(0, position - 300)
+            end = min(len(article_content), position + len(statistic_text) + 300)
+            context = article_content[start:end].lower()
+
+            # Check if source appears near the statistic
+            if source_name.lower() in context:
+                logger.debug(f"Source '{source_name}' found near statistic - validated")
+                return True
+
+            # Check if source excerpt appears near statistic
+            if source_excerpt and len(source_excerpt) > 20:
+                excerpt_key = source_excerpt[:50].lower()
+                if excerpt_key in context:
+                    logger.debug(f"Source excerpt found near statistic - validated")
+                    return True
+
+            # Source not found near statistic - likely mismatch
+            logger.warning(
+                f"Source '{source_name}' not found near statistic '{statistic_text[:50]}' "
+                f"- possible mismatch"
+            )
+            return False
+
+        except Exception as e:
+            logger.error(f"Error validating source relevance: {e}")
+            return True  # On error, assume valid to avoid false negatives
+
+    def _trace_via_web_search_improved(
+        self,
+        statistic_text: str,
+        article_url: str
+    ) -> Optional[Dict]:
+        """
+        Improved web search with better query construction and result validation.
+
+        Improvements:
+        1. Better search queries (contextual keywords)
+        2. Multiple search strategies
+        3. Result relevance scoring
+        4. Deduplication logic
 
         Args:
             statistic_text: The statistic to search for
+            article_url: URL of the original article (to avoid circular references)
 
         Returns:
             Dict with source info or None
@@ -358,51 +444,188 @@ class SourceTracer:
         if not settings.google_fact_check_api_key:
             return None
 
+        if not hasattr(settings, 'google_search_engine_id') or not settings.google_search_engine_id:
+            logger.debug("Google Custom Search Engine ID not configured")
+            return None
+
         try:
-            # Use Google Custom Search API to search for the statistic
-            search_query = f'"{statistic_text}" source study report'
-            url = "https://www.googleapis.com/customsearch/v1"
-            params = {
-                "key": settings.google_fact_check_api_key,
-                "cx": settings.google_search_engine_id if hasattr(settings, 'google_search_engine_id') else None,
-                "q": search_query,
-                "num": 3  # Get top 3 results
-            }
+            # Strategy 1: Search for statistic + "source" + "study"
+            search_queries = [
+                f'"{statistic_text}" source',
+                f'"{statistic_text}" study report',
+                f'"{statistic_text}" statistics data',
+            ]
 
-            if not params["cx"]:
-                logger.debug("Google Custom Search Engine ID not configured")
+            best_result = None
+            highest_score = 0.0
+
+            for query in search_queries:
+                url = "https://www.googleapis.com/customsearch/v1"
+                params = {
+                    "key": settings.google_fact_check_api_key,
+                    "cx": settings.google_search_engine_id,
+                    "q": query,
+                    "num": 5  # Get top 5 results for better selection
+                }
+
+                response = requests.get(url, params=params, timeout=10)
+
+                if response.status_code != 200:
+                    logger.warning(f"Google Search API returned status {response.status_code}")
+                    continue
+
+                data = response.json()
+
+                if not data.get("items"):
+                    continue
+
+                # Score each result
+                for item in data["items"]:
+                    result_url = item.get("link", "")
+                    title = item.get("title", "")
+                    snippet = item.get("snippet", "")
+
+                    # Skip if it's the same article we're analyzing
+                    if result_url == article_url:
+                        continue
+
+                    # Score this result
+                    score = self._score_search_result(
+                        statistic_text, title, snippet, result_url
+                    )
+
+                    if score > highest_score:
+                        highest_score = score
+                        best_result = {
+                            "url": result_url,
+                            "title": title,
+                            "snippet": snippet,
+                            "score": score
+                        }
+
+            if not best_result or highest_score < 0.5:
+                logger.debug("No relevant search results found")
                 return None
 
-            response = requests.get(url, params=params, timeout=10)
+            # Extract source name from best result
+            source_name = self._extract_source_name_from_search_improved(
+                best_result["title"],
+                best_result["snippet"],
+                best_result["url"]
+            )
 
-            if response.status_code != 200:
-                logger.warning(f"Google Search API returned status {response.status_code}")
-                return None
-
-            data = response.json()
-
-            if not data.get("items"):
-                return None
-
-            # Analyze top result
-            top_result = data["items"][0]
-            source_url = top_result.get("link", "")
-            title = top_result.get("title", "")
-            snippet = top_result.get("snippet", "")
-
-            # Use AI to extract source name from title/snippet
-            source_name = self._extract_source_name_from_search(title, snippet, source_url)
+            confidence = min(0.9, 0.5 + (highest_score * 0.4))  # Max 0.9 for web search
 
             return {
-                "source_url": source_url,
+                "source_url": best_result["url"],
                 "source_name": source_name,
-                "source_excerpt": snippet[:200],
-                "confidence": 0.7  # Medium-high confidence for web search
+                "source_excerpt": best_result["snippet"][:200],
+                "confidence": confidence,
+                "relevance_score": highest_score
             }
 
         except Exception as e:
-            logger.error(f"Error in web search trace: {e}")
+            logger.error(f"Error in improved web search: {e}")
             return None
+
+    def _score_search_result(
+        self,
+        statistic_text: str,
+        title: str,
+        snippet: str,
+        url: str
+    ) -> float:
+        """
+        Score a search result's relevance to the statistic.
+
+        Scoring factors:
+        - Statistic appears in title/snippet (high weight)
+        - Credible domain (.gov, .edu, known orgs)
+        - Contains study/report keywords
+        - Title relevance
+
+        Returns:
+            Score from 0.0 to 1.0
+        """
+        score = 0.0
+        combined_text = (title + " " + snippet).lower()
+        stat_lower = statistic_text.lower()
+
+        # Extract key numbers from statistic
+        numbers = re.findall(r'\d+(?:\.\d+)?', statistic_text)
+
+        # Check if statistic or key numbers appear in result
+        if stat_lower in combined_text:
+            score += 0.4
+        elif any(num in combined_text for num in numbers):
+            score += 0.2
+
+        # Check for credible domains
+        domain = urlparse(url).netloc.lower()
+        if any(tld in domain for tld in ['.gov', '.edu']):
+            score += 0.3
+        elif any(org in domain for org in ['nih', 'cdc', 'who', 'census', 'bls', 'fbi']):
+            score += 0.25
+
+        # Check for study/report keywords
+        study_keywords = ['study', 'report', 'research', 'survey', 'poll', 'data', 'statistics']
+        if any(keyword in combined_text for keyword in study_keywords):
+            score += 0.15
+
+        # Check for source attribution keywords
+        source_keywords = ['according to', 'published by', 'released by', 'from']
+        if any(keyword in combined_text for keyword in source_keywords):
+            score += 0.1
+
+        return min(1.0, score)
+
+    def _extract_source_name_from_search_improved(
+        self,
+        title: str,
+        snippet: str,
+        url: str
+    ) -> str:
+        """
+        Extract source name from search result with improved heuristics.
+        """
+        combined = title + " " + snippet
+
+        # Pattern 1: "According to [Organization]"
+        patterns = [
+            r"(?:according to|from|by|published by|released by)\s+(?:the\s+)?([A-Z][A-Za-z\s&]+(?:University|Institute|Bureau|Agency|Department|Foundation|Center|Association|Survey|Poll|Research))",
+            r"([A-Z][A-Za-z\s&]+\s+(?:University|Institute|Bureau|Agency|Department|Foundation|Center|Association))",
+            r"(?:U\.S\.|US)\s+(Census Bureau|Bureau of Labor Statistics|Department of [A-Za-z]+)",
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, combined)
+            if match:
+                name = match.group(1).strip()
+                # Clean up
+                name = re.sub(r'\s+', ' ', name)  # Normalize whitespace
+                if len(name) > 5:  # Sanity check
+                    return name
+
+        # Fallback: Extract from domain
+        domain = urlparse(url).netloc
+        if domain.startswith("www."):
+            domain = domain[4:]
+
+        # Known domain mappings
+        domain_map = {
+            'cdc.gov': 'CDC',
+            'census.gov': 'U.S. Census Bureau',
+            'bls.gov': 'Bureau of Labor Statistics',
+            'nih.gov': 'NIH',
+            'who.int': 'World Health Organization',
+            'pewresearch.org': 'Pew Research Center',
+        }
+
+        if domain in domain_map:
+            return domain_map[domain]
+
+        # Generic domain name
+        return domain.split(".")[0].replace('-', ' ').title()
 
     def _trace_via_database(self, statistic_text: str, session: Session) -> Optional[Dict]:
         """
@@ -440,26 +663,6 @@ class SourceTracer:
             logger.error(f"Error in database trace: {e}")
             return None
 
-    def _extract_source_name_from_search(self, title: str, snippet: str, url: str) -> Optional[str]:
-        """Extract source name from search result using heuristics."""
-        # Extract domain
-        domain = urlparse(url).netloc
-        if domain.startswith("www."):
-            domain = domain[4:]
-
-        # Look for known patterns in title/snippet
-        patterns = [
-            r"(?:according to|from|by|study by|report by)\s+([A-Z][A-Za-z\s&]+(?:University|Institute|Bureau|Agency|Department|Foundation|Center|Association))",
-            r"([A-Z][A-Za-z\s&]+(?:University|Institute|Bureau|Agency|Department|Foundation|Center|Association))",
-        ]
-
-        for pattern in patterns:
-            match = re.search(pattern, title + " " + snippet)
-            if match:
-                return match.group(1).strip()
-
-        # Fallback to domain name
-        return domain.split(".")[0].title()
 
     def _extract_references_section(self, article_content: str) -> Optional[str]:
         """
@@ -736,12 +939,6 @@ class SourceTracer:
                         'method': 'heuristic'
                     }
 
-            # If still not verified, try web search (optional, requires API key)
-            if settings.google_fact_check_api_key and hasattr(settings, 'google_search_engine_id'):
-                web_verification = self._verify_organization_via_web(source_name)
-                if web_verification.get('verified'):
-                    return web_verification
-
             # Organization not recognized
             logger.debug(f"Organization '{source_name}' not verified")
             return {
@@ -759,49 +956,6 @@ class SourceTracer:
                 'method': 'error'
             }
 
-    def _verify_organization_via_web(self, source_name: str) -> Dict:
-        """
-        Verify organization exists via Google search (optional fallback).
-
-        Args:
-            source_name: Organization name to verify
-
-        Returns:
-            Dict with verification results
-        """
-        try:
-            search_query = f'"{source_name}" official website'
-
-            response = requests.get(
-                "https://www.googleapis.com/customsearch/v1",
-                params={
-                    "key": settings.google_fact_check_api_key,
-                    "cx": settings.google_search_engine_id,
-                    "q": search_query,
-                    "num": 1
-                },
-                timeout=5
-            )
-
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('items') and len(data['items']) > 0:
-                    top_result = data['items'][0]
-                    logger.debug(f"Organization '{source_name}' verified via web search")
-                    return {
-                        'verified': True,
-                        'category': 'web_verified',
-                        'confidence': 0.7,
-                        'method': 'web_search',
-                        'website': top_result.get('link'),
-                        'snippet': top_result.get('snippet', '')[:200]
-                    }
-
-            return {'verified': False, 'confidence': 0.2, 'method': 'web_search_failed'}
-
-        except Exception as e:
-            logger.warning(f"Web verification error for '{source_name}': {e}")
-            return {'verified': False, 'confidence': 0.0, 'method': 'web_search_error'}
 
 
 # Singleton instance

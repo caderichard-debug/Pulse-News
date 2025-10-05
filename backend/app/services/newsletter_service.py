@@ -321,9 +321,11 @@ def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict
             "url": article.url,
             "source_name": article.source.name,
             "political_lean": analysis.political_lean.value if analysis.political_lean else None,
+            "sentiment_score": analysis.sentiment_score,
             "published_at": article.published_at.strftime("%b %d") if article.published_at else "",
             "summary": analysis.summary,
             "key_stats": analysis.key_stats,
+            "bias_indicators": [analysis.bias_indicators] if analysis.bias_indicators else [],
             "frameworks": frameworks_for_article,
             "statistics": [
                 {
