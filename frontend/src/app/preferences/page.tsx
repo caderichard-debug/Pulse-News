@@ -143,10 +143,6 @@ export default function PreferencesPage() {
     }
   };
 
-  const handleLogout = () => {
-    api.clearToken();
-    router.push('/login');
-  };
 
   if (loading) {
     return (

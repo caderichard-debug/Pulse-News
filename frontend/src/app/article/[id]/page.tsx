@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
@@ -63,24 +63,25 @@ export default function ArticleDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (articleId) {
-      loadArticle();
-    }
-  }, [articleId]);
-
-  async function loadArticle() {
+  const loadArticle = useCallback(async () => {
     try {
       setLoading(true);
       const data = await api.getArticleDetail(articleId);
       setArticle(data);
       setError(null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load article');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load article';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  }
+  }, [articleId]);
+
+  useEffect(() => {
+    if (articleId) {
+      loadArticle();
+    }
+  }, [articleId, loadArticle]);
 
   function getVerificationBadge(status: string) {
     const badges: Record<string, { color: string; text: string; icon: string }> = {

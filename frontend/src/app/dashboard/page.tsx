@@ -73,10 +73,6 @@ export default function DashboardPage() {
     }
   };
 
-  const handleLogout = () => {
-    api.clearToken();
-    router.push('/login');
-  };
 
   // Transform sentiment data for Recharts
   const sentimentChartData = sentimentData.map(item => ({

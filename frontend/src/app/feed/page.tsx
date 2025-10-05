@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
@@ -43,12 +43,7 @@ export default function FeedPage() {
   const [sortBy, setSortBy] = useState('newest');
   const [page, setPage] = useState(1);
 
-  useEffect(() => {
-    loadFeedData();
-    loadFilters();
-  }, [selectedTopic, selectedSource, selectedLean, sortBy, page]);
-
-  async function loadFeedData() {
+  const loadFeedData = useCallback(async () => {
     try {
       setLoading(true);
       const data = await api.getFeedArticles({
@@ -61,12 +56,18 @@ export default function FeedPage() {
       });
       setFeedData(data);
       setError(null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load feed');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load feed';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  }
+  }, [page, selectedTopic, selectedSource, selectedLean, sortBy]);
+
+  useEffect(() => {
+    loadFeedData();
+    loadFilters();
+  }, [selectedTopic, selectedSource, selectedLean, sortBy, page, loadFeedData]);
 
   async function loadFilters() {
     try {
@@ -274,7 +275,7 @@ export default function FeedPage() {
                       </div>
                     )}
 
-                    {article.primary_framework && (
+                    {article.primary_framework && article.framework_position !== null && (
                       <div className="flex items-center gap-1">
                         <span className="text-gray-600">Framework:</span>
                         <span className="font-semibold text-purple-600">
