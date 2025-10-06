@@ -5,6 +5,7 @@ from app.database import create_db_and_tables
 from app.jobs.scheduler import start_scheduler, stop_scheduler
 from app.routes import admin, auth, preferences, articles, test_email, analytics, feed
 import logging
+from vercel_python import VercelHandler
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,6 +33,8 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan
 )
+
+handler = VercelHandler(app)
 
 # CORS middleware for frontend
 app.add_middleware(
