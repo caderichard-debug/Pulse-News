@@ -6,7 +6,7 @@ Tests core newsletter generation logic with mocked external dependencies.
 import pytest
 from unittest.mock import patch, MagicMock
 from sqlmodel import Session
-from .models import (
+from ..app.models import (
     User, Article, ArticleAnalysis, Source, Topic,
     UserTopicPreference, ProcessingStatus, PoliticalLean
 )
@@ -112,7 +112,7 @@ class TestNewsletterServiceBasics:
     @patch('app.services.newsletter_service.settings')
     def test_newsletter_requires_api_key(self, mock_settings):
         """Test that newsletter generation fails without API key"""
-        from .services.newsletter_service import generate_and_send_newsletters
+        from ..app.services.newsletter_service import generate_and_send_newsletters
 
         mock_settings.resend_api_key = None
 
@@ -128,7 +128,7 @@ class TestNewsletterServiceBasics:
         self, mock_settings, mock_generate, session: Session, active_user: User
     ):
         """Test that newsletter generation is attempted for active users"""
-        from .services.newsletter_service import generate_and_send_newsletters
+        from ..app.services.newsletter_service import generate_and_send_newsletters
 
         mock_settings.resend_api_key = "test_key"
         mock_generate.return_value = None  # No content
@@ -141,7 +141,7 @@ class TestNewsletterServiceBasics:
     @patch('app.services.newsletter_service.settings')
     def test_render_newsletter_template(self, mock_settings):
         """Test newsletter template rendering with basic data"""
-        from .services.newsletter_service import _render_newsletter_template
+        from ..app.services.newsletter_service import _render_newsletter_template
 
         data = {
             "user_name": "Test User",

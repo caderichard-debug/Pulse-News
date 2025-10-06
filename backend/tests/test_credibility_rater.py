@@ -3,8 +3,8 @@ Tests for Credibility Rater Service
 """
 import pytest
 from sqlmodel import Session, select
-from .services.credibility_rater import CredibilityRater, get_credibility_rater
-from .models import SourceCredibilityRating
+from ..app.services.credibility_rater import CredibilityRater, get_credibility_rater
+from ..app.models import SourceCredibilityRating
 from datetime import datetime, timedelta
 
 

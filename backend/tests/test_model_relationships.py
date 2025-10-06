@@ -5,7 +5,7 @@ Tests foreign keys, cascades, and relationship integrity.
 
 import pytest
 from sqlmodel import Session, select
-from .models import (
+from ..app.models import (
     Article, ArticleAnalysis, Source, Topic, Framework,
     User, UserTopicPreference, ArticleFrameworkLink,
     SourceTopicLink, ProcessingStatus, PoliticalLean
