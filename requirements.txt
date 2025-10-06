@@ -33,7 +33,6 @@ email-validator==2.1.0
 
 # Configuration & Utils
 python-dotenv==1.0.1
-python==3.9
 pydantic==2.7.4
 pydantic-settings==2.0.0
 typing-extensions>=4.8.0

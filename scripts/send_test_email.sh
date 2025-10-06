@@ -65,7 +65,7 @@ print(f\"  Resend API: {'✅ Configured' if config.get('resend_configured') else
 if not config.get('resend_configured'):
     print('')
     print('⚠️  Warning: Resend API key not configured!')
-    print('   Set RESEND_API_KEY in backend/.env')
+    print('   Set RESEND_API_KEY in api/.env')
     sys.exit(1)
 " || exit 1
 
