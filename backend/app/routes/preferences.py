@@ -4,9 +4,9 @@ User preferences routes: manage topic subscriptions and notification settings.
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select
-from app.database import get_session
-from app.models import User, UserTopicPreference, Topic, Source, UserSourceSubscription, Article, ArticleAnalysis, PoliticalLean
-from app.routes.auth import get_current_user
+from ..database import get_session
+from ..models import User, UserTopicPreference, Topic, Source, UserSourceSubscription, Article, ArticleAnalysis, PoliticalLean
+from ..routes.auth import get_current_user
 from pydantic import BaseModel, Field
 from typing import List, Optional
 import logging
