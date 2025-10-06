@@ -47,14 +47,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-@app.get("")
-def root():
-    return {
-        "name": "Pulse News Aggregator API",
-        "version": "0.1.0",
-        "docs": "/docs"
-    }
 
 # Include routers
 app.include_router(admin.router)
@@ -64,6 +56,14 @@ app.include_router(articles.router)  # Merged: includes both /analyzed and /{art
 app.include_router(test_email.router)
 app.include_router(analytics.router)
 app.include_router(feed.router)
+
+@app.get("/")
+def root():
+    return {
+        "name": "Pulse News Aggregator API",
+        "version": "0.1.0",
+        "docs": "/docs"
+    }
 
 # This is important for Vercel
 if __name__ == "__main__":
