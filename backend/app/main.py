@@ -36,10 +36,14 @@ app = FastAPI(
 )
 
 # CORS middleware for frontend
-frontend_url = os.getenv("FRONTEND_URL", "*")  # fallback to '*' if not set
+allowed = [
+    "https://localhost:3000",
+    "https://pulse-news-ten.vercel.app/",
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[frontend_url],  # Next.js dev server
+    allow_origin_regex=r"^https:\/\/pulse-news-git-.*\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
