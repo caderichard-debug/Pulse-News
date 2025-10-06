@@ -1,11 +1,12 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.database import create_db_and_tables
-from app.jobs.scheduler import start_scheduler, stop_scheduler
-from app.routes import admin, auth, preferences, articles, test_email, analytics, feed
+from .database import create_db_and_tables
+from .jobs.scheduler import start_scheduler, stop_scheduler
+from .routes import admin, auth, preferences, articles, test_email, analytics, feed
 import logging
-from vercel_python import VercelHandler
+from mangum import Mangum
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -37,7 +38,11 @@ app = FastAPI(
 # CORS middleware for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Next.js dev server
+    allow_origins=[
+            "http://localhost:3000", # Next.js dev server
+            "https://pulse-news-ten.vercel.app/", # Next.js production server
+        ],  
+    allow_origin_regex=r"^https:\/\/pulse-news-git-.*\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -61,4 +66,4 @@ def root():
         "docs": "/docs"
     }
 
-handler = VercelHandler(app)
+handler = Mangum(app)
