@@ -7,14 +7,14 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, create_engine, SQLModel
 from sqlmodel.pool import StaticPool
 from datetime import datetime
-from app.main import app
-from app.models import (
+.main import app
+.models import (
     User, Article, ArticleAnalysis, Source,
     Framework, ArticleFrameworkLink, StatisticVerification,
     ArticleCluster, ArticleClusterMember, ArticleContext, PoliticalLean
 )
-from app.database import get_session
-from app.utils.auth import create_access_token, hash_password
+.database import get_session
+.utils.auth import create_access_token, hash_password
 
 
 @pytest.fixture(name="session")
@@ -114,7 +114,7 @@ def test_article(session: Session):
     session.commit()
 
     # Add statistics
-    from app.models import VerificationStatus
+    .models import VerificationStatus
     stat = StatisticVerification(
         article_id=article.id,
         statistic_text="50% of Americans support this policy",

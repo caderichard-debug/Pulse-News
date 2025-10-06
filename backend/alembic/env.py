@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # Import SQLModel and all models
 from sqlmodel import SQLModel
-from app.models import (
+.models import (
     Source,
     Topic,
     Article,

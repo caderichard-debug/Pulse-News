@@ -4,11 +4,11 @@ Tests for Statistics Verification Service
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from sqlmodel import Session, select
-from app.models import (
+.models import (
     Article, Source, ArticleAnalysis, StatisticVerification,
     ProcessingStatus, PoliticalLean, VerificationStatus, VerificationMethod
 )
-from app.services.statistics_verifier import (
+.services.statistics_verifier import (
     extract_statistics_from_article,
     verify_statistic_v2,
     process_article_statistics,

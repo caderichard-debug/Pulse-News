@@ -5,8 +5,8 @@ Pytest configuration and fixtures.
 import pytest
 from sqlmodel import Session, create_engine, SQLModel
 from sqlmodel.pool import StaticPool
-from app.database import get_session
-from app.main import app
+.database import get_session
+.main import app
 
 
 @pytest.fixture(name="session")
