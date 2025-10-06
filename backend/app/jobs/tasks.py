@@ -4,9 +4,9 @@ These are the actual functions that get executed by the scheduler.
 """
 
 from sqlmodel import Session
-from .database import engine
-from .services.rss_scraper import scrape_all_active_sources
-from .services.article_extractor import process_pending_articles
+from ..database import engine
+from ..services.rss_scraper import scrape_all_active_sources
+from ..services.article_extractor import process_pending_articles
 import logging
 
 logger = logging.getLogger(__name__)

@@ -6,13 +6,13 @@ Merged from articles.py and article_detail.py to resolve router conflict.
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
-from .database import get_session
-from .models import (
+from ..database import get_session
+from ..models import (
     User, Article, ArticleAnalysis, ArticleFrameworkLink,
     Framework, Source, StatisticVerification, ArticleClusterMember,
     ArticleCluster, ArticleContext
 )
-from .routes.auth import get_current_user
+from ..routes.auth import get_current_user
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime

@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from .routes import admin, auth, preferences
+from ..routes import admin, auth, preferences
 
 router = APIRouter()
 
