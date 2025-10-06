@@ -42,7 +42,7 @@ app.add_middleware(
             "http://localhost:3000", # Next.js dev server
             "https://pulse-news-ten.vercel.app/", # Next.js production server
         ],  
-    allow_origin_regex=r"^https:\/\/pulse-news-git-.*\.vercel\.app$",
+    allow_origin_regex="https://pulse-news-.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

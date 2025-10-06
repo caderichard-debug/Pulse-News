@@ -16,7 +16,7 @@ from ..jobs.tasks import (
     article_clustering_job,
     context_generation_job
 )
-from app.config import settings
+from ..config import settings
 import logging
 
 logger = logging.getLogger(__name__)
