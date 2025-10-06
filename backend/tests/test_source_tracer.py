@@ -4,7 +4,7 @@ Tests for Source Tracer Service
 import pytest
 from unittest.mock import Mock, patch
 from sqlmodel import Session
-from .services.source_tracer import SourceTracer, get_source_tracer
+from ..app.services.source_tracer import SourceTracer, get_source_tracer
 
 
 class TestSourceTracer:

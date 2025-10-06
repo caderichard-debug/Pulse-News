@@ -6,7 +6,7 @@ Extends test_api.py with more comprehensive coverage.
 import pytest
 from sqlmodel import Session
 from fastapi.testclient import TestClient
-from .models import (
+from ..app.models import (
     Article, ArticleAnalysis, Source, Framework, User,
     ProcessingStatus, PoliticalLean
 )

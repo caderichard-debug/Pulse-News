@@ -4,11 +4,11 @@ Tests for Context Generation Service
 import pytest
 from unittest.mock import Mock, patch
 from sqlmodel import Session, select
-from .models import (
+from ..app.models import (
     Article, Source, ArticleAnalysis, ArticleContext,
     ProcessingStatus, PoliticalLean
 )
-from .services.context_generator import (
+from ..app.services.context_generator import (
     generate_article_context,
     get_article_context,
     format_context_for_newsletter,

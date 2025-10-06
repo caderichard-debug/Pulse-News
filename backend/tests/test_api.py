@@ -7,8 +7,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, create_engine, SQLModel
 from sqlmodel.pool import StaticPool
-from .main import app
-from .database import get_session
+from ..app.main import app
+from ..app.database import get_session
 
 
 @pytest.fixture(name="session")
