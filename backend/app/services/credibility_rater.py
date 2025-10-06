@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 from datetime import datetime, timedelta
 from sqlmodel import Session, select
 
-from app.models import SourceCredibilityRating
+from ..models import SourceCredibilityRating
 
 logger = logging.getLogger(__name__)
 

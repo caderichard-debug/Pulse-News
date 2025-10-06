@@ -4,12 +4,12 @@ Analytics routes for dashboard data visualization.
 
 from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session, select, func
-from app.database import get_session
-from app.models import (
+from ..database import get_session
+from ..models import (
     User, Article, ArticleAnalysis, ArticleFrameworkLink,
     Framework, Topic, UserTopicPreference, PoliticalLean
 )
-from app.routes.auth import get_current_user
+from ..routes.auth import get_current_user
 from pydantic import BaseModel
 from typing import List, Optional, Dict
 from datetime import datetime, timedelta
@@ -326,7 +326,7 @@ async def get_user_stats(
     """
     Get user's personal statistics for dashboard overview.
     """
-    from app.models import Newsletter, UserSourceSubscription
+    .models import Newsletter, UserSourceSubscription
 
     # Count newsletters received
     newsletter_count = session.exec(

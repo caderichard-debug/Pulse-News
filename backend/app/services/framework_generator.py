@@ -4,11 +4,11 @@ This is the "competitive edge" - mapping articles to underlying ethical debates.
 """
 
 from sqlmodel import Session, select
-from app.models import (
+from ..models import (
     Article, ArticleAnalysis, Framework, ArticleFrameworkLink
 )
-from app.database import engine
-from app.utils.openai_client import openai_client
+from ..database import engine
+from ..utils.openai_client import openai_client
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 import logging

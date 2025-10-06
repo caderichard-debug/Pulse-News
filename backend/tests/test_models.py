@@ -2,7 +2,7 @@
 Test database models and validation.
 """
 
-from app.models import User, Article, Framework, ProcessingStatus, PoliticalLean
+.models import User, Article, Framework, ProcessingStatus, PoliticalLean
 from datetime import datetime
 import pytest
 

@@ -8,8 +8,8 @@ from readability import Document
 from bs4 import BeautifulSoup
 import requests
 from sqlmodel import Session, select
-from app.models import Article, ProcessingStatus
-from app.database import engine
+from ..models import Article, ProcessingStatus
+from ..database import engine
 from typing import Optional, Dict
 import logging
 import time

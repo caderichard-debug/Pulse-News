@@ -4,8 +4,8 @@ Run this before seeding data.
 """
 
 from sqlmodel import SQLModel
-from app.database import engine
-from app.models import (
+.database import engine
+.models import (
     Source,
     Topic,
     Article,

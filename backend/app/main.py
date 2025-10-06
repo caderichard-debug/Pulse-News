@@ -2,9 +2,9 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.database import create_db_and_tables
-from app.jobs.scheduler import start_scheduler, stop_scheduler
-from app.routes import admin, auth, preferences, articles, test_email, analytics, feed
+from .database import create_db_and_tables
+from .jobs.scheduler import start_scheduler, stop_scheduler
+from .routes import admin, auth, preferences, articles, test_email, analytics, feed
 import logging
 
 logging.basicConfig(level=logging.INFO)
