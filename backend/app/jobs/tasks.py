@@ -84,7 +84,7 @@ def analyze_job(session: Session = None):
         logger.info("Starting scheduled AI analysis job")
         logger.info("=" * 60)
 
-        from app.services.ai_analyzer import analyze_articles_batch
+        .services.ai_analyzer import analyze_articles_batch
 
         # Process up to 10 articles (2 batches of 5)
         total_analyzed = 0
@@ -128,7 +128,7 @@ def framework_job(session: Session = None):
         logger.info("Starting scheduled framework update job")
         logger.info("=" * 60)
 
-        from app.services.framework_generator import (
+        .services.framework_generator import (
             map_articles_to_frameworks,
             discover_new_frameworks
         )
@@ -188,7 +188,7 @@ def newsletter_job():
         logger.info("Starting scheduled newsletter job")
         logger.info("=" * 60)
 
-        from app.services.newsletter_service import generate_and_send_newsletters
+        .services.newsletter_service import generate_and_send_newsletters
 
         # Generate and send newsletters
         stats = generate_and_send_newsletters()
@@ -224,7 +224,7 @@ def statistics_verification_job(session: Session = None):
         logger.info("Starting scheduled statistics verification job")
         logger.info("=" * 60)
 
-        from app.services.statistics_verifier import process_pending_verifications
+        .services.statistics_verifier import process_pending_verifications
 
         if session is None:
             with Session(engine) as session:
@@ -266,7 +266,7 @@ def article_clustering_job(session: Session = None):
         logger.info("Starting scheduled article clustering job")
         logger.info("=" * 60)
 
-        from app.services.article_clusterer import process_article_clustering
+        .services.article_clusterer import process_article_clustering
 
         if session is None:
             with Session(engine) as session:
@@ -308,7 +308,7 @@ def context_generation_job(session: Session = None):
         logger.info("Starting scheduled context generation job")
         logger.info("=" * 60)
 
-        from app.services.context_generator import process_article_contexts
+        .services.context_generator import process_article_contexts
 
         if session is None:
             with Session(engine) as session:

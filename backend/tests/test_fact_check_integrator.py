@@ -3,7 +3,7 @@ Tests for Fact Check Integrator Service
 """
 import pytest
 from unittest.mock import Mock, patch
-from app.services.fact_check_integrator import FactCheckIntegrator, get_fact_check_integrator
+.services.fact_check_integrator import FactCheckIntegrator, get_fact_check_integrator
 
 
 class TestFactCheckIntegrator:

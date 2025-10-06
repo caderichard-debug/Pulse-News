@@ -7,10 +7,10 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, create_engine, SQLModel, select
 from sqlmodel.pool import StaticPool
-from app.main import app
-from app.database import get_session
-from app.models import User, Source, UserSourceSubscription, Article, ArticleAnalysis, PoliticalLean
-from app.utils.auth import hash_password
+.main import app
+.database import get_session
+.models import User, Source, UserSourceSubscription, Article, ArticleAnalysis, PoliticalLean
+.utils.auth import hash_password
 from datetime import datetime
 
 

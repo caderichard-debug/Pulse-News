@@ -1,7 +1,7 @@
 # update_user_name.py
-from app.database import engine
+.database import engine
 from sqlmodel import Session, select
-from app.models import User
+.models import User
 
 with Session(engine) as session:
     user = session.exec(select(User).where(User.email == 'cade.richard@gmail.com')).first()
