@@ -6,7 +6,6 @@ from .database import create_db_and_tables
 from .jobs.scheduler import start_scheduler, stop_scheduler
 from .routes import admin, auth, preferences, articles, test_email, analytics, feed
 import logging
-from mangum import Mangum
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -65,5 +64,3 @@ def root():
         "version": "0.1.0",
         "docs": "/docs"
     }
-
-handler = Mangum(app)
