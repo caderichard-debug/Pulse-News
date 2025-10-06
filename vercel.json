@@ -1,20 +1,26 @@
 {
-  "version": 3,
-  "functions": {
-    "backend/app/main.py": {
-      "runtime": "python3.11"
-    }
-  },
-  "rewrites": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/(.*)",
-      "destination": "/api/backend/app/main"
+      "src": "frontend/package.json",
+      "use": "@vercel/next"
+    },
+    {
+      "src": "backend/app/main.py",
+      "use": "@vercel/python"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/backend/app/main"
+      "dest": "backend/app/main.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "frontend/$1"
     }
-  ]
+  ],
+  "env": {
+    "ENVIRONMENT": "production"
+  }
 }
