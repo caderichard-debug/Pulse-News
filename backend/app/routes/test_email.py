@@ -4,12 +4,12 @@ Test email endpoint - for testing Resend integration.
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
-from ..database import get_session
-from ..models import User
-from ..routes.auth import get_current_user
-from ..config import settings
+from .database import get_session
+from .models import User
+from .routes.auth import get_current_user
+from .config import settings
 from pydantic import BaseModel, EmailStr
-from ..services.newsletter_service import send_test_newsletter
+from .services.newsletter_service import send_test_newsletter
 import resend
 import logging
 

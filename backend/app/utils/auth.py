@@ -6,7 +6,7 @@ import bcrypt
 from datetime import datetime, timedelta
 from typing import Optional
 import jwt
-from ..config import settings
+from .config import settings
 
 
 def hash_password(password: str) -> str:

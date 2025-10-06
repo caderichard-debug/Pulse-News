@@ -6,8 +6,8 @@ Tests feed parsing, article extraction, and duplicate handling.
 import pytest
 from unittest.mock import MagicMock, patch
 from sqlmodel import Session, select
-.services.rss_scraper import scrape_source, scrape_all_active_sources
-.models import Source, Article, ProcessingStatus, PoliticalLean
+from .services.rss_scraper import scrape_source, scrape_all_active_sources
+from .models import Source, Article, ProcessingStatus, PoliticalLean
 from datetime import datetime
 import time
 

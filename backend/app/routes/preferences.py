@@ -4,9 +4,9 @@ User preferences routes: manage topic subscriptions and notification settings.
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select
-from ..database import get_session
-from ..models import User, UserTopicPreference, Topic, Source, UserSourceSubscription, Article, ArticleAnalysis, PoliticalLean
-from ..routes.auth import get_current_user
+from .database import get_session
+from .models import User, UserTopicPreference, Topic, Source, UserSourceSubscription, Article, ArticleAnalysis, PoliticalLean
+from .routes.auth import get_current_user
 from pydantic import BaseModel, Field
 from typing import List, Optional
 import logging
@@ -250,7 +250,7 @@ def get_newsletter_preview(
 
     Useful for testing preferences before committing.
     """
-    .services.newsletter_service import _generate_newsletter_for_user
+    from .services.newsletter_service import _generate_newsletter_for_user
 
     try:
         newsletter_data = _generate_newsletter_for_user(current_user, session)

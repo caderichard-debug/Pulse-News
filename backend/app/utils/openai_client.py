@@ -9,7 +9,7 @@ To use this:
 """
 
 from openai import OpenAI
-from ..config import settings
+from .config import settings
 import logging
 import json
 from typing import List, Dict, Optional

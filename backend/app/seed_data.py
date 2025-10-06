@@ -4,8 +4,8 @@ Run this once after creating the database to populate sources, topics, and seed 
 """
 
 from sqlmodel import Session, select
-.database import engine
-.models import Source, Topic, Framework, SourceTopicLink
+from .database import engine
+from .models import Source, Topic, Framework, SourceTopicLink
 from datetime import datetime
 
 

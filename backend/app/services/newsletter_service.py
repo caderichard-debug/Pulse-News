@@ -4,14 +4,14 @@ Generates personalized newsletters based on user preferences and sends via email
 """
 
 from sqlmodel import Session, select
-from ..models import (
+from .models import (
     User, Article, ArticleAnalysis, Framework, ArticleFrameworkLink,
     UserTopicPreference, Newsletter, NewsletterArticle, Topic,
     StatisticVerification, ArticleContext, ArticleCluster, ArticleClusterMember,
     UserSourceSubscription
 )
-from ..database import engine
-from ..config import settings
+from .database import engine
+from .config import settings
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 import logging
