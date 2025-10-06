@@ -22,5 +22,16 @@
   ],
   "env": {
     "ENVIRONMENT": "production"
-  }
+  },
+  "functions": {
+    "backend/app/main.py": {
+      "runtime": "python3.11"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/backend/app/main"
+    }
+  ]
 }
