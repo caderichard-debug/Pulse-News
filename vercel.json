@@ -10,25 +10,14 @@
       "use": "@vercel/python"
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "/backend/app/main.py"
+      "src": "/api/(.*)",
+      "dest": "backend/app/main.py"
     },
     {
-      "source": "/(.*)",
-      "destination": "/frontend/$1"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "https://app.example" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" },
-        { "key": "Access-Control-Allow-Credentials", "value": "true" }
-      ]
+      "src": "/(.*)",
+      "dest": "frontend/$1"
     }
   ],
   "env": {
