@@ -14,7 +14,7 @@ from typing import Optional, Dict, List
 from urllib.parse import quote
 from datetime import datetime
 
-from app.config import settings
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 

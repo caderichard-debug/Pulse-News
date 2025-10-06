@@ -5,9 +5,9 @@ Authentication routes: user registration, login, and email verification.
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlmodel import Session, select
-from app.database import get_session
-from app.models import User, UserTopicPreference, Topic
-from app.utils.auth import (
+from ..database import get_session
+from ..models import User, UserTopicPreference, Topic
+from ..utils.auth import (
     hash_password,
     verify_password,
     create_access_token,

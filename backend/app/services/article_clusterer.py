@@ -9,7 +9,7 @@ import logging
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime, timedelta
 from sqlmodel import Session, select
-from app.models import (
+from ..models import (
     Article, ArticleAnalysis, ArticleCluster, ArticleClusterMember, Source
 )
 from difflib import SequenceMatcher
