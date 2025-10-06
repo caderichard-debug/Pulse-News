@@ -4,9 +4,9 @@ Generates summaries, sentiment analysis, bias detection, and extracts key statis
 """
 
 from sqlmodel import Session, select
-from app.models import Article, ArticleAnalysis, ProcessingStatus, PoliticalLean
-from app.database import engine
-from app.utils.openai_client import openai_client
+from .models import Article, ArticleAnalysis, ProcessingStatus, PoliticalLean
+from .database import engine
+from .utils.openai_client import openai_client
 from datetime import datetime
 from typing import List, Optional
 import logging

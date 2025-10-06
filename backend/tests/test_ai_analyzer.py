@@ -6,12 +6,12 @@ Tests article analysis, batch processing, and OpenAI integration.
 import pytest
 from unittest.mock import MagicMock, patch
 from sqlmodel import Session, select
-from app.services.ai_analyzer import (
+from .services.ai_analyzer import (
     analyze_articles_batch,
     get_article_analysis,
     get_unanalyzed_article_count
 )
-from app.models import (
+from .models import (
     Article, ArticleAnalysis, Source, ProcessingStatus, PoliticalLean
 )
 from datetime import datetime

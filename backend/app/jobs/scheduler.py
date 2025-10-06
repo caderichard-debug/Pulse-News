@@ -6,7 +6,7 @@ Sets up 8 separate background jobs with different schedules.
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.triggers.cron import CronTrigger
-from app.jobs.tasks import (
+from .jobs.tasks import (
     scrape_job,
     extract_job,
     analyze_job,
@@ -16,7 +16,7 @@ from app.jobs.tasks import (
     article_clustering_job,
     context_generation_job
 )
-from app.config import settings
+from .config import settings
 import logging
 
 logger = logging.getLogger(__name__)

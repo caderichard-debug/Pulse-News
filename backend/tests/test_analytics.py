@@ -7,13 +7,13 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, create_engine, SQLModel
 from sqlmodel.pool import StaticPool
-from app.main import app
-from app.database import get_session
-from app.models import (
+from .main import app
+from .database import get_session
+from .models import (
     User, Source, Article, ArticleAnalysis, Topic, UserTopicPreference,
     Framework, ArticleFrameworkLink, PoliticalLean
 )
-from app.utils.auth import hash_password
+from .utils.auth import hash_password
 from datetime import datetime, timedelta
 
 

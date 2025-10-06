@@ -4,13 +4,13 @@ Admin routes for monitoring and manual job triggers.
 
 from fastapi import APIRouter, Depends, BackgroundTasks
 from sqlmodel import Session, select, func
-from app.models import Article, Source, Framework, User, ProcessingStatus
-from app.database import get_session
-from app.jobs.tasks import (
+from .models import Article, Source, Framework, User, ProcessingStatus
+from .database import get_session
+from .jobs.tasks import (
     scrape_job, extract_job, analyze_job, framework_job,
     statistics_verification_job, article_clustering_job, context_generation_job
 )
-from app.jobs.scheduler import get_job_status
+from .jobs.scheduler import get_job_status
 from datetime import datetime, timedelta
 from typing import Dict, Any
 

@@ -5,8 +5,8 @@ Stores: title, url, author, published_at, source_id
 
 import feedparser
 from sqlmodel import Session, select
-from app.models import Source, Article, ProcessingStatus
-from app.database import engine
+from .models import Source, Article, ProcessingStatus
+from .database import engine
 from datetime import datetime
 from typing import List
 import logging
