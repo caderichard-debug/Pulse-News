@@ -46,7 +46,7 @@ jobs:
       - name: Lint with ruff
         run: |
           pip install ruff
-          ruff check backend/ --select E,F,W || true
+          ruff check api/ --select E,F,W || true
 
       - name: Run tests
         env:
@@ -54,7 +54,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SECRET_KEY: test-secret-key-for-ci-only
         run: |
-          pytest backend/tests/ -v --cov=backend/app --cov-report=xml || echo "No tests found yet - skipping"
+          pytest api/tests/ -v --cov=api/app --cov-report=xml || echo "No tests found yet - skipping"
 
       - name: Upload coverage
         uses: codecov/codecov-action@v3
