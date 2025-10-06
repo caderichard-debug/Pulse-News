@@ -12,17 +12,17 @@ import logging
 from typing import List, Dict, Optional
 from datetime import datetime
 from sqlmodel import Session, select
-from ..models import (
+from .models import (
     Article, ArticleAnalysis, StatisticVerification,
     VerificationStatus, VerificationMethod
 )
-from ..config import settings
+from .config import settings
 from openai import OpenAI
 
 # Import V2 services
-from ..services.source_tracer import get_source_tracer
-from ..services.credibility_rater import get_credibility_rater
-from ..services.fact_check_integrator import get_fact_check_integrator
+from .services.source_tracer import get_source_tracer
+from .services.credibility_rater import get_credibility_rater
+from .services.fact_check_integrator import get_fact_check_integrator
 
 # Initialize OpenAI client
 openai_api = OpenAI(api_key=settings.openai_api_key) if settings.openai_api_key else None

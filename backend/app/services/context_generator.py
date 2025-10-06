@@ -9,8 +9,8 @@ import logging
 from typing import Optional, Dict, List
 from datetime import datetime
 from sqlmodel import Session, select
-from ..models import Article, ArticleAnalysis, ArticleContext
-from ..config import settings
+from .models import Article, ArticleAnalysis, ArticleContext
+from .config import settings
 from openai import OpenAI
 
 # Initialize OpenAI client

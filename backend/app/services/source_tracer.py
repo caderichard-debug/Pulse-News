@@ -20,8 +20,8 @@ from typing import Optional, Dict, List
 from urllib.parse import urlparse, quote
 from sqlmodel import Session, select
 
-from ..models import Article, StatisticVerification
-from ..config import settings
+from .models import Article, StatisticVerification
+from .config import settings
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
