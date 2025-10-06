@@ -32,6 +32,7 @@ passlib[bcrypt]==1.7.4
 email-validator==2.1.0
 
 # Configuration & Utils
+python=3.8.11
 python-dotenv==1.0.1
 pydantic==2.7.4
 pydantic-settings==2.0.0
