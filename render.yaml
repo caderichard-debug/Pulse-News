@@ -15,3 +15,8 @@ services:
     env: docker
     rootDir: backend
     plan: free
+    
+jobs:
+  seed_database:
+    command: python -m app.seed_data
+    environment: service  # Use the same environment as your backend
