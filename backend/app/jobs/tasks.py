@@ -308,7 +308,7 @@ def context_generation_job(session: Session = None):
         logger.info("Starting scheduled context generation job")
         logger.info("=" * 60)
 
-        .services.context_generator import process_article_contexts
+        ..services.context_generator import process_article_contexts
 
         if session is None:
             with Session(engine) as session:
