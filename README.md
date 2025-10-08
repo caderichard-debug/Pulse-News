@@ -156,7 +156,7 @@ Pulse/
 │   │   └── utils/           # Helpers
 ├── frontend/                # Next.js app
 ├── docker-compose.yml
-├── dockerfile
+├── Dockerfile
 └── requirements.txt
 ```
 

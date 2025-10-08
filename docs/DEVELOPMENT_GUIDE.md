@@ -568,7 +568,7 @@ docker logs news_backend -f
 | Preferences Page | Topic management | `/frontend/src/app/preferences/page.tsx` |
 | **Infrastructure** |
 | Docker Compose | Service orchestration | `/docker-compose.yml` |
-| Dockerfile | Backend container config | `/dockerfile` |
+| Dockerfile | Backend container config | `/Dockerfile` |
 | Requirements | Python dependencies | `/requirements.txt` |
 | **Database** |
 | Migrations | Alembic migration files | `/backend/alembic/versions/` |
