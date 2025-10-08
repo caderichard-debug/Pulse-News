@@ -1,0 +1,1 @@
+test server deployment: docker run -e PORT=8000 -p 9000:8000 pulse-backend

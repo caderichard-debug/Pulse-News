@@ -1,4 +1,6 @@
 from sqlmodel import create_engine, Session, SQLModel
+import time
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 from typing import Generator
 import os
@@ -18,8 +20,21 @@ engine = create_engine(DATABASE_URL, echo=True)  # echo=True for development
 
 def create_db_and_tables():
     """Create all database tables"""
-    SQLModel.metadata.create_all(engine)
+    #SQLModel.metadata.create_all(engine)
 
+    max_retries = 30
+    for attempt in range(max_retries):
+        try:
+            SQLModel.metadata.create_all(engine)
+            print("DB connected and tables created!")
+            break
+        except OperationalError as e:
+            print("OperationalError: ", e)
+            print(f"Database not ready, retrying... ({attempt + 1}/{max_retries})")
+            time.sleep(1)
+    else:
+        raise RuntimeError("Database did not become ready in time.")
+    
 
 def get_session() -> Generator[Session, None, None]:
     """Dependency for getting database sessions in FastAPI routes"""
