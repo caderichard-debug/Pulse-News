@@ -34,6 +34,8 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+const port = process.env.PORT or 8000 
+
 # CORS middleware for frontend
 frontend_url = os.getenv("FRONTEND_URL", "*")  # fallback to '*' if not set
 app.add_middleware(
