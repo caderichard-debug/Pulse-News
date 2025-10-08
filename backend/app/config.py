@@ -7,7 +7,7 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str = "postgresql://postgres:password@db:5432/news_db"
-    pulse_access_token: str = None
+    pulse_access_token: Optional[str] = None
 
     # API Keys
     openai_api_key: Optional[str] = None
