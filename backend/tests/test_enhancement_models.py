@@ -3,7 +3,7 @@ Tests for newsletter enhancement models.
 """
 import pytest
 from sqlmodel import Session, select
-.models import (
+from ..models import (
     Article, Source, ArticleAnalysis, ProcessingStatus, PoliticalLean,
     StatisticVerification, VerificationStatus, VerificationMethod,
     ArticleCluster, ArticleClusterMember,

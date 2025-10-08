@@ -250,7 +250,7 @@ def get_newsletter_preview(
 
     Useful for testing preferences before committing.
     """
-    .services.newsletter_service import _generate_newsletter_for_user
+    from ..services.newsletter_service import _generate_newsletter_for_user
 
     try:
         newsletter_data = _generate_newsletter_for_user(current_user, session)

@@ -3,11 +3,11 @@ Tests for Article Clustering Service
 """
 import pytest
 from sqlmodel import Session, select
-.models import (
+from ..models import (
     Article, Source, ArticleAnalysis, ArticleCluster, ArticleClusterMember,
     ProcessingStatus, PoliticalLean
 )
-.services.article_clusterer import (
+from ..services.article_clusterer import (
     normalize_title,
     calculate_similarity,
     generate_cluster_hash,
