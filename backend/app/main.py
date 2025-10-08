@@ -34,7 +34,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-const port = process.env.PORT or 8000 
+port = process.env.PORT or 8000 
 
 # CORS middleware for frontend
 frontend_url = os.getenv("FRONTEND_URL", "*")  # fallback to '*' if not set
@@ -64,3 +64,7 @@ def root():
         "docs": "/docs"
     }
 
+# Expose port for render
+if __name__ == "__main__":
+    port = os.getenv(PORT, default=8000)
+    uvicorn.run(app, host="0.0.0.0", port=port) # Example port 10000
