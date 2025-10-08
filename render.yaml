@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: frontend
+    env: node
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  - type: web
+    name: backend
+    env: docker
+    rootDir: backend
+    plan: free
