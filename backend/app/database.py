@@ -4,9 +4,11 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 from typing import Generator
 import os
+import logging
 from dotenv import load_dotenv
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 # Get DATABASE_URL from environment variable, fallback to default
 DATABASE_URL = os.getenv(
@@ -26,11 +28,11 @@ def create_db_and_tables():
     for attempt in range(max_retries):
         try:
             SQLModel.metadata.create_all(engine)
-            print("DB connected and tables created!")
+            logger("DB connected and tables created!")
             break
         except OperationalError as e:
-            print("OperationalError: ", e)
-            print(f"Database not ready, retrying... ({attempt + 1}/{max_retries})")
+            logger("OperationalError: ", e)
+            logger(f"Database not ready, retrying... ({attempt + 1}/{max_retries})")
             time.sleep(1)
     else:
         raise RuntimeError(f"Database did not become ready in time.\nURL: {DATABASE_URL}")
