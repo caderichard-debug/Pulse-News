@@ -12,9 +12,9 @@ from datetime import datetime
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-..app.database import engine
-..app.models import StatisticVerification, Article
-..app.services.statistics_verifier import verify_statistic_v2
+from ..app.database import engine
+from ..app.models import StatisticVerification, Article
+from ..app.services.statistics_verifier import verify_statistic_v2
 
 def main():
     print("=" * 80)

@@ -6,12 +6,12 @@ Run with: pytest backend/tests/test_newsletter_preferences.py -v
 import pytest
 from sqlmodel import Session, create_engine, SQLModel
 from sqlmodel.pool import StaticPool
-.models import (
+from ..models import (
     User, Source, Article, ArticleAnalysis, Topic, UserTopicPreference,
     UserSourceSubscription, PoliticalLean
 )
-.services.newsletter_service import _generate_newsletter_for_user
-.utils.auth import hash_password
+from ..services.newsletter_service import _generate_newsletter_for_user
+from ..utils.auth import hash_password
 from datetime import datetime
 
 

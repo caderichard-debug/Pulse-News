@@ -326,7 +326,7 @@ async def get_user_stats(
     """
     Get user's personal statistics for dashboard overview.
     """
-    .models import Newsletter, UserSourceSubscription
+    from ..models import Newsletter, UserSourceSubscription
 
     # Count newsletters received
     newsletter_count = session.exec(

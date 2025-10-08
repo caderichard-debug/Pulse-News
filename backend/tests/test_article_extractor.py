@@ -6,11 +6,11 @@ Tests web scraping, content extraction, and fallback methods.
 import pytest
 from unittest.mock import MagicMock, patch, Mock
 from sqlmodel import Session, select
-.services.article_extractor import (
+from ..services.article_extractor import (
     extract_article_content,
     process_pending_articles
 )
-.models import Article, Source, ProcessingStatus, PoliticalLean
+from ..models import Article, Source, ProcessingStatus, PoliticalLean
 from datetime import datetime
 import requests
 
