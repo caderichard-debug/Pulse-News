@@ -1,6 +1,12 @@
 # Base image
 FROM python:3.11-slim
 
+# Create venv
+RUN python -m venv /opt/venv
+
+# Activate it
+ENV PATH="/opt/venv/bin:$PATH"
+
 # Set working directory
 WORKDIR /app
 
