@@ -12,14 +12,14 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   backend:
-    build: .
+    build: backend
     container_name: news_backend
     depends_on:
       - db
     ports:
       - "8000:8000"
     env_file:
-      - backend/.env
+      - .env
     environment:
       DATABASE_URL: postgresql://postgres:password@db:5432/news_db
     volumes:

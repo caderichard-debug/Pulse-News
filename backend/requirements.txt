@@ -3,4 +3,4 @@ uvicorn
 sqlalchemy
 psycopg2-binary
 alembic
-
+sqlmodel
