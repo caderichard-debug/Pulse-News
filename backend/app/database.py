@@ -33,7 +33,7 @@ def create_db_and_tables():
             print(f"Database not ready, retrying... ({attempt + 1}/{max_retries})")
             time.sleep(1)
     else:
-        raise RuntimeError("Database did not become ready in time.")
+        raise RuntimeError(f"Database did not become ready in time.\nURL: {DATABASE_URL}")
     
 
 def get_session() -> Generator[Session, None, None]:
