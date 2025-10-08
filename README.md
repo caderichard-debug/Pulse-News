@@ -153,10 +153,10 @@ Pulse/
 │   │   ├── services/        # Business logic
 │   │   ├── jobs/            # Scheduled tasks
 │   │   ├── templates/       # Email templates
-│   │   └── utils/           # Helpers
+│   │   ├── utils/           # Helpers
+│   ├── Dockerfile           # Dockerfile
+│   ├── docker-compose.yml
 ├── frontend/                # Next.js app
-├── docker-compose.yml
-├── Dockerfile
 └── requirements.txt
 ```
 

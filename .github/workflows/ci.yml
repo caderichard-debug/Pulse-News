@@ -138,7 +138,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile
+          file: ./backend/Dockerfile
           push: false
           tags: pulse-backend:test
           cache-from: type=gha
