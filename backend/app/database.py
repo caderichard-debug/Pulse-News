@@ -28,11 +28,11 @@ def create_db_and_tables():
     for attempt in range(max_retries):
         try:
             SQLModel.metadata.create_all(engine)
-            logger("DB connected and tables created!")
+            logger.info("DB connected and tables created!")
             break
         except OperationalError as e:
-            logger("OperationalError: ", e)
-            logger(f"Database not ready, retrying... ({attempt + 1}/{max_retries})")
+            logger.info("OperationalError: ", e)
+            logger.info(f"Database not ready, retrying... ({attempt + 1}/{max_retries})")
             time.sleep(1)
     else:
         raise RuntimeError(f"Database did not become ready in time.\nURL: {DATABASE_URL}")
