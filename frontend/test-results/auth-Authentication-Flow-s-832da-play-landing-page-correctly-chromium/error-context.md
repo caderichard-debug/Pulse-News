@@ -1,0 +1,70 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - heading "⚡ Pulse" [level=1] [ref=e5]
+      - paragraph [ref=e6]: News aggregation with ethical clarity
+      - paragraph [ref=e7]: Get AI-powered summaries, bias detection, and unique framework analysis that maps articles to underlying ethical debates. Delivered daily to your inbox.
+      - generic [ref=e8]:
+        - link "Get Started" [ref=e9] [cursor=pointer]:
+          - /url: /signup
+        - link "Log In" [ref=e10] [cursor=pointer]:
+          - /url: /login
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - generic [ref=e13]: 🤖
+        - heading "AI Summaries" [level=3] [ref=e14]
+        - paragraph [ref=e15]: Concise 100-word summaries of top articles, saving you time while keeping you informed.
+      - generic [ref=e16]:
+        - generic [ref=e17]: ⚖️
+        - heading "Bias Detection" [level=3] [ref=e18]
+        - paragraph [ref=e19]: Sentiment analysis and political lean detection helps you understand different perspectives.
+      - generic [ref=e20]:
+        - generic [ref=e21]: 🎯
+        - heading "Framework Mapping" [level=3] [ref=e22]
+        - paragraph [ref=e23]: "Our unique feature: articles mapped to ethical debates like \"Privacy vs. Security\" to see the bigger picture."
+    - generic [ref=e24]:
+      - heading "How It Works" [level=2] [ref=e25]
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - generic [ref=e28]: "1"
+          - generic [ref=e29]:
+            - heading "Choose Your Topics" [level=3] [ref=e30]
+            - paragraph [ref=e31]: Select from Politics, Technology, Business, Science, and more. Adjust priorities to customize your digest.
+        - generic [ref=e32]:
+          - generic [ref=e33]: "2"
+          - generic [ref=e34]:
+            - heading "We Aggregate & Analyze" [level=3] [ref=e35]
+            - paragraph [ref=e36]: Our AI scrapes trusted sources, extracts articles, generates summaries, and maps them to ethical frameworks.
+        - generic [ref=e37]:
+          - generic [ref=e38]: "3"
+          - generic [ref=e39]:
+            - heading "Daily Newsletter Delivered" [level=3] [ref=e40]
+            - paragraph [ref=e41]: Receive your personalized digest at 7 AM every day with the articles and frameworks most relevant to you.
+    - generic [ref=e42]:
+      - heading "Trusted Sources" [level=2] [ref=e43]
+      - generic [ref=e44]:
+        - generic [ref=e45]: AP News
+        - generic [ref=e46]: •
+        - generic [ref=e47]: Reuters
+        - generic [ref=e48]: •
+        - generic [ref=e49]: NPR
+        - generic [ref=e50]: •
+        - generic [ref=e51]: BBC
+        - generic [ref=e52]: •
+        - generic [ref=e53]: NYT
+        - generic [ref=e54]: •
+        - generic [ref=e55]: The Atlantic
+        - generic [ref=e56]: •
+        - generic [ref=e57]: Ars Technica
+    - generic [ref=e58]:
+      - heading "Start Your Free Newsletter Today" [level=2] [ref=e59]
+      - paragraph [ref=e60]: Join readers who value clarity and depth in their news
+      - link "Sign Up Now" [ref=e61] [cursor=pointer]:
+        - /url: /signup
+  - button "Open Next.js Dev Tools" [ref=e67] [cursor=pointer]:
+    - img [ref=e68]
+  - alert [ref=e71]
+```

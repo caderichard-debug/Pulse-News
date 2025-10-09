@@ -1,0 +1,44 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e4]:
+      - button "Pulse" [ref=e6]
+      - generic [ref=e7]:
+        - button "📊Dashboard" [ref=e8]
+        - button "📰Feed" [ref=e9]
+        - button "⚙️Preferences" [ref=e10]
+        - button "💡How It Works" [ref=e11]
+      - generic [ref=e12]:
+        - button
+        - button "Logout" [ref=e13]
+  - generic [ref=e15]:
+    - generic [ref=e17]:
+      - heading "📊 Dashboard" [level=1] [ref=e18]
+      - paragraph [ref=e19]: Your discourse analytics
+    - generic [ref=e21]:
+      - button "7d" [ref=e22]
+      - button "30d" [ref=e23]
+      - button "90d" [ref=e24]
+    - generic [ref=e25]:
+      - heading "Sentiment Over Time" [level=2] [ref=e26]
+      - paragraph [ref=e27]: Track how sentiment changes across your topics
+      - generic [ref=e28]: No sentiment data available for this time range
+    - generic [ref=e29]:
+      - heading "Source Bias Distribution" [level=2] [ref=e30]
+      - paragraph [ref=e31]: Weekly breakdown of political lean in your news sources
+      - generic [ref=e32]: No bias distribution data available
+  - generic [ref=e37] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e38]:
+      - img [ref=e39]
+    - generic [ref=e42]:
+      - button "Open issues overlay" [ref=e43]:
+        - generic [ref=e44]:
+          - generic [ref=e45]: "0"
+          - generic [ref=e46]: "1"
+        - generic [ref=e47]: Issue
+      - button "Collapse issues badge" [ref=e48]:
+        - img [ref=e49]
+  - alert [ref=e51]
+```

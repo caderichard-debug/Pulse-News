@@ -24,7 +24,7 @@ test.describe('Complete User Journey', () => {
     await page.getByLabel(/email/i).fill(userEmail);
     await page.getByLabel(/^password/i).first().fill(userPassword);
     await page.getByLabel(/confirm password/i).fill(userPassword);
-    await page.getByRole('button', { name: /next/i }).click();
+    await page.getByRole('button', { name: /continue/i }).click();
 
     // Select topics
     await expect(page.getByRole('heading', { name: /select.*topics/i })).toBeVisible();
@@ -116,7 +116,7 @@ test.describe('Preferences Management', () => {
     await page.getByLabel(/email/i).fill(userEmail);
     await page.getByLabel(/^password/i).first().fill(userPassword);
     await page.getByLabel(/confirm password/i).fill(userPassword);
-    await page.getByRole('button', { name: /next/i }).click();
+    await page.getByRole('button', { name: /continue/i }).click();
     await page.getByRole('checkbox').first().check();
     await page.getByRole('button', { name: /create account/i }).click();
 
@@ -170,7 +170,7 @@ test.describe('Navigation Flow', () => {
     await page.getByLabel(/email/i).fill(email);
     await page.getByLabel(/^password/i).first().fill(password);
     await page.getByLabel(/confirm password/i).fill(password);
-    await page.getByRole('button', { name: /next/i }).click();
+    await page.getByRole('button', { name: /continue/i }).click();
     await page.getByRole('checkbox').first().check();
     await page.getByRole('button', { name: /create account/i }).click();
 
@@ -244,7 +244,7 @@ test.describe('Error Handling', () => {
     await page.getByLabel(/email/i).fill(email);
     await page.getByLabel(/^password/i).first().fill(password);
     await page.getByLabel(/confirm password/i).fill(password);
-    await page.getByRole('button', { name: /next/i }).click();
+    await page.getByRole('button', { name: /continue/i }).click();
     await page.getByRole('checkbox').first().check();
     await page.getByRole('button', { name: /create account/i }).click();
 

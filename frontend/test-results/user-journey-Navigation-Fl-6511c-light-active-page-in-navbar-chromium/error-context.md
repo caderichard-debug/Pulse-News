@@ -1,0 +1,69 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - heading "⚡ Pulse" [level=1] [ref=e5]
+      - paragraph [ref=e6]: Create your account
+    - generic [ref=e7]:
+      - generic [ref=e8]: "1"
+      - generic [ref=e10]: "2"
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - generic [ref=e14]: Full Name
+          - textbox "Full Name" [ref=e15]:
+            - /placeholder: John Doe
+            - text: Nav User
+        - generic [ref=e16]:
+          - generic [ref=e17]: Email
+          - textbox "Email" [ref=e18]:
+            - /placeholder: john@example.com
+            - text: nav1760024712946@example.com
+        - generic [ref=e19]:
+          - generic [ref=e20]: Password
+          - textbox "Password" [ref=e21]:
+            - /placeholder: ••••••••
+            - text: NavPassword123!
+        - generic [ref=e22]:
+          - generic [ref=e23]: Confirm Password
+          - textbox "Confirm Password" [ref=e24]:
+            - /placeholder: ••••••••
+            - text: NavPassword123!
+      - button "Continue" [ref=e26]
+    - generic [ref=e27]:
+      - text: Already have an account?
+      - link "Log in" [ref=e28] [cursor=pointer]:
+        - /url: /login
+  - generic [active]:
+    - menu "Next.js Dev Tools Items" [ref=e29]:
+      - generic [ref=e30]:
+        - menuitem "Issues 1" [ref=e31] [cursor=pointer]:
+          - generic [ref=e32]: Issues
+          - generic [ref=e34]: "1"
+        - menuitem "Route Static" [ref=e36]:
+          - generic [ref=e37]: Route
+          - generic [ref=e38]: Static
+        - generic "Turbopack is enabled." [ref=e39]:
+          - generic [ref=e40]: Turbopack
+          - generic [ref=e41]: Enabled
+        - menuitem "Route Info" [ref=e42]:
+          - generic [ref=e43]: Route Info
+          - img [ref=e45]
+      - menuitem "Preferences" [ref=e48]:
+        - generic [ref=e49]: Preferences
+        - img [ref=e51]
+    - generic [ref=e57] [cursor=pointer]:
+      - button "Close Next.js Dev Tools" [expanded] [ref=e58]:
+        - img [ref=e59]
+      - generic [ref=e62]:
+        - button "Open issues overlay" [ref=e63]:
+          - generic [ref=e64]:
+            - generic [ref=e65]: "0"
+            - generic [ref=e66]: "1"
+          - generic [ref=e67]: Issue
+        - button "Collapse issues badge" [ref=e68]:
+          - img [ref=e69]
+  - alert [ref=e71]
+```

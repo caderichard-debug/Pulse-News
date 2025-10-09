@@ -116,16 +116,6 @@ jobs:
     needs: frontend-tests
 
     services:
-      # Backend API for E2E tests
-      backend:
-        image: python:3.11-slim
-        env:
-          DATABASE_URL: postgresql://postgres:testpassword@postgres:5432/test_db
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          SECRET_KEY: test-secret-key-for-e2e
-        ports:
-          - 8000:8000
-
       postgres:
         image: postgres:15
         env:
@@ -144,6 +134,39 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Python for backend
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install backend dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql://postgres:testpassword@localhost:5432/test_db
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SECRET_KEY: test-secret-key-for-e2e
+        run: |
+          cd backend
+          alembic upgrade head
+
+      - name: Start backend server
+        env:
+          DATABASE_URL: postgresql://postgres:testpassword@localhost:5432/test_db
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SECRET_KEY: test-secret-key-for-e2e
+          RESEND_API_KEY: fake-key-for-testing
+          FROM_EMAIL: test@example.com
+        run: |
+          cd backend
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 5
+          curl --retry 10 --retry-delay 1 --retry-connrefused http://localhost:8000/docs || echo "Backend may not be ready"
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -151,7 +174,7 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
         working-directory: ./frontend
         run: npm ci
 

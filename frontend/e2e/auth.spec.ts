@@ -47,7 +47,7 @@ test.describe('Authentication Flow', () => {
     await page.getByLabel(/confirm password/i).fill('SecurePassword123!');
 
     // Click next to go to topic selection
-    await page.getByRole('button', { name: /next/i }).click();
+    await page.getByRole('button', { name: /continue/i }).click();
 
     // Step 2: Select topics
     await expect(page.getByRole('heading', { name: /select.*topics/i })).toBeVisible();
@@ -75,7 +75,7 @@ test.describe('Authentication Flow', () => {
     await page.getByLabel(/email/i).fill(email);
     await page.getByLabel(/^password/i).first().fill(password);
     await page.getByLabel(/confirm password/i).fill(password);
-    await page.getByRole('button', { name: /next/i }).click();
+    await page.getByRole('button', { name: /continue/i }).click();
 
     // Select a topic
     await page.getByRole('checkbox').first().check();
@@ -114,7 +114,7 @@ test.describe('Authentication Flow', () => {
     await page.getByLabel(/^password/i).first().fill('short');
     await page.getByLabel(/confirm password/i).fill('short');
 
-    await page.getByRole('button', { name: /next/i }).click();
+    await page.getByRole('button', { name: /continue/i }).click();
 
     // Should show validation error
     await expect(page.getByText(/password.*8.*characters/i)).toBeVisible();
@@ -128,7 +128,7 @@ test.describe('Authentication Flow', () => {
     await page.getByLabel(/^password/i).first().fill('SecurePassword123!');
     await page.getByLabel(/confirm password/i).fill('DifferentPassword123!');
 
-    await page.getByRole('button', { name: /next/i }).click();
+    await page.getByRole('button', { name: /continue/i }).click();
 
     // Should show validation error
     await expect(page.getByText(/passwords.*match/i)).toBeVisible();
@@ -143,7 +143,7 @@ test.describe('Authentication Flow', () => {
     await page.getByLabel(/email/i).fill(email);
     await page.getByLabel(/^password/i).first().fill('Password123!');
     await page.getByLabel(/confirm password/i).fill('Password123!');
-    await page.getByRole('button', { name: /next/i }).click();
+    await page.getByRole('button', { name: /continue/i }).click();
     await page.getByRole('checkbox').first().check();
     await page.getByRole('button', { name: /create account/i }).click();
 
@@ -156,7 +156,7 @@ test.describe('Authentication Flow', () => {
     await page.getByLabel(/email/i).fill(email);
     await page.getByLabel(/^password/i).first().fill('Password123!');
     await page.getByLabel(/confirm password/i).fill('Password123!');
-    await page.getByRole('button', { name: /next/i }).click();
+    await page.getByRole('button', { name: /continue/i }).click();
     await page.getByRole('checkbox').first().check();
     await page.getByRole('button', { name: /create account/i }).click();
 
