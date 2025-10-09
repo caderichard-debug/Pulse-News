@@ -148,7 +148,7 @@ test.describe('Preferences Management', () => {
 
     // Change article ordering
     const orderingSelect = page.getByRole('combobox').filter({ hasText: /ordering/i });
-    await orderingSelect.selectOption({ label: /good.*first/i });
+    await orderingSelect.selectOption('good_first');
 
     // Save changes
     await page.getByRole('button', { name: /save/i }).click();
