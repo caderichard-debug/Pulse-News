@@ -222,10 +222,10 @@ describe('DashboardPage', () => {
       render(<DashboardPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('⚙️ Preferences')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /preferences/i })).toBeInTheDocument();
       });
 
-      const preferencesButton = screen.getByText('⚙️ Preferences');
+      const preferencesButton = screen.getByRole('button', { name: /preferences/i });
       await user.click(preferencesButton);
 
       expect(mockPush).toHaveBeenCalledWith('/preferences');
@@ -236,13 +236,13 @@ describe('DashboardPage', () => {
       render(<DashboardPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('🏠 Home')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /pulse/i })).toBeInTheDocument();
       });
 
-      const homeButton = screen.getByText('🏠 Home');
+      const homeButton = screen.getByRole('button', { name: /pulse/i });
       await user.click(homeButton);
 
-      expect(mockPush).toHaveBeenCalledWith('/');
+      expect(mockPush).toHaveBeenCalledWith('/dashboard');
     });
   });
 

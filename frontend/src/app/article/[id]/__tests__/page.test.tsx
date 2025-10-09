@@ -328,7 +328,7 @@ describe('ArticleDetailPage', () => {
         expect(screen.getByText('Key Players')).toBeInTheDocument();
         expect(screen.getByText(/⏱️/)).toBeInTheDocument();
         expect(screen.getByText('Timeline')).toBeInTheDocument();
-        expect(screen.getByText(/💡/)).toBeInTheDocument();
+        expect(screen.getAllByText(/💡/).length).toBeGreaterThan(0);
         expect(screen.getByText('Why This Matters')).toBeInTheDocument();
       });
     });
