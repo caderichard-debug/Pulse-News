@@ -235,13 +235,15 @@ jobs:
 
       - name: Build backend image
         uses: docker/build-push-action@v5
+        continue-on-error: false
         with:
           context: .
           file: ./backend/Dockerfile
           push: false
           tags: pulse-backend:test
+          # Use cache if available, but don't fail if GitHub cache service has issues
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: type=gha,mode=max,ignore-error=true
 
   # All checks passed
   all-checks:
