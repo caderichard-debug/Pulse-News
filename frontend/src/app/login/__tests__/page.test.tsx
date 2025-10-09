@@ -29,7 +29,7 @@ describe('LoginPage', () => {
   it('renders login form', () => {
     render(<LoginPage />);
 
-    expect(screen.getByText('Pulse')).toBeInTheDocument();
+    expect(screen.getByText(/Pulse/)).toBeInTheDocument();
     expect(screen.getByText('Welcome back')).toBeInTheDocument();
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();

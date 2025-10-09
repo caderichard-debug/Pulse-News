@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 jest.mock('@/lib/api', () => ({
   api: {
     getArticleDetail: jest.fn(),
+    getCurrentUser: jest.fn(),
   },
 }));
 
@@ -99,6 +100,7 @@ describe('ArticleDetailPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (api.getArticleDetail as jest.Mock).mockResolvedValue(mockArticleDetail);
+    (api.getCurrentUser as jest.Mock).mockResolvedValue({ name: 'Test User' });
   });
 
   it('should render loading state initially', () => {

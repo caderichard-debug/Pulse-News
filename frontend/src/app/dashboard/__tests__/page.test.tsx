@@ -10,6 +10,7 @@ jest.mock('@/lib/api', () => ({
     getSentimentOverTime: jest.fn(),
     getBiasDistribution: jest.fn(),
     clearToken: jest.fn(),
+    getCurrentUser: jest.fn(),
   },
 }));
 
@@ -19,6 +20,7 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  usePathname: () => '/dashboard',
 }));
 
 // Mock Recharts to avoid rendering issues in tests
@@ -59,6 +61,7 @@ describe('DashboardPage', () => {
     (api.getUserStats as jest.Mock).mockResolvedValue(mockUserStats);
     (api.getSentimentOverTime as jest.Mock).mockResolvedValue(mockSentimentData);
     (api.getBiasDistribution as jest.Mock).mockResolvedValue(mockBiasData);
+    (api.getCurrentUser as jest.Mock).mockResolvedValue({ name: 'Test User' });
   });
 
   it('should render loading state initially', () => {

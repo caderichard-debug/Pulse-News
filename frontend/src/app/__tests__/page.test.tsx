@@ -13,7 +13,7 @@ describe('Landing Page', () => {
     render(<Home />);
 
     expect(screen.getByText(/ai-powered summaries/i)).toBeInTheDocument();
-    expect(screen.getByText(/bias detection/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/bias detection/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/framework analysis/i)).toBeInTheDocument();
   });
 
@@ -72,24 +72,24 @@ describe('Landing Page', () => {
     render(<Home />);
 
     expect(screen.getByText(/choose your topics/i)).toBeInTheDocument();
-    expect(screen.getByText(/we scrape/i)).toBeInTheDocument();
-    expect(screen.getByText(/ai analyzes/i)).toBeInTheDocument();
-    expect(screen.getByText(/daily newsletter/i)).toBeInTheDocument();
+    expect(screen.getByText(/we aggregate & analyze/i)).toBeInTheDocument();
+    expect(screen.getByText(/daily newsletter delivered/i)).toBeInTheDocument();
   });
 
   it('shows trusted sources section', () => {
     render(<Home />);
 
-    expect(screen.getByText(/trusted sources/i)).toBeInTheDocument();
-    expect(screen.getByText(/reuters/i)).toBeInTheDocument();
-    expect(screen.getByText(/ap news/i)).toBeInTheDocument();
-    expect(screen.getByText(/bbc/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /trusted sources/i })).toBeInTheDocument();
+    expect(screen.getByText('Reuters')).toBeInTheDocument();
+    expect(screen.getByText('AP News')).toBeInTheDocument();
+    expect(screen.getByText('BBC')).toBeInTheDocument();
   });
 
-  it('displays footer with copyright', () => {
+  it('displays CTA section', () => {
     render(<Home />);
 
-    expect(screen.getByText(/© 2025 pulse/i)).toBeInTheDocument();
+    expect(screen.getByText(/start your free newsletter today/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /sign up now/i })).toBeInTheDocument();
   });
 
   it('renders with gradient background', () => {

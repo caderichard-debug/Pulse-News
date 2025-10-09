@@ -36,13 +36,13 @@ describe('SignupPage', () => {
   it('renders signup form with step 1 (details)', async () => {
     render(<SignupPage />);
 
-    expect(screen.getByText('Pulse')).toBeInTheDocument();
+    expect(screen.getByText(/Pulse/)).toBeInTheDocument();
     expect(screen.getByText('Create your account')).toBeInTheDocument();
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^password/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /next/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument();
   });
 
   it('shows login link', () => {
@@ -80,7 +80,7 @@ describe('SignupPage', () => {
     fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'different123' } });
 
-    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/passwords do not match/i)).toBeInTheDocument();
@@ -95,7 +95,7 @@ describe('SignupPage', () => {
     fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: 'short' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'short' } });
 
-    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/password must be at least 8 characters/i)).toBeInTheDocument();
@@ -110,7 +110,7 @@ describe('SignupPage', () => {
     fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'password123' } });
 
-    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/select.*topics/i)).toBeInTheDocument();
@@ -125,7 +125,7 @@ describe('SignupPage', () => {
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'john@example.com' } });
     fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'password123' } });
-    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
     await waitFor(() => {
       expect(screen.getByText('Technology')).toBeInTheDocument();
@@ -142,7 +142,7 @@ describe('SignupPage', () => {
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'john@example.com' } });
     fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'password123' } });
-    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
     await waitFor(() => {
       expect(screen.getByText('Technology')).toBeInTheDocument();
@@ -168,7 +168,7 @@ describe('SignupPage', () => {
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'john@example.com' } });
     fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'password123' } });
-    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
     // Select topics in step 2
     await waitFor(() => {
@@ -207,7 +207,7 @@ describe('SignupPage', () => {
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'john@example.com' } });
     fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'password123' } });
-    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
     await waitFor(() => {
       expect(screen.getByText('Technology')).toBeInTheDocument();
@@ -234,7 +234,7 @@ describe('SignupPage', () => {
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'existing@example.com' } });
     fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'password123' } });
-    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
     await waitFor(() => {
       expect(screen.getByText('Technology')).toBeInTheDocument();
@@ -260,7 +260,7 @@ describe('SignupPage', () => {
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'john@example.com' } });
     fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'password123' } });
-    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
@@ -275,7 +275,7 @@ describe('SignupPage', () => {
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'john@example.com' } });
     fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'password123' } });
-    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
@@ -285,7 +285,7 @@ describe('SignupPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /back/i }));
 
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /next/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument();
   });
 
   it('loads topics on mount', async () => {
