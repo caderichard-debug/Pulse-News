@@ -4,6 +4,53 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-08 17:00
+
+**Render.com Deployment & UI Polish** ✅
+
+### Deployment Automation
+- **Added database seeding job** to [render.yaml](render.yaml:19-24)
+  - Runs `python -m app.seed_data` on every deployment
+  - Seeds 8 topics, 8 sources, 10 ethical frameworks automatically
+  - Eliminates manual seeding in production
+- **Improved database connection retry logic** in [database.py](backend/app/database.py:27-38)
+  - Max 30 retries with 1-second intervals
+  - Better error logging for debugging cloud deployment issues
+  - Production-ready for Render.com's container startup delays
+  - Uses dotenv for environment variable loading
+
+### UI/UX Improvements
+- **Fixed placeholder text brightness** on authentication pages
+  - [login/page.tsx](frontend/src/app/login/page.tsx) - `placeholder-gray-200` → `placeholder-gray-400`
+  - [signup/page.tsx](frontend/src/app/signup/page.tsx) - Improved visibility for all form fields (name, email, password, confirm password)
+  - Better accessibility and readability for users
+- **Removed framework "score" visualization** (commit e398100)
+  - Focus on position-on-axis (-10 to +10) for ethical frameworks
+  - Aligns with documentation's axis-based philosophy
+  - Simplified framework display in article detail pages
+
+### Infrastructure Updates
+- Render.com configuration complete and tested
+- Automatic deployment on git push to main
+- Free tier services (frontend + backend + database)
+- Environment variable management via Render dashboard
+
+### Test Results
+- ✅ **All 234 tests passing** (127 backend + 107 frontend)
+- ✅ Render.yaml syntax validated
+- ✅ Database connection retry logic tested locally
+- ✅ Authentication pages tested with improved placeholders
+
+**Code References:**
+- Deployment: [render.yaml](render.yaml)
+- Database: [database.py](backend/app/database.py)
+- Login: [login/page.tsx](frontend/src/app/login/page.tsx)
+- Signup: [signup/page.tsx](frontend/src/app/signup/page.tsx)
+
+**Git Commits:** bb2fcc6, 14e9096, 70855d5, 480a2f3, e398100
+
+---
+
 ## 2025-10-04 01:15
 
 **Critical Fixes - Router Conflict & Documentation Updates** ✅

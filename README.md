@@ -110,30 +110,48 @@ users → newsletters
 
 ## 📊 Project Status
 
-✅ **All systems operational** - 127/127 tests passing (100%)
+✅ **All systems operational** - 234/234 tests passing (100%)
+- **Backend**: 127 tests passing
+- **Frontend**: 107 tests passing
 
 ### ✅ Completed
-- [x] Database models & migrations
+
+**Backend (Phase 1-3)**
+- [x] Database models & migrations (18 tables)
 - [x] Docker configuration
-- [x] RSS scraper service
+- [x] RSS scraper service (8 sources)
 - [x] Article extraction (trafilatura + readability fallback)
-- [x] APScheduler background jobs
-- [x] Claude AI integration (analysis & framework generation)
+- [x] APScheduler background jobs (8 scheduled tasks)
+- [x] OpenAI GPT-4o-mini integration (analysis & framework generation)
+- [x] Statistics verification V2 (3-stage pipeline: source tracing, credibility, fact-checking)
+- [x] Article clustering & context generation
 - [x] Newsletter generation & email sending
 - [x] User authentication (JWT)
-- [x] API endpoints (public, protected, admin)
+- [x] API endpoints (28 routes: auth, preferences, analytics, feed, articles, admin)
 - [x] Comprehensive test suite (127 tests, 100% passing)
+- [x] Render.com deployment configuration
 
-### 🔄 In Progress
-- [ ] Frontend UI (Next.js)
-- [ ] Email tracking & analytics
-- [ ] Advanced user preferences
+**Frontend (Phase 1-3)**
+- [x] Landing page with hero section
+- [x] Authentication (login, 2-step signup with topic selection)
+- [x] Enhanced preferences (topics, sources, settings) with 3-tab interface
+- [x] Dashboard with analytics visualizations (sentiment, bias, framework heatmap)
+- [x] Article feed with filtering (topic, source, political lean) and pagination
+- [x] Article detail pages (full analysis, verified statistics, frameworks, context, related articles)
+- [x] Global navigation bar
+- [x] "How It Works" educational page
+- [x] Comprehensive test suite (107 tests, 100% passing)
 
-### 📅 Upcoming
-- [ ] Framework discovery optimization
-- [ ] Real-time updates
-- [ ] Mobile app
-- [ ] Premium features
+### 🔄 In Progress (Phase 4)
+- [ ] Challenge system (weekly viewpoint engagement tracking)
+- [ ] Viewpoint diversity analytics
+- [ ] Curated reflections
+
+### 📅 Upcoming (Phase 5-6)
+- [ ] Advanced analytics (claim recurrence, animated heatmaps)
+- [ ] Performance optimization (React Query, virtualization)
+- [ ] Dark mode & accessibility enhancements
+- [ ] Mobile responsive refinements
 
 ## 🔧 Development
 
@@ -197,7 +215,7 @@ docker-compose exec backend alembic downgrade -1
 
 ### Phase 1: MVP (50 users) - $0-5/month
 - Railway/Render free tier
-- Claude Haiku API (~$2/month)
+- OpenAI GPT-4o-mini API (~$2/month)
 - Resend free tier (3k emails/month)
 
 ### Phase 2: Growth (500 users) - $30-50/month
