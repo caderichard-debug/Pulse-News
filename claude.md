@@ -42,10 +42,9 @@
 #### API Routes (`/backend/app/routes/`)
 - **[auth.py](backend/app/routes/auth.py)** - User registration, login (JWT)
 - **[preferences.py](backend/app/routes/preferences.py)** - User preferences (topics, sources, settings)
-- **[analytics.py](backend/app/routes/analytics.py)** - Dashboard analytics endpoints
-- **[feed.py](backend/app/routes/feed.py)** - Article feed with filtering
-- **[article_detail.py](backend/app/routes/article_detail.py)** - Full article analysis
-- **[articles.py](backend/app/routes/articles.py)** - Public article browsing
+- **[analytics.py](backend/app/routes/analytics.py)** - Dashboard analytics endpoints (5 endpoints)
+- **[feed.py](backend/app/routes/feed.py)** - Article feed with filtering (3 endpoints)
+- **[articles.py](backend/app/routes/articles.py)** - Article listing and detail (merged router, 2 endpoints)
 - **[admin.py](backend/app/routes/admin.py)** - Admin controls & job triggers
 - **[test_email.py](backend/app/routes/test_email.py)** - Email testing endpoints
 
@@ -85,15 +84,16 @@
 
 #### Pages (`/frontend/src/app/`)
 - **[page.tsx](frontend/src/app/page.tsx)** - Landing page (hero, features)
-- **[login/](frontend/src/app/login/)** - Login page
-- **[signup/](frontend/src/app/signup/)** - Registration page
-- **[preferences/](frontend/src/app/preferences/)** - Topic/source/settings management
-- **[dashboard/](frontend/src/app/dashboard/)** - Analytics dashboard
-- **[feed/](frontend/src/app/feed/)** - Article feed with filters
-- **[article/[id]/](frontend/src/app/article/[id]/)** - Article detail page
+- **[login/](frontend/src/app/login/)** - Login page (improved placeholder visibility)
+- **[signup/](frontend/src/app/signup/)** - 2-step registration (user details → topic selection)
+- **[preferences/](frontend/src/app/preferences/)** - Topic/source/settings management (3-tab interface)
+- **[dashboard/](frontend/src/app/dashboard/)** - Analytics dashboard with visualizations
+- **[feed/](frontend/src/app/feed/)** - Article feed with filtering & pagination
+- **[article/[id]/](frontend/src/app/article/[id]/)** - Article detail with full analysis
+- **[how-it-works/](frontend/src/app/how-it-works/)** - Educational page explaining data pipeline
 
 #### Components (`/frontend/src/components/`)
-- **[Navbar.tsx](frontend/src/components/Navbar.tsx)** - Global navigation bar
+- **[Navbar.tsx](frontend/src/components/Navbar.tsx)** - Global navigation bar with dynamic user name, active page highlighting, and logout
 
 #### API Client (`/frontend/src/lib/`)
 - **[api.ts](frontend/src/lib/api.ts)** - Centralized API client with all endpoints
@@ -295,10 +295,14 @@ See [ARCHITECTURE.md](docs/ARCHITECTURE.md#database-schema) for full schema with
 - **All 127 backend tests passing**
 
 ### ✅ Completed (Frontend - Phases 1-3)
-- **Phase 1**: Enhanced preferences (topics, sources, settings)
-- **Phase 2**: Dashboard with analytics visualizations
-- **Phase 3**: Article feed & detail pages
-- Global navigation bar
+- **Phase 1**: Enhanced preferences (topics, sources, settings with 3-tab interface)
+- **Phase 2**: Dashboard with analytics visualizations (sentiment, bias, stats)
+- **Phase 3**: Article feed & detail pages (filtering, pagination, full analysis)
+- Landing page with hero section
+- 2-step signup flow with topic selection
+- Global navigation bar (Dashboard, Feed, Preferences, How It Works)
+- "How It Works" educational page
+- UI polish (improved placeholder visibility on auth pages)
 - **All 107 frontend tests passing**
 
 ### 🔜 Upcoming (Phase 4-6)
@@ -447,6 +451,6 @@ CLAIMBUSTER_API_KEY=...
 
 ---
 
-**Last Updated**: 2025-10-03
-**Status**: Phase 3 Complete (127 backend + 107 frontend tests passing ✅)
+**Last Updated**: 2025-10-08
+**Status**: Phase 3 Complete + Deployment Ready (234 tests passing: 127 backend + 107 frontend ✅)
 **Maintained by**: AI assistants working on Pulse
