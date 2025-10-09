@@ -244,7 +244,12 @@ jobs:
         timeout-minutes: 5
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8000
-        run: npx playwright test --config=playwright.config.ci.ts
+        run: |
+          echo "Running smoke tests first to verify connectivity..."
+          npx playwright test smoke.spec.ts --config=playwright.config.ci.ts --reporter=list || echo "Smoke tests failed"
+          echo ""
+          echo "Running full e2e test suite..."
+          npx playwright test --config=playwright.config.ci.ts
 
       - name: Debug on test failure
         if: failure()
