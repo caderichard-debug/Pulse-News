@@ -164,8 +164,16 @@ jobs:
         run: |
           cd backend
           uvicorn app.main:app --host 0.0.0.0 --port 8000 &
-          sleep 5
-          curl --retry 10 --retry-delay 1 --retry-connrefused http://localhost:8000/docs || echo "Backend may not be ready"
+          echo "Waiting for backend to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:8000/docs > /dev/null; then
+              echo "Backend is ready!"
+              break
+            fi
+            echo "Waiting for backend (attempt $i/30)..."
+            sleep 2
+          done
+          curl -f http://localhost:8000/docs || (echo "Backend failed to start" && exit 1)
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -178,15 +186,39 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
+      - name: Build frontend
+        working-directory: ./frontend
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+        run: npm run build
+
+      - name: Start frontend server
+        working-directory: ./frontend
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+        run: |
+          npm run start &
+          echo "Waiting for frontend to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:3000 > /dev/null; then
+              echo "Frontend is ready!"
+              break
+            fi
+            echo "Waiting for frontend (attempt $i/30)..."
+            sleep 2
+          done
+          curl -f http://localhost:3000 || (echo "Frontend failed to start" && exit 1)
+
       - name: Install Playwright browsers
         working-directory: ./frontend
         run: npx playwright install --with-deps chromium
 
       - name: Run Playwright tests
         working-directory: ./frontend
+        timeout-minutes: 5
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8000
-        run: npx playwright test
+        run: npx playwright test --config=playwright.config.ci.ts
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
