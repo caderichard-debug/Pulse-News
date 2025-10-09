@@ -14,4 +14,4 @@ services:
     name: backend
     env: docker
     rootDir: backend
-    plan: free
+    plan: starter
