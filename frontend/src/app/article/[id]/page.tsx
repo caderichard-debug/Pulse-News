@@ -293,7 +293,7 @@ export default function ArticleDetailPage() {
                 {fw.explanation && (
                   <p className="text-purple-100 mb-4 text-sm leading-relaxed">{fw.explanation}</p>
                 )}
-{/*
+
                 <div className="flex items-center gap-3 text-sm mb-3">
                   <span className="font-medium">{fw.left_position}</span>
                   <div className="flex-1 h-2 bg-white/30 rounded-full relative overflow-hidden">
@@ -320,7 +320,6 @@ export default function ArticleDetailPage() {
                      'Strongly aligned with ' + fw.right_position}
                   </p>
                 </div>
-*/}
               </div>
             ))}
           </div>
