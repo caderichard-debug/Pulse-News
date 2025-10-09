@@ -6,11 +6,11 @@ Tests AI-driven framework discovery and article-to-framework mapping.
 import pytest
 from unittest.mock import MagicMock, patch
 from sqlmodel import Session, select
-from ..services.framework_generator import (
+from app.services.framework_generator import (
     map_articles_to_frameworks,
     discover_new_frameworks
 )
-from ..models import (
+from app.models import (
     Article, ArticleAnalysis, Framework, ArticleFrameworkLink,
     Source, ProcessingStatus, PoliticalLean
 )
