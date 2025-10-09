@@ -22,8 +22,16 @@ from app.models import (
     User,
     Newsletter,
     SourceTopicLink,
+    ArticleTopicLink,
+    NewsletterArticle,
     ArticleFrameworkLink,
     UserTopicPreference,
+    UserSourceSubscription,
+    StatisticVerification,
+    ArticleCluster,
+    ArticleClusterMember,
+    ArticleContext,
+    SourceCredibilityRating,
 )
 
 # this is the Alembic Config object, which provides
