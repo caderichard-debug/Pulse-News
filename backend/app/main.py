@@ -62,6 +62,12 @@ def root():
         "docs": "/docs"
     }
 
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint for monitoring"""
+    return {"status": "healthy"}
+
 # Expose port for render
 if __name__ == "__main__":
     port = os.getenv(PORT, default=8000)
