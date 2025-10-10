@@ -14,6 +14,9 @@ services:
     dockerfilePath: ./Dockerfile
     plan: starter
     healthCheckPath: /health
+    # Enable PR previews
+    previewsEnabled: true
+    previewsExpireAfterDays: 3
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -24,9 +27,11 @@ services:
       - key: FRONTEND_URL
         value: https://pulse-frontend-pfrt.onrender.com
       - key: CACHE_BUST
-        value: "2025-10-10-v1"
+        value: "2025-10-10-v2"
       - key: ENVIRONMENT
         value: production
+      - key: IS_PULL_REQUEST
+        isPreview: true
       - key: DEBUG
         value: false
       - key: AI_MODEL
@@ -63,6 +68,9 @@ services:
     buildCommand: npm install && npm run build
     startCommand: npm start
     plan: free
+    # Enable PR previews
+    previewsEnabled: true
+    previewsExpireAfterDays: 3
     envVars:
       - key: NODE_ENV
         value: production
