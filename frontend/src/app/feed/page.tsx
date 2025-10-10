@@ -41,6 +41,7 @@ export default function FeedPage() {
   const [selectedSource, setSelectedSource] = useState<number | null>(null);
   const [selectedLean, setSelectedLean] = useState<string>('');
   const [sortBy, setSortBy] = useState('newest');
+  const [onlyAnalyzed, setOnlyAnalyzed] = useState(false);
   const [page, setPage] = useState(1);
 
   const loadFeedData = useCallback(async () => {
@@ -53,6 +54,7 @@ export default function FeedPage() {
         source_id: selectedSource || undefined,
         political_lean: selectedLean || undefined,
         sort_by: sortBy,
+        only_analyzed: onlyAnalyzed,
       });
       setFeedData(data);
       setError(null);
@@ -62,12 +64,12 @@ export default function FeedPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, selectedTopic, selectedSource, selectedLean, sortBy]);
+  }, [page, selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed]);
 
   useEffect(() => {
     loadFeedData();
     loadFilters();
-  }, [selectedTopic, selectedSource, selectedLean, sortBy, page, loadFeedData]);
+  }, [selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed, page, loadFeedData]);
 
   async function loadFilters() {
     try {
@@ -138,7 +140,7 @@ export default function FeedPage() {
 
           {/* Filters */}
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           {/* Topic filter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Topic</label>
@@ -202,6 +204,20 @@ export default function FeedPage() {
               <option value="sentiment_low">Most Negative</option>
             </select>
           </div>
+            </div>
+
+            {/* Only analyzed checkbox */}
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="only-analyzed"
+                checked={onlyAnalyzed}
+                onChange={(e) => { setOnlyAnalyzed(e.target.checked); setPage(1); }}
+                className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+              />
+              <label htmlFor="only-analyzed" className="ml-2 text-sm font-medium text-gray-700">
+                Show only analyzed articles
+              </label>
             </div>
           </div>
 

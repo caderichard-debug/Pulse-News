@@ -80,7 +80,7 @@ def test_data(session: Session):
     session.commit()
     session.refresh(framework)
 
-    # Create articles
+    # Create articles (3 with analysis, 1 without)
     articles_data = [
         {
             "title": "Article 1",
@@ -90,7 +90,8 @@ def test_data(session: Session):
             "published_at": datetime.utcnow() - timedelta(hours=1),
             "processing_status": ProcessingStatus.COMPLETED,
             "sentiment": 5.0,
-            "lean": PoliticalLean.LEFT
+            "lean": PoliticalLean.LEFT,
+            "has_analysis": True
         },
         {
             "title": "Article 2",
@@ -100,7 +101,8 @@ def test_data(session: Session):
             "published_at": datetime.utcnow() - timedelta(hours=2),
             "processing_status": ProcessingStatus.COMPLETED,
             "sentiment": -3.0,
-            "lean": PoliticalLean.RIGHT
+            "lean": PoliticalLean.RIGHT,
+            "has_analysis": True
         },
         {
             "title": "Article 3",
@@ -110,7 +112,17 @@ def test_data(session: Session):
             "published_at": datetime.utcnow() - timedelta(hours=3),
             "processing_status": ProcessingStatus.COMPLETED,
             "sentiment": 0.0,
-            "lean": PoliticalLean.CENTER
+            "lean": PoliticalLean.CENTER,
+            "has_analysis": True
+        },
+        {
+            "title": "Article 4 - No Analysis",
+            "url": "https://example.com/4",
+            "source_id": source1.id,
+            "topic_category": "Politics",
+            "published_at": datetime.utcnow() - timedelta(hours=4),
+            "processing_status": ProcessingStatus.COMPLETED,
+            "has_analysis": False
         },
     ]
 
@@ -128,24 +140,25 @@ def test_data(session: Session):
         session.commit()
         session.refresh(article)
 
-        # Add analysis
-        analysis = ArticleAnalysis(
-            article_id=article.id,
-            summary="Test summary",
-            sentiment_score=article_data["sentiment"],
-            political_lean=article_data["lean"],
-        )
-        session.add(analysis)
+        # Add analysis only if specified
+        if article_data["has_analysis"]:
+            analysis = ArticleAnalysis(
+                article_id=article.id,
+                summary="Test summary",
+                sentiment_score=article_data["sentiment"],
+                political_lean=article_data["lean"],
+            )
+            session.add(analysis)
 
-        # Add framework link
-        link = ArticleFrameworkLink(
-            article_id=article.id,
-            framework_id=framework.id,
-            position_on_axis=3,
-            relevance_score=0.8,
-            ai_explanation="Test explanation"
-        )
-        session.add(link)
+            # Add framework link
+            link = ArticleFrameworkLink(
+                article_id=article.id,
+                framework_id=framework.id,
+                position_on_axis=3,
+                relevance_score=0.8,
+                ai_explanation="Test explanation"
+            )
+            session.add(link)
 
     session.commit()
 
@@ -165,8 +178,8 @@ class TestFeedEndpoints:
         data = response.json()
         assert "articles" in data
         assert "total_count" in data
-        assert data["total_count"] == 3
-        assert len(data["articles"]) == 3
+        assert data["total_count"] == 4  # Now includes article without analysis
+        assert len(data["articles"]) == 4
 
     def test_feed_requires_auth(self, client):
         """Test that feed endpoints require authentication."""
@@ -181,7 +194,7 @@ class TestFeedEndpoints:
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["total_count"] == 2
+        assert data["total_count"] == 3  # 2 with analysis + 1 without
         for article in data["articles"]:
             assert article["topic_category"] == "Politics"
 
@@ -194,7 +207,7 @@ class TestFeedEndpoints:
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["total_count"] == 2
+        assert data["total_count"] == 3  # 2 with analysis + 1 without
         for article in data["articles"]:
             assert article["source_id"] == source_id
 
@@ -224,7 +237,7 @@ class TestFeedEndpoints:
     def test_feed_sort_by_sentiment_high(self, client, auth_token, test_data):
         """Test sorting articles by highest sentiment."""
         response = client.get(
-            "/feed/articles?sort_by=sentiment_high",
+            "/feed/articles?sort_by=sentiment_high&only_analyzed=true",
             headers={"Authorization": f"Bearer {auth_token}"}
         )
         assert response.status_code == 200
@@ -243,7 +256,7 @@ class TestFeedEndpoints:
         assert data["page"] == 1
         assert data["page_size"] == 2
         assert len(data["articles"]) == 2
-        assert data["total_count"] == 3
+        assert data["total_count"] == 4  # Now includes article without analysis
 
     def test_get_available_topics(self, client, auth_token, test_data):
         """Test getting available topics."""
@@ -283,3 +296,28 @@ class TestFeedEndpoints:
         assert "primary_framework" in article
         assert "framework_position" in article
         assert article["primary_framework"] is not None
+
+    def test_feed_filter_only_analyzed(self, client, auth_token, test_data):
+        """Test filtering to show only articles with analysis."""
+        # First, verify we have 4 total articles
+        response = client.get(
+            "/feed/articles",
+            headers={"Authorization": f"Bearer {auth_token}"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total_count"] == 4
+
+        # Now filter to only analyzed articles
+        response = client.get(
+            "/feed/articles?only_analyzed=true",
+            headers={"Authorization": f"Bearer {auth_token}"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total_count"] == 3  # Only articles with analysis
+        # Verify all returned articles have analysis data
+        for article in data["articles"]:
+            assert article["summary"] is not None
+            assert article["sentiment_score"] is not None
+            assert article["political_lean"] is not None
