@@ -53,9 +53,10 @@ def test_framework_model():
 
 def test_processing_status_enum():
     """Test ProcessingStatus enum values"""
-    assert ProcessingStatus.PENDING == "pending"
-    assert ProcessingStatus.COMPLETED == "completed"
-    assert ProcessingStatus.FAILED == "failed"
+    assert ProcessingStatus.PENDING == "PENDING"
+    assert ProcessingStatus.PROCESSING == "PROCESSING"
+    assert ProcessingStatus.COMPLETED == "COMPLETED"
+    assert ProcessingStatus.FAILED == "FAILED"
 
 
 def test_political_lean_enum():

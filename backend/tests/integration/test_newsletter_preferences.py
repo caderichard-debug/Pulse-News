@@ -83,7 +83,7 @@ def session_fixture():
                 title=title,
                 url=f"https://example.com/{article_id}",
                 published_at=datetime.utcnow(),
-                processing_status="completed"
+                processing_status=ProcessingStatus.COMPLETED
             )
             session.add(article)
 

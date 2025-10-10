@@ -11,7 +11,8 @@ from app.main import app
 from app.models import (
     User, Article, ArticleAnalysis, Source,
     Framework, ArticleFrameworkLink, StatisticVerification,
-    ArticleCluster, ArticleClusterMember, ArticleContext, PoliticalLean
+    ArticleCluster, ArticleClusterMember, ArticleContext, PoliticalLean,
+    ProcessingStatus
 )
 from app.database import get_session
 from app.utils.auth import create_access_token, hash_password
@@ -73,7 +74,7 @@ def test_article(session: Session):
         source_id=source.id,
         topic_category="Politics",
         published_at=datetime.utcnow(),
-        processing_status="completed",
+        processing_status=ProcessingStatus.COMPLETED,
         content_text="This is test content for the article."
     )
     session.add(article)
@@ -162,7 +163,7 @@ def test_article(session: Session):
         source_id=source.id,
         topic_category="Politics",
         published_at=datetime.utcnow(),
-        processing_status="completed",
+        processing_status=ProcessingStatus.COMPLETED,
         content_text="Related content"
     )
     session.add(related_article)
@@ -322,7 +323,7 @@ class TestArticleDetailEndpoints:
             title="No Analysis Article",
             url="https://example.com/no-analysis",
             source_id=source.id,
-            processing_status="pending",
+            processing_status=ProcessingStatus.PENDING,
             published_at=datetime.utcnow()
         )
         session.add(article)
@@ -351,7 +352,7 @@ class TestArticleDetailEndpoints:
             title="No Context Article",
             url="https://example.com/no-context",
             source_id=source.id,
-            processing_status="completed",
+            processing_status=ProcessingStatus.COMPLETED,
             published_at=datetime.utcnow()
         )
         session.add(article)

@@ -6,45 +6,70 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ## 2025-10-10 (Current Session)
 
-**E2E Test Fixes - Enhanced** ✅
+**CRITICAL FIX: Database Enum Mismatch** ✅
 
 ### Issue Fixed
-- **CI e2e test failing**: "Article Feed" heading not found on feed page (still failing after first fix)
+- **CI e2e test failing**: All feed endpoints returning 500 errors due to database enum type mismatch
+- **Root cause**: Python enum had lowercase values (`"completed"`) but database enum expected uppercase (`"COMPLETED"`)
 
-### Root Causes (Updated Analysis)
-1. **Heading selector mismatch**: Test was looking for `/article feed/i` but page has `"📰 Article Feed"` with emoji
-2. **Insufficient hydration time**: Network requests weren't completing before element checks
-3. **Race conditions**: React hydration timing issues on feed page
-4. **Missing defensive checks**: Test didn't handle loading states or error states properly
-5. **No wait for content**: Test was checking for heading before any content loaded
+### Complete Analysis
+After initial e2e test improvements, discovered the real issue from log analysis:
+```
+psycopg2.errors.InvalidTextRepresentation: invalid input value for enum processingstatus: "COMPLETED"
+```
 
-### Changes Made (Second Iteration)
-- Updated heading selector to `/📰.*article feed/i` to match emoji in [user-journey.spec.ts](frontend/e2e/user-journey.spec.ts:93)
-- Added `waitForLoadState('networkidle')` before checking for feed elements
-- **Added defensive waiting**: Wait for either h1 or error message to appear before proceeding
-- **Added loading state check**: Detect and wait for loading spinner to disappear
-- **Added error detection**: Throw descriptive error if error message appears instead of content
-- Increased timeout from 10s to 15s for initial content appearance
-- Applied `networkidle` waits to all navigation tests for consistency
+**The Problem:**
+- Database enum: `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED` (uppercase)
+- Python enum in models.py: `"pending"`, `"processing"`, `"completed"`, `"failed"` (lowercase)
+- All feed API calls failed because SQLAlchemy couldn't match enum values
 
-### Files Modified
-- [frontend/e2e/user-journey.spec.ts](frontend/e2e/user-journey.spec.ts)
-  - Lines 68-93: Enhanced feed page loading detection with defensive checks
-  - Lines 240, 246, 252, 258, 265, 275: Added networkidle waits to navigation tests
+### Changes Made
 
-### Why This Should Work Now
-1. **Waits for actual content**: Uses `waitForSelector('h1, .bg-red-50')` to ensure something loads
-2. **Handles all states**: Checks for loading spinner, error message, and normal content
-3. **Better debugging**: Console logs and descriptive errors help identify issues
-4. **More defensive**: Won't fail immediately if timing is slightly off
+**Backend Code (3 commits total):**
 
-### Local Test Results
-✅ All 23 e2e tests passing locally with backend running
-- Including the previously failing "Complete User Journey" test
+1. **Fixed enum definition** in [models.py](backend/app/models.py:9-13):
+   - Changed `ProcessingStatus` enum values from lowercase to uppercase
+   - `COMPLETED = "COMPLETED"` (was `"completed"`)
+   - All other values updated to match database
+
+2. **Fixed test fixtures** across multiple files:
+   - [test_feed.py](backend/tests/routes/test_feed.py): Changed `"completed"` to `ProcessingStatus.COMPLETED`
+   - [test_analytics.py](backend/tests/routes/test_analytics.py): Added ProcessingStatus import and fixed values
+   - [test_article_detail.py](backend/tests/routes/test_article_detail.py): Added ProcessingStatus import and fixed all hardcoded values
+   - [test_source_preferences.py](backend/tests/routes/test_source_preferences.py): Fixed enum usage
+   - [test_newsletter_preferences.py](backend/tests/integration/test_newsletter_preferences.py): Fixed enum usage
+   - [test_api_routes.py](backend/tests/routes/test_api_routes.py): Updated assertions from `"completed"` to `"COMPLETED"`
+   - [test_models.py](backend/tests/test_models.py): Updated enum value assertions
+
+**Frontend E2E Tests (2 commits):**
+
+3. **Enhanced e2e test robustness** in [user-journey.spec.ts](frontend/e2e/user-journey.spec.ts):
+   - Updated heading selector to match emoji: `/📰.*article feed/i`
+   - Added defensive waiting for content to load
+   - Added loading spinner detection
+   - Added error state detection with descriptive messages
+   - Added `waitForLoadState('networkidle')` before checking elements
+
+### Test Results
+
+✅ **All tests passing**:
+- **Backend**: 127 tests passing (including all feed, analytics, article detail tests)
+- **Frontend E2E**: 23/23 tests passing locally
+- **Feed endpoints**: Now returning 200 OK with correct data
+
+### Why This Fix Was Critical
+
+The e2e test improvements alone wouldn't have solved the problem - the API was returning 500 errors!
+1. Feed page couldn't load because API calls were failing
+2. No amount of waiting or defensive checks would fix a 500 error
+3. Once enum values matched database, all endpoints started working
+4. E2e test enhancements then ensured reliable test execution
 
 **Code References:**
-- Test file: [frontend/e2e/user-journey.spec.ts](frontend/e2e/user-journey.spec.ts)
-- Page component: [frontend/src/app/feed/page.tsx](frontend/src/app/feed/page.tsx:135)
+- Enum definition: [backend/app/models.py](backend/app/models.py:9-13)
+- Feed routes: [backend/app/routes/feed.py](backend/app/routes/feed.py)
+- E2E tests: [frontend/e2e/user-journey.spec.ts](frontend/e2e/user-journey.spec.ts)
+- Test fixtures: [backend/tests/routes/](backend/tests/routes/)
 
 ---
 

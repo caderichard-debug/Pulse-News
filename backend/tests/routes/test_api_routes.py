@@ -167,7 +167,7 @@ class TestArticlesRoutes:
         assert data["id"] == analyzed_article.id
         assert data["title"] == "Test Article"
         assert data["word_count"] == 100
-        assert data["processing_status"] == "completed"  # Enum value is lowercase
+        assert data["processing_status"] == "COMPLETED"  # Enum value is uppercase
         assert "content_preview" in data
         assert data["has_full_content"] is True
         assert "analysis" in data
@@ -224,9 +224,9 @@ class TestAdminRoutes:
 
         # Verify article stats
         assert data["articles"]["total"] >= 1
-        assert "pending" in data["articles"]
-        assert "completed" in data["articles"]
-        assert "failed" in data["articles"]
+        assert "PENDING" in data["articles"]
+        assert "COMPLETED" in data["articles"]
+        assert "FAILED" in data["articles"]
         assert "extraction_success_rate" in data["articles"]
 
         # Verify framework stats

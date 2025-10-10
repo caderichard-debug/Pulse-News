@@ -11,7 +11,7 @@ from app.main import app
 from app.database import get_session
 from app.models import (
     User, Source, Article, ArticleAnalysis, Topic, UserTopicPreference,
-    Framework, ArticleFrameworkLink, PoliticalLean
+    Framework, ArticleFrameworkLink, PoliticalLean, ProcessingStatus
 )
 from app.utils.auth import hash_password
 from datetime import datetime, timedelta
@@ -91,7 +91,7 @@ def session_fixture():
                 url=f"https://test.com/article-{i+1}",
                 published_at=datetime.utcnow() - timedelta(days=days_ago),
                 topic_category="Politics" if i % 2 == 0 else "Technology",
-                processing_status="completed"
+                processing_status=ProcessingStatus.COMPLETED
             )
             session.add(article)
 

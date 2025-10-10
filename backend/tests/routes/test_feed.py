@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from app.main import app
 from app.models import (
     User, Article, ArticleAnalysis, Source, Topic,
-    Framework, ArticleFrameworkLink, PoliticalLean
+    Framework, ArticleFrameworkLink, PoliticalLean, ProcessingStatus
 )
 from app.database import get_session
 from app.utils.auth import create_access_token, hash_password
@@ -88,7 +88,7 @@ def test_data(session: Session):
             "source_id": source1.id,
             "topic_category": "Politics",
             "published_at": datetime.utcnow() - timedelta(hours=1),
-            "processing_status": "completed",
+            "processing_status": ProcessingStatus.COMPLETED,
             "sentiment": 5.0,
             "lean": PoliticalLean.LEFT
         },
@@ -98,7 +98,7 @@ def test_data(session: Session):
             "source_id": source2.id,
             "topic_category": "Technology",
             "published_at": datetime.utcnow() - timedelta(hours=2),
-            "processing_status": "completed",
+            "processing_status": ProcessingStatus.COMPLETED,
             "sentiment": -3.0,
             "lean": PoliticalLean.RIGHT
         },
@@ -108,7 +108,7 @@ def test_data(session: Session):
             "source_id": source1.id,
             "topic_category": "Politics",
             "published_at": datetime.utcnow() - timedelta(hours=3),
-            "processing_status": "completed",
+            "processing_status": ProcessingStatus.COMPLETED,
             "sentiment": 0.0,
             "lean": PoliticalLean.CENTER
         },

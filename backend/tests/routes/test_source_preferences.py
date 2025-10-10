@@ -52,7 +52,7 @@ def session_fixture():
             title="Test Article 1",
             url="https://example.com/1",
             published_at=datetime.utcnow(),
-            processing_status="completed"
+            processing_status=ProcessingStatus.COMPLETED
         )
         session.add(article1)
 
