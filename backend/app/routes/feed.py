@@ -56,6 +56,7 @@ async def get_feed_articles(
     source_id: Optional[int] = Query(default=None, description="Filter by source ID"),
     political_lean: Optional[str] = Query(default=None, description="Filter by political lean: left, center, right"),
     sort_by: str = Query(default="newest", description="Sort order: newest, oldest, sentiment_high, sentiment_low"),
+    only_analyzed: bool = Query(default=False, description="Show only articles with analysis"),
     session: Session = Depends(get_session)
 ):
     """
@@ -63,7 +64,7 @@ async def get_feed_articles(
 
     Returns paginated list of articles with analysis data.
     """
-    # Build base query (LEFT JOIN so articles without analysis still show)
+    # Build base query (LEFT JOIN so articles without analysis still show, unless filtered)
     query = (
         select(Article, ArticleAnalysis, Source)
         .join(Source, Source.id == Article.source_id)
@@ -82,6 +83,9 @@ async def get_feed_articles(
         # Convert string to enum
         lean_enum = PoliticalLean(political_lean)
         query = query.where(ArticleAnalysis.political_lean == lean_enum)
+
+    if only_analyzed:
+        query = query.where(ArticleAnalysis.id.isnot(None))
 
     # Get total count before pagination
     count_query = select(func.count()).select_from(query.subquery())
