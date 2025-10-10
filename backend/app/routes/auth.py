@@ -89,6 +89,39 @@ def get_current_user(
     return user
 
 
+def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
+    session: Session = Depends(get_session)
+) -> Optional[User]:
+    """
+    Dependency to optionally get the current user from JWT token.
+    Returns None if no token is provided or if token is invalid.
+    Usage: current_user: Optional[User] = Depends(get_optional_user)
+    """
+    if not credentials:
+        return None
+
+    try:
+        token = credentials.credentials
+        payload = decode_access_token(token)
+
+        if not payload:
+            return None
+
+        email = payload.get("sub")
+        if not email:
+            return None
+
+        user = session.exec(select(User).where(User.email == email)).first()
+
+        if not user or not user.is_active:
+            return None
+
+        return user
+    except Exception:
+        return None
+
+
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 def register(
     request: RegisterRequest,
