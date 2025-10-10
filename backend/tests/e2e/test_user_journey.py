@@ -9,7 +9,7 @@ from sqlmodel import Session, create_engine, SQLModel
 from sqlmodel.pool import StaticPool
 from app.main import app
 from app.database import get_session
-from app.models import Source, Topic, Framework
+from app.models import Source, Topic, Framework, PoliticalLean
 import time
 
 
@@ -214,7 +214,7 @@ class TestCompleteUserJourney:
             article_id=article.id,
             summary="Government proposes new regulations for AI development.",
             sentiment_score=0,
-            political_lean="CENTER",
+            political_lean=PoliticalLean.CENTER,
             bias_indicators="Neutral reporting",
             key_stats=["50% of AI companies affected", "2025 implementation"]
         )
@@ -309,7 +309,7 @@ class TestCompleteUserJourney:
                 article_id=article.id,
                 summary=f"Summary of article {i+1}",
                 sentiment_score=i - 1,  # -1, 0, 1
-                political_lean="CENTER",
+                political_lean=PoliticalLean.CENTER,
                 bias_indicators="Neutral",
                 key_stats=[]
             )

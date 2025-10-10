@@ -5,7 +5,7 @@ Tests multiple services working together.
 
 import pytest
 from sqlmodel import Session
-from app.models import Source, Article, ArticleAnalysis, Topic, ProcessingStatus
+from app.models import Source, Article, ArticleAnalysis, Topic, ProcessingStatus, PoliticalLean
 from app.services.rss_scraper import scrape_source
 from app.services.article_extractor import extract_article_content
 from unittest.mock import patch, Mock
@@ -143,7 +143,7 @@ class TestArticlePipelineIntegration:
             assert analysis is not None
             assert "Government announces" in analysis.summary
             assert analysis.sentiment_score == 0
-            assert analysis.political_lean == "CENTER"
+            assert analysis.political_lean == PoliticalLean.CENTER
 
     def test_full_pipeline_with_error_handling(self, session: Session):
         """
@@ -332,7 +332,7 @@ class TestNewsletterPipelineIntegration:
             article_id=tech_article.id,
             summary="Tech summary",
             sentiment_score=5,
-            political_lean="CENTER",
+            political_lean=PoliticalLean.CENTER,
             bias_indicators="neutral",
             key_stats=[]
         ))
@@ -357,7 +357,7 @@ class TestNewsletterPipelineIntegration:
             article_id=politics_article.id,
             summary="Politics summary",
             sentiment_score=-2,
-            political_lean="LEFT",
+            political_lean=PoliticalLean.LEFT,
             bias_indicators="slight left bias",
             key_stats=[]
         ))
