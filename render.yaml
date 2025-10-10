@@ -9,7 +9,7 @@ services:
     name: pulse-backend
     runtime: docker
     repo: https://github.com/caderichard-debug/Pulse-News
-    branch: main
+    branch: frontend/tweaks
     rootDir: backend
     dockerfilePath: ./Dockerfile
     plan: starter
@@ -58,7 +58,7 @@ services:
     name: pulse-frontend
     runtime: node
     repo: https://github.com/caderichard-debug/Pulse-News
-    branch: main
+    branch: frontend/tweaks
     rootDir: frontend
     buildCommand: npm install && npm run build
     startCommand: npm start
