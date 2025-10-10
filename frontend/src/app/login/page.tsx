@@ -37,7 +37,7 @@ export default function LoginPage() {
       <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-indigo-600">⚡ Pulse</h1>
-          <p className="text-gray-600 mt-2">Welcome back</p>
+          <h2 className="text-gray-600 mt-2 text-xl">Welcome back</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

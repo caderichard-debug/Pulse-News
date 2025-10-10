@@ -85,7 +85,7 @@ export default function SignupPage() {
       <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-indigo-600">⚡ Pulse</h1>
-          <p className="text-gray-600 mt-2">Create your account</p>
+          <h2 className="text-gray-600 mt-2 text-xl">Create your account</h2>
         </div>
 
         {/* Progress indicator */}
