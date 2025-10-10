@@ -2,7 +2,19 @@
  * API client for Pulse backend
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Get API URL and ensure it has a protocol
+const getApiBaseUrl = () => {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+  // If the URL doesn't start with http:// or https://, add https://
+  if (!apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
+    return `https://${apiUrl}`;
+  }
+
+  return apiUrl;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 interface ApiError {
   detail: string;

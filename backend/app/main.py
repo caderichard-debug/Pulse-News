@@ -39,6 +39,9 @@ frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
 # Handle empty string from .env
 if not frontend_url or frontend_url.strip() == "":
     frontend_url = "http://localhost:3000"
+# Add https:// if the URL doesn't have a protocol (from Render's host property)
+elif not frontend_url.startswith("http://") and not frontend_url.startswith("https://"):
+    frontend_url = f"https://{frontend_url}"
 
 app.add_middleware(
     CORSMiddleware,

@@ -23,7 +23,7 @@ services:
         fromService:
           type: web
           name: pulse-frontend
-          property: url
+          property: host
       - key: ENVIRONMENT
         value: production
       - key: DEBUG
@@ -79,4 +79,4 @@ services:
         fromService:
           type: web
           name: pulse-backend
-          property: url
+          property: host
