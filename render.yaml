@@ -31,7 +31,7 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: IS_PULL_REQUEST
-        isPreview: true
+        value: true
       - key: DEBUG
         value: false
       - key: AI_MODEL
