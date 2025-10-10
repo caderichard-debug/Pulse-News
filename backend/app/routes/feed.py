@@ -63,11 +63,11 @@ async def get_feed_articles(
 
     Returns paginated list of articles with analysis data.
     """
-    # Build base query
+    # Build base query (LEFT JOIN so articles without analysis still show)
     query = (
         select(Article, ArticleAnalysis, Source)
-        .join(ArticleAnalysis, ArticleAnalysis.article_id == Article.id)
         .join(Source, Source.id == Article.source_id)
+        .outerjoin(ArticleAnalysis, ArticleAnalysis.article_id == Article.id)
         .where(Article.processing_status == ProcessingStatus.COMPLETED)
     )
 
@@ -131,9 +131,9 @@ async def get_feed_articles(
             source_name=source.name,
             source_id=source.id,
             topic_category=article.topic_category,
-            summary=analysis.summary,
-            sentiment_score=analysis.sentiment_score,
-            political_lean=analysis.political_lean.value if analysis.political_lean else None,
+            summary=analysis.summary if analysis else None,
+            sentiment_score=analysis.sentiment_score if analysis else None,
+            political_lean=analysis.political_lean.value if analysis and analysis.political_lean else None,
             primary_framework=framework_data[0] if framework_data else None,
             framework_position=framework_data[1] if framework_data else None
         ))
