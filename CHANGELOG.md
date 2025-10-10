@@ -6,6 +6,82 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ## 2025-10-10 (Current Session)
 
+**Enabled Pull Request Previews on Render** ✅
+
+### What Changed
+- Updated [render.yaml](render.yaml) to enable PR preview environments:
+  - Added `previewsEnabled: true` for both backend and frontend services
+  - Set `previewsExpireAfterDays: 3` to auto-cleanup after PR close
+  - Added `IS_PULL_REQUEST` environment variable for preview detection
+  - Updated `CACHE_BUST` to v2 to force rebuild
+- Created [docs/PR_PREVIEWS.md](docs/PR_PREVIEWS.md) - comprehensive guide covering:
+  - How PR previews work on Render
+  - Automatic deployment workflow
+  - Preview URLs and accessing them
+  - Environment variable handling
+  - Testing and best practices
+  - Troubleshooting common issues
+  - Cost considerations
+
+### How It Works
+- When you create a PR, Render automatically creates preview deployments
+- Each PR gets unique URLs: `pulse-backend-pr-{NUMBER}.onrender.com` and `pulse-frontend-pr-{NUMBER}.onrender.com`
+- Previews are automatically updated when you push new commits
+- Previews are deleted 3 days after PR is closed/merged
+
+### Benefits
+- ✅ Test changes in production-like environment before merging
+- ✅ Share preview links with reviewers
+- ✅ Catch deployment issues early
+- ✅ Automatic cleanup (no manual intervention needed)
+
+---
+
+**Added Test User to Seed Data** ✅
+
+### What Changed
+- Enhanced [backend/app/seed_data.py](backend/app/seed_data.py) to create a test user on database initialization:
+  - Default credentials: `test@pulse.com` / `testpassword123`
+  - Customizable via environment variables: `TEST_USER_EMAIL`, `TEST_USER_PASSWORD`, `TEST_USER_NAME`
+  - User is automatically verified and subscribed to default topics
+  - Test user creation is idempotent (safe to run multiple times)
+- Separated test user creation into `create_test_user()` function
+- Updated seed script to create test user even if database is already seeded
+- Updated [docs/RENDER_DEPLOYMENT.md](docs/RENDER_DEPLOYMENT.md) with test user credentials and security notes
+- Created [backend/TEST_USER.md](backend/TEST_USER.md) with comprehensive documentation
+
+### Test Results
+- ✅ Auth tests: 10/10 passing
+- ✅ Test user login verified locally
+- ✅ Seed script runs successfully
+
+### Deployment Impact
+- On Render, the test user will be automatically created on first startup
+- Provides immediate login access without manual user creation
+- Recommended to change credentials via environment variables for production
+
+---
+
+**Improved Article Date Display on Feed Page** ✅
+
+### What Changed
+- Enhanced the `formatTimeAgo()` function in [frontend/src/app/feed/page.tsx](frontend/src/app/feed/page.tsx:102-122) to show more precise timestamps:
+  - Minutes ago (for articles < 1 hour old): "5m ago", "30m ago"
+  - Hours ago (for articles < 24 hours old): "2h ago", "12h ago"
+  - Days ago (for articles < 7 days old): "3d ago", "6d ago"
+  - Weeks ago (for articles < 30 days old): "2w ago", "3w ago"
+  - Actual date for older articles: "Oct 8", "Jan 15, 2024"
+- Added `read_time_minutes` field to backend API response in [backend/app/routes/feed.py](backend/app/routes/feed.py:32,144)
+- Calculates read time from word count (200 words/minute)
+- Fixed incorrect test in [backend/tests/routes/test_feed.py](backend/tests/routes/test_feed.py:184-190) that expected auth requirement (feed is public)
+
+### Test Results
+- ✅ Backend: 12/12 tests passing in `test_feed.py`
+- ✅ Frontend: 24/24 tests passing in feed page tests
+- ✅ Frontend build: Successful compilation with no errors
+
+---
+
 **CRITICAL FIX: Database Enum Mismatch + Migration** ✅
 
 ### Issue Fixed
