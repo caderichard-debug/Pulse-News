@@ -21,6 +21,8 @@ services:
           property: connectionString
       - key: FRONTEND_URL
         value: https://pulse-frontend-pfrt.onrender.com
+      - key: CACHE_BUST
+        value: "2025-10-10-v1"
       - key: ENVIRONMENT
         value: production
       - key: DEBUG
