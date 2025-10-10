@@ -19,6 +19,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # Drop the default value first (it references the old enum type)
+    op.execute("ALTER TABLE articles ALTER COLUMN processing_status DROP DEFAULT")
+
     # Rename old enum type
     op.execute("ALTER TYPE processingstatus RENAME TO processingstatus_old")
 
@@ -35,8 +38,14 @@ def upgrade() -> None:
     # Drop old enum type
     op.execute("DROP TYPE processingstatus_old")
 
+    # Re-add the default value with uppercase
+    op.execute("ALTER TABLE articles ALTER COLUMN processing_status SET DEFAULT 'PENDING'::processingstatus")
+
 
 def downgrade() -> None:
+    # Drop the default value first
+    op.execute("ALTER TABLE articles ALTER COLUMN processing_status DROP DEFAULT")
+
     # Rename current enum type
     op.execute("ALTER TYPE processingstatus RENAME TO processingstatus_new")
 
@@ -52,3 +61,6 @@ def downgrade() -> None:
 
     # Drop new enum type
     op.execute("DROP TYPE processingstatus_new")
+
+    # Re-add the default value with lowercase
+    op.execute("ALTER TABLE articles ALTER COLUMN processing_status SET DEFAULT 'pending'::processingstatus")
