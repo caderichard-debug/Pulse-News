@@ -1,15 +1,17 @@
 """
 Seed initial data for the news aggregator.
 Run this once after creating the database to populate sources, topics, seed frameworks,
-and trigger initial article scraping.
+test user, and trigger initial article scraping.
 """
 
 from sqlmodel import Session, select
 from .database import engine
-from .models import Source, Topic, Framework, SourceTopicLink
+from .models import Source, Topic, Framework, SourceTopicLink, User, UserTopicPreference
+from .utils.auth import hash_password
 from datetime import datetime
 import time
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -179,13 +181,81 @@ FRAMEWORKS = [
 ]
 
 
+def create_test_user(session: Session, topic_map: dict = None):
+    """Create a test user for development and testing"""
+    test_user_email = os.getenv("TEST_USER_EMAIL", "test@pulse.com")
+    test_user_password = os.getenv("TEST_USER_PASSWORD", "testpassword123")
+    test_user_name = os.getenv("TEST_USER_NAME", "Test User")
+
+    # Check if test user already exists
+    existing_user = session.exec(select(User).where(User.email == test_user_email)).first()
+    if not existing_user:
+        test_user = User(
+            email=test_user_email,
+            hashed_password=hash_password(test_user_password),
+            name=test_user_name,
+            email_verified=True,
+            is_active=True
+        )
+        session.add(test_user)
+        session.commit()
+        session.refresh(test_user)
+
+        # Subscribe test user to all default topics if topic_map provided
+        if topic_map:
+            for topic_name, topic in topic_map.items():
+                if topic.is_active_default:
+                    preference = UserTopicPreference(
+                        user_id=test_user.id,
+                        topic_id=topic.id,
+                        priority_level=3,  # Medium priority
+                        include_in_newsletter=True,
+                        articles_per_topic=5
+                    )
+                    session.add(preference)
+            session.commit()
+        else:
+            # If no topic_map, subscribe to all existing default topics
+            topics = session.exec(select(Topic).where(Topic.is_active_default == True)).all()
+            for topic in topics:
+                preference = UserTopicPreference(
+                    user_id=test_user.id,
+                    topic_id=topic.id,
+                    priority_level=3,
+                    include_in_newsletter=True,
+                    articles_per_topic=5
+                )
+                session.add(preference)
+            session.commit()
+
+        print(f"✓ Created test user: {test_user.email}")
+        print(f"   Password: {test_user_password}")
+        return test_user
+    else:
+        print(f"✓ Test user already exists: {test_user_email}")
+        return existing_user
+
+
 def seed_database():
     """Populate database with initial data"""
     with Session(engine) as session:
-        # Check if already seeded
+        # Check if already seeded (check for topics AND sources)
         existing_topics = session.exec(select(Topic)).first()
+
         if existing_topics:
-            print("Database already seeded. Skipping...")
+            print("Database already seeded (topics exist).")
+            # Still create test user if it doesn't exist
+            test_user_email = os.getenv("TEST_USER_EMAIL", "test@pulse.com")
+            existing_user = session.exec(select(User).where(User.email == test_user_email)).first()
+            if not existing_user:
+                print("Creating test user...")
+                create_test_user(session)
+                print("\n✅ Test user created!")
+                print(f"\n📧 Test user credentials:")
+                print(f"   Email: {test_user_email}")
+                print(f"   Password: {os.getenv('TEST_USER_PASSWORD', 'testpassword123')}")
+            else:
+                print("Test user already exists. Skipping...")
             return
 
         print("Seeding database...")
@@ -227,10 +297,17 @@ def seed_database():
             session.commit()
             print(f"✓ Created framework: {framework.name}")
 
+        # Create Test User
+        test_user = create_test_user(session, topic_map)
+
         print("\n✅ Database seeding complete!")
         print(f"   - {len(TOPICS)} topics")
         print(f"   - {len(SOURCES)} sources")
         print(f"   - {len(FRAMEWORKS)} frameworks")
+        print(f"   - 1 test user")
+        print(f"\n📧 Test user credentials:")
+        print(f"   Email: {test_user.email}")
+        print(f"   Password: {os.getenv('TEST_USER_PASSWORD', 'testpassword123')}")
 
 
 def run_initial_scraping():
