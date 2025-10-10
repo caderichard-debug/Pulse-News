@@ -10,6 +10,7 @@ jest.mock('@/lib/api', () => ({
     getSentimentOverTime: jest.fn(),
     getBiasDistribution: jest.fn(),
     clearToken: jest.fn(),
+    getCurrentUser: jest.fn(),
   },
 }));
 
@@ -19,6 +20,7 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  usePathname: () => '/dashboard',
 }));
 
 // Mock Recharts to avoid rendering issues in tests
@@ -59,6 +61,7 @@ describe('DashboardPage', () => {
     (api.getUserStats as jest.Mock).mockResolvedValue(mockUserStats);
     (api.getSentimentOverTime as jest.Mock).mockResolvedValue(mockSentimentData);
     (api.getBiasDistribution as jest.Mock).mockResolvedValue(mockBiasData);
+    (api.getCurrentUser as jest.Mock).mockResolvedValue({ name: 'Test User' });
   });
 
   it('should render loading state initially', () => {
@@ -211,7 +214,7 @@ describe('DashboardPage', () => {
       await user.click(logoutButton);
 
       expect(api.clearToken).toHaveBeenCalled();
-      expect(mockPush).toHaveBeenCalledWith('/login');
+      expect(mockPush).toHaveBeenCalledWith('/');
     });
 
     it('should navigate to preferences page', async () => {
@@ -219,10 +222,10 @@ describe('DashboardPage', () => {
       render(<DashboardPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('⚙️ Preferences')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /preferences/i })).toBeInTheDocument();
       });
 
-      const preferencesButton = screen.getByText('⚙️ Preferences');
+      const preferencesButton = screen.getByRole('button', { name: /preferences/i });
       await user.click(preferencesButton);
 
       expect(mockPush).toHaveBeenCalledWith('/preferences');
@@ -233,13 +236,13 @@ describe('DashboardPage', () => {
       render(<DashboardPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('🏠 Home')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /pulse/i })).toBeInTheDocument();
       });
 
-      const homeButton = screen.getByText('🏠 Home');
+      const homeButton = screen.getByRole('button', { name: /pulse/i });
       await user.click(homeButton);
 
-      expect(mockPush).toHaveBeenCalledWith('/');
+      expect(mockPush).toHaveBeenCalledWith('/dashboard');
     });
   });
 

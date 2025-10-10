@@ -53,6 +53,14 @@ class ApiClient {
     });
 
     if (!response.ok) {
+      // Handle auth errors by redirecting to login
+      if (response.status === 401 || response.status === 403) {
+        this.clearToken();
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
+      }
+
       const error: ApiError = await response.json().catch(() => ({
         detail: 'An error occurred',
       }));

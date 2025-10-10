@@ -45,6 +45,10 @@ yarn-error.log*
 out/
 *.tsbuildinfo
 
+# Test results
+**/*test-results*/
+**/*playwright-report*/
+
 # IDE
 .vscode/
 .idea/

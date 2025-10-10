@@ -9,6 +9,7 @@ jest.mock('@/lib/api', () => ({
     getFeedArticles: jest.fn(),
     getFeedTopics: jest.fn(),
     getFeedSources: jest.fn(),
+    getCurrentUser: jest.fn(),
   },
 }));
 
@@ -18,6 +19,7 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  usePathname: () => '/feed',
 }));
 
 describe('FeedPage', () => {
@@ -76,6 +78,7 @@ describe('FeedPage', () => {
     (api.getFeedArticles as jest.Mock).mockResolvedValue(mockFeedResponse);
     (api.getFeedTopics as jest.Mock).mockResolvedValue(mockTopics);
     (api.getFeedSources as jest.Mock).mockResolvedValue(mockSources);
+    (api.getCurrentUser as jest.Mock).mockResolvedValue({ name: 'Test User' });
   });
 
   it('should render loading state initially', () => {

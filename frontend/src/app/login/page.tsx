@@ -24,8 +24,8 @@ export default function LoginPage() {
       // Save token
       api.setToken(response.access_token);
 
-      // Redirect to preferences page
-      router.push('/preferences');
+      // Redirect to dashboard page
+      router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
       setLoading(false);
@@ -37,15 +37,16 @@ export default function LoginPage() {
       <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-indigo-600">⚡ Pulse</h1>
-          <p className="text-gray-600 mt-2">Welcome back</p>
+          <h2 className="text-gray-600 mt-2 text-xl">Welcome back</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
               Email
             </label>
             <input
+              id="email"
               type="email"
               required
               value={formData.email}
@@ -58,10 +59,11 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
               Password
             </label>
             <input
+              id="password"
               type="password"
               required
               value={formData.password}

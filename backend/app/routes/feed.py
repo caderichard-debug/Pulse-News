@@ -8,7 +8,7 @@ from ..database import get_session
 from ..models import (
     User, Article, ArticleAnalysis, ArticleFrameworkLink,
     Framework, Source, Topic, UserTopicPreference,
-    UserSourceSubscription, PoliticalLean
+    UserSourceSubscription, PoliticalLean, ProcessingStatus
 )
 from ..routes.auth import get_current_user
 from pydantic import BaseModel
@@ -68,7 +68,7 @@ async def get_feed_articles(
         select(Article, ArticleAnalysis, Source)
         .join(ArticleAnalysis, ArticleAnalysis.article_id == Article.id)
         .join(Source, Source.id == Article.source_id)
-        .where(Article.processing_status == "completed")
+        .where(Article.processing_status == ProcessingStatus.COMPLETED)
     )
 
     # Apply filters
@@ -157,7 +157,7 @@ async def get_available_topics(
     topics = session.exec(
         select(Article.topic_category, func.count(Article.id).label('count'))
         .where(Article.topic_category.isnot(None))
-        .where(Article.processing_status == "completed")
+        .where(Article.processing_status == ProcessingStatus.COMPLETED)
         .group_by(Article.topic_category)
         .order_by(func.count(Article.id).desc())
     ).all()
@@ -179,7 +179,7 @@ async def get_available_sources(
     sources = session.exec(
         select(Source, func.count(Article.id).label('count'))
         .join(Article, Article.source_id == Source.id)
-        .where(Article.processing_status == "completed")
+        .where(Article.processing_status == ProcessingStatus.COMPLETED)
         .group_by(Source.id)
         .order_by(func.count(Article.id).desc())
     ).all()

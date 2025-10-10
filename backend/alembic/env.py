@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # Import SQLModel and all models
 from sqlmodel import SQLModel
-from ..models import (
+from app.models import (
     Source,
     Topic,
     Article,
@@ -22,8 +22,16 @@ from ..models import (
     User,
     Newsletter,
     SourceTopicLink,
+    ArticleTopicLink,
+    NewsletterArticle,
     ArticleFrameworkLink,
     UserTopicPreference,
+    UserSourceSubscription,
+    StatisticVerification,
+    ArticleCluster,
+    ArticleClusterMember,
+    ArticleContext,
+    SourceCredibilityRating,
 )
 
 # this is the Alembic Config object, which provides

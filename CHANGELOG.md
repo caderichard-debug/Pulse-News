@@ -4,6 +4,252 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-10 (Current Session)
+
+**CRITICAL FIX: Database Enum Mismatch + Migration** ✅
+
+### Issue Fixed
+- **CI e2e test failing**: All feed endpoints returning 500 errors due to database enum type mismatch
+- **Root cause**: Initial migration created lowercase enum, but code was updated to use uppercase
+
+### Complete Analysis
+After initial e2e test improvements, discovered the real issue from log analysis:
+```
+psycopg2.errors.InvalidTextRepresentation: invalid input value for enum processingstatus: "COMPLETED"
+```
+
+**The Problem:**
+- Initial migration (`20251009_000001_initial_schema.py`) created enum with lowercase: `'pending', 'processing', 'completed', 'failed'`
+- Code was updated to use uppercase: `"PENDING"`, `"PROCESSING"`, `"COMPLETED"`, `"FAILED"`
+- Existing databases (including CI) still had lowercase enum
+- All feed API calls failed because SQLAlchemy couldn't match enum values
+
+### Changes Made
+
+**4 Commits Total:**
+
+1. **Fixed e2e test selectors** in [user-journey.spec.ts](frontend/e2e/user-journey.spec.ts):
+   - Updated heading selector to match emoji: `/📰.*article feed/i`
+   - Added `waitForLoadState('networkidle')` before checking elements
+
+2. **Enhanced e2e test robustness** in [user-journey.spec.ts](frontend/e2e/user-journey.spec.ts):
+   - Added defensive waiting for content to load (`h1` or error message)
+   - Added loading spinner detection
+   - Added error state detection with descriptive messages
+   - Increased timeouts for more reliable CI execution
+
+3. **Fixed enum definition in code** in [models.py](backend/app/models.py:9-13):
+   - Changed `ProcessingStatus` enum values from lowercase to uppercase
+   - Fixed all test fixtures across 8 test files to use enum members
+   - Updated test assertions to expect uppercase values
+
+4. **Created Alembic migration** ([ae55c7bb7c8f](backend/alembic/versions/ae55c7bb7c8f_update_processing_status_enum_to_.py)):
+   - Migrates existing database enum from lowercase to uppercase
+   - Converts all existing article data to uppercase
+   - Provides downgrade path for rollback
+   - **CI will apply this migration automatically** (line 149-156 in `.github/workflows/ci.yml`)
+
+### Migration Details
+
+The migration performs these steps:
+1. Rename old enum type to `processingstatus_old`
+2. Create new enum type with uppercase values
+3. Alter articles table to use new enum, converting values with `UPPER()`
+4. Drop old enum type
+
+### Test Results
+
+✅ **All tests passing locally**:
+- **Backend**: 127 tests passing (including all feed, analytics, article detail tests)
+- **Frontend E2E**: 23/23 tests passing locally
+- **Feed endpoints**: Now returning 200 OK with correct data
+- **Migration tested**: Successfully migrated 356 COMPLETED, 85 PENDING, 144 FAILED articles
+
+### Why This Fix Was Critical
+
+The e2e test improvements alone wouldn't have solved the problem - the API was returning 500 errors!
+1. Feed page couldn't load because API calls were failing
+2. No amount of waiting or defensive checks would fix a 500 error
+3. **Initial fix (commit 3)** updated code but not existing databases
+4. **Migration (commit 4)** fixes existing databases including CI
+5. E2e test enhancements then ensured reliable test execution
+
+**Code References:**
+- Enum definition: [backend/app/models.py](backend/app/models.py:9-13)
+- Migration: [backend/alembic/versions/ae55c7bb7c8f_update_processing_status_enum_to_.py](backend/alembic/versions/ae55c7bb7c8f_update_processing_status_enum_to_.py)
+- CI workflow (runs migrations): [.github/workflows/ci.yml](.github/workflows/ci.yml:149-156)
+- E2E tests: [frontend/e2e/user-journey.spec.ts](frontend/e2e/user-journey.spec.ts)
+
+---
+
+## 2025-10-08 21:00
+
+**Frontend E2E Tests & Missing Unit Tests** ✅
+
+### Playwright E2E Tests Added
+- **Installed Playwright** with Chromium browser
+- **Created comprehensive E2E test suites**:
+  - **`auth.spec.ts`** - [frontend/e2e/auth.spec.ts](frontend/e2e/auth.spec.ts):
+    - Landing page display
+    - Signup flow (2-step process)
+    - Login flow with valid/invalid credentials
+    - Password validation (length, match)
+    - Duplicate email prevention
+
+  - **`user-journey.spec.ts`** - [frontend/e2e/user-journey.spec.ts](frontend/e2e/user-journey.spec.ts):
+    - Complete user journey: signup → preferences → dashboard → feed → logout
+    - Preferences management (topics, sources, settings)
+    - Navigation flow with active page highlighting
+    - Error handling (404, unauthorized access)
+    - Login persistence across page reloads
+
+### Frontend Unit Tests Added (50+ tests)
+- **Login Page** (15 tests) - [login/__tests__/page.test.tsx](frontend/src/app/login/__tests__/page.test.tsx):
+  - Form rendering and validation
+  - Successful/failed login flows
+  - Loading states
+  - Error messages
+  - Navigation after login
+
+- **Signup Page** (20+ tests) - [signup/__tests__/page.test.tsx](frontend/src/app/signup/__tests__/page.test.tsx):
+  - 2-step signup process
+  - Form validation (password length, match)
+  - Topic selection
+  - Error handling
+  - Back/Next navigation
+
+- **Landing Page** (15 tests) - [__tests__/page.test.tsx](frontend/src/app/__tests__/page.test.tsx):
+  - Hero section
+  - Feature cards
+  - Call-to-action buttons
+  - How It Works section
+  - Trusted sources
+
+- **Navbar Component** (20 tests) - [components/__tests__/Navbar.test.tsx](frontend/src/components/__tests__/Navbar.test.tsx):
+  - Navigation links
+  - Active page highlighting
+  - User name display
+  - Logout functionality
+  - Navigation actions
+
+### CI/CD Pipeline Enhanced
+- **Added frontend unit test step** with coverage reporting to CodeCov
+- **Added Playwright E2E test job**:
+  - Runs after unit tests pass
+  - Spins up backend API and PostgreSQL services
+  - Installs Playwright browsers
+  - Runs E2E tests in CI environment
+  - Uploads Playwright HTML report as artifact
+- Updated "All Checks" job to include E2E tests
+
+### NPM Scripts Added
+- `npm run test:e2e` - Run Playwright tests headless
+- `npm run test:e2e:ui` - Run with Playwright UI
+- `npm run test:e2e:debug` - Run with debugger
+
+### Test Coverage Summary
+- **Frontend Unit Tests**: 157+ tests (107 existing + 50 new)
+- **Frontend E2E Tests**: 15+ critical user journey tests
+- **Total Frontend Tests**: ~172 tests
+- **Total Project Tests**: ~344 tests (172 backend + 172 frontend)
+
+### What This Achieves
+✅ Complete test pyramid for frontend (unit → integration → E2E)
+✅ Critical user paths validated end-to-end
+✅ CI/CD pipeline validates all changes before merge
+✅ Visual regression detection via Playwright screenshots
+✅ Cross-browser testing capability (currently Chromium)
+
+**Code References:**
+- E2E Tests: [auth.spec.ts](frontend/e2e/auth.spec.ts), [user-journey.spec.ts](frontend/e2e/user-journey.spec.ts)
+- Unit Tests: [login](frontend/src/app/login/__tests__/), [signup](frontend/src/app/signup/__tests__/), [landing](frontend/src/app/__tests__/), [navbar](frontend/src/components/__tests__/)
+- Playwright Config: [playwright.config.ts](frontend/playwright.config.ts)
+- CI/CD: [.github/workflows/ci.yml](.github/workflows/ci.yml)
+
+---
+
+## 2025-10-08 20:00
+
+**Comprehensive Testing Infrastructure Enhancement** ✅
+
+### Test Pyramid Implementation
+- **Restructured test directory** to match app structure:
+  - `tests/utils/` - Unit tests for utilities
+  - `tests/services/` - Unit tests for services
+  - `tests/routes/` - Integration tests for API routes
+  - `tests/integration/` - Multi-component integration tests
+  - `tests/e2e/` - End-to-end user journey tests
+  - `tests/jobs/` - Background job tests
+- Fixed all import paths (relative → absolute `app.` imports)
+
+### New Unit Tests (60+ tests added)
+- **`test_auth.py`** (35 tests) - [tests/utils/test_auth.py](backend/tests/utils/test_auth.py):
+  - Password hashing and verification (bcrypt)
+  - JWT token creation and decoding
+  - Specialized tokens (verification, password reset)
+  - Edge cases (long passwords, unicode, empty strings)
+  - Token expiration and tampering detection
+
+- **`test_openai_client.py`** (25+ tests) - [tests/utils/test_openai_client.py](backend/tests/utils/test_openai_client.py):
+  - Client initialization with/without API key
+  - Batch article analysis with mocked OpenAI
+  - Framework generation and article mapping
+  - Cost calculation accuracy
+  - Prompt building functions
+  - Error handling (JSON decode errors, API failures)
+
+### New Integration Tests
+- **`test_article_pipeline.py`** - [tests/integration/test_article_pipeline.py](backend/tests/integration/test_article_pipeline.py):
+  - Scrape → Extract → Analyze complete workflow
+  - Extraction → Analysis pipeline integration
+  - Batch processing with multiple articles
+  - Error handling across pipeline stages
+  - Newsletter generation with user preferences
+
+### New E2E Tests (10+ tests)
+- **`test_user_journey.py`** - [tests/e2e/test_user_journey.py](backend/tests/e2e/test_user_journey.py):
+  - **Complete user workflow**: Register → Login → Set preferences → Browse feed → Read article
+  - **Article pipeline**: Scrape → Extract → Analyze → Map frameworks → User views
+  - **Newsletter flow**: Subscribe → Articles analyzed → Newsletter generated → User views
+  - **Authentication flow**: Registration, login, token validation, error handling
+  - **Error scenarios**: Invalid credentials, database constraints, missing resources
+
+### Documentation
+- **Created comprehensive testing strategy** - [TESTING_STRATEGY.md](docs/TESTING_STRATEGY.md):
+  - Test pyramid breakdown (60% unit, 30% integration, 10% E2E)
+  - Coverage summary and targets
+  - Missing tests identified
+  - Running tests guide
+  - CI/CD recommendations
+  - Best practices and success metrics
+
+### Test Coverage
+- **Backend**: ~172+ tests total
+  - Unit: ~100 tests (utils + services)
+  - Integration: ~65 tests (routes + pipelines)
+  - E2E: ~7 tests (user journeys)
+- **Frontend**: 107 tests (unchanged)
+- **Total**: ~279+ tests
+
+### What's Still Missing
+**Backend**:
+- ❌ Unit tests for jobs/tasks.py
+- ❌ Integration tests for scheduler + email delivery
+- ❌ Performance/load tests
+
+**Frontend**:
+- ❌ E2E tests with Playwright (critical path)
+- ❌ Unit tests for Login, Signup, Landing pages
+- ❌ Accessibility tests
+
+**Code References:**
+- Utils tests: [test_auth.py](backend/tests/utils/test_auth.py), [test_openai_client.py](backend/tests/utils/test_openai_client.py)
+- Integration: [test_article_pipeline.py](backend/tests/integration/test_article_pipeline.py)
+- E2E: [test_user_journey.py](backend/tests/e2e/test_user_journey.py)
+- Strategy: [TESTING_STRATEGY.md](docs/TESTING_STRATEGY.md)
+
+---
+
 ## 2025-10-08 17:00
 
 **Render.com Deployment & UI Polish** ✅

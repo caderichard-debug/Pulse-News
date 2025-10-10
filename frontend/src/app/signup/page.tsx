@@ -85,7 +85,7 @@ export default function SignupPage() {
       <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-indigo-600">⚡ Pulse</h1>
-          <p className="text-gray-600 mt-2">Create your account</p>
+          <h2 className="text-gray-600 mt-2 text-xl">Create your account</h2>
         </div>
 
         {/* Progress indicator */}
@@ -115,10 +115,11 @@ export default function SignupPage() {
           {step === 'details' ? (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                   Full Name
                 </label>
                 <input
+                  id="name"
                   type="text"
                   required
                   value={formData.name}
@@ -131,10 +132,11 @@ export default function SignupPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                   Email
                 </label>
                 <input
+                  id="email"
                   type="email"
                   required
                   value={formData.email}
@@ -147,10 +149,11 @@ export default function SignupPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                   Password
                 </label>
                 <input
+                  id="password"
                   type="password"
                   required
                   value={formData.password}
@@ -163,10 +166,11 @@ export default function SignupPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
                   Confirm Password
                 </label>
                 <input
+                  id="confirmPassword"
                   type="password"
                   required
                   value={formData.confirmPassword}

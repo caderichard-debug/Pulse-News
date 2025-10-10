@@ -13,6 +13,7 @@ jest.mock('@/lib/api', () => ({
     updateSourcePreferences: jest.fn(),
     updateSettings: jest.fn(),
     clearToken: jest.fn(),
+    getCurrentUser: jest.fn(),
   },
 }));
 
@@ -22,6 +23,7 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  usePathname: () => '/preferences',
 }));
 
 describe('PreferencesPage', () => {
@@ -49,6 +51,7 @@ describe('PreferencesPage', () => {
     (api.getPreferences as jest.Mock).mockResolvedValue(mockPreferences);
     (api.getSources as jest.Mock).mockResolvedValue(mockSources);
     (api.getSettings as jest.Mock).mockResolvedValue(mockSettings);
+    (api.getCurrentUser as jest.Mock).mockResolvedValue({ name: 'Test User' });
   });
 
   it('should render loading state initially', () => {
@@ -281,6 +284,6 @@ describe('PreferencesPage', () => {
     await user.click(logoutButton);
 
     expect(api.clearToken).toHaveBeenCalled();
-    expect(mockPush).toHaveBeenCalledWith('/login');
+    expect(mockPush).toHaveBeenCalledWith('/');
   });
 });

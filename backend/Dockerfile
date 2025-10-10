@@ -27,8 +27,6 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy backend code
 COPY . /app
 
-CMD [""]
-
 # Expose port
 EXPOSE 8000
 

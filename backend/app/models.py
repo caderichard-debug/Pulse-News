@@ -1,4 +1,5 @@
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import SQLModel, Field, Relationship, Column
+from sqlalchemy import Enum as SQLEnum
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
@@ -6,10 +7,10 @@ from enum import Enum
 
 # Enums
 class ProcessingStatus(str, Enum):
-    PENDING = "pending"
-    PROCESSING = "processing"
-    COMPLETED = "completed"
-    FAILED = "failed"
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
 
 
 class PoliticalLean(str, Enum):
@@ -19,8 +20,8 @@ class PoliticalLean(str, Enum):
 
 
 class SubscriptionTier(str, Enum):
-    FREE = "free"
-    PREMIUM = "premium"
+    FREE = "FREE"
+    PREMIUM = "PREMIUM"
 
 
 class VerificationStatus(str, Enum):
@@ -240,7 +241,10 @@ class User(SQLModel, table=True):
     name: Optional[str] = Field(default=None, max_length=200)
 
     # Subscription
-    subscription_tier: SubscriptionTier = Field(default=SubscriptionTier.FREE)
+    subscription_tier: SubscriptionTier = Field(
+        default=SubscriptionTier.FREE,
+        sa_column=Column(SQLEnum(SubscriptionTier, values_callable=lambda x: [e.value for e in x]))
+    )
     is_active: bool = Field(default=True)
 
     # Preferences
