@@ -6,6 +6,51 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ## 2025-10-10 (Current Session)
 
+**Fixed Article Date Display - No More "Just Now" for All Articles** ✅
+
+### What Changed
+- Fixed timezone handling bug that caused all articles to show "Just now" regardless of age
+- Created centralized date utility functions in [frontend/src/lib/dateUtils.ts](frontend/src/lib/dateUtils.ts):
+  - `formatTimeAgo()` - Relative time (5m ago, 2h ago, 3d ago, 1w ago) or absolute for old articles
+  - `formatDate()` - Formatted absolute dates (Oct 9, 2025)
+  - `formatDateTime()` - Full date and time formatting
+- Updated [frontend/src/app/feed/page.tsx](frontend/src/app/feed/page.tsx:6) to use new utility
+- Updated [frontend/src/app/article/[id]/page.tsx](frontend/src/app/article/[id]/page.tsx:6) to use new utility
+- Added comprehensive test suite in [frontend/src/lib/__tests__/dateUtils.test.ts](frontend/src/lib/__tests__/dateUtils.test.ts)
+
+### The Problem
+- Backend sends UTC timestamps without 'Z' suffix (e.g., "2025-10-09 20:25:00")
+- JavaScript's `new Date()` treated these as local time, not UTC
+- This caused incorrect time calculations, showing recent dates for old articles
+- All articles from yesterday appeared as "Just now" or very recent
+
+### The Solution
+- Append 'Z' to date strings to explicitly treat them as UTC: `new Date(dateString + 'Z')`
+- Enhanced formatting with more granular time buckets:
+  - < 1 minute: "Just now"
+  - < 60 minutes: "15m ago"
+  - < 24 hours: "5h ago"
+  - < 7 days: "2d ago"
+  - < 30 days: "2w ago"
+  - ≥ 30 days: "Oct 9, 2025" (absolute date)
+- Handle edge cases like future dates (clock skew)
+
+### Test Results
+- All 198 frontend tests passing (up from 186) ✅
+- 12 new date utility tests covering:
+  - Relative time formatting for all time ranges
+  - UTC timezone handling
+  - Future date edge cases
+  - Absolute date formatting
+
+**Code References:**
+- Main utility: [dateUtils.ts](frontend/src/lib/dateUtils.ts)
+- Feed usage: [feed/page.tsx:6](frontend/src/app/feed/page.tsx#L6)
+- Article detail: [article/[id]/page.tsx:6](frontend/src/app/article/[id]/page.tsx#L6)
+- Tests: [dateUtils.test.ts](frontend/src/lib/__tests__/dateUtils.test.ts)
+
+---
+
 **Enabled Pull Request Previews on Render** ✅
 
 ### What Changed

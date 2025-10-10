@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { api } from '@/lib/api';
+import { formatDate } from '@/lib/dateUtils';
 import Navbar from '@/components/Navbar';
 
 interface ArticleDetail {
@@ -181,7 +182,7 @@ export default function ArticleDetailPage() {
             </>
           )}
           <span>•</span>
-          <span>{new Date(article.published_at).toLocaleDateString()}</span>
+          <span>{formatDate(article.published_at)}</span>
           {article.read_time_minutes && (
             <>
               <span>•</span>
@@ -444,7 +445,7 @@ export default function ArticleDetailPage() {
                     <div className="flex-1">
                       <p className="font-medium text-gray-900 mb-1">{related.title}</p>
                       <p className="text-sm text-gray-600">
-                        {related.source_name} • {new Date(related.published_at).toLocaleDateString()}
+                        {related.source_name} • {formatDate(related.published_at)}
                       </p>
                     </div>
                     <div className="ml-4 text-right text-sm flex flex-col gap-1">
