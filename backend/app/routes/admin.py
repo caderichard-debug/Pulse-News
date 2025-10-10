@@ -17,6 +17,24 @@ from typing import Dict, Any
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
+@router.get("/config/check")
+def check_configuration() -> Dict[str, Any]:
+    """
+    Check if critical configuration values are set (without exposing secrets).
+    """
+    from ..utils.openai_client import openai_client
+    from ..config import settings
+
+    return {
+        "openai_configured": openai_client.is_available(),
+        "openai_model": settings.ai_model if openai_client.is_available() else "N/A",
+        "database_configured": bool(settings.database_url),
+        "resend_configured": bool(settings.resend_api_key),
+        "environment": settings.environment,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+
 @router.get("/stats")
 def get_system_stats(session: Session = Depends(get_session)) -> Dict[str, Any]:
     """
