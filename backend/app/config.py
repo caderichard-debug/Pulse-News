@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
+import os
 
 
 class Settings(BaseSettings):
@@ -44,7 +45,8 @@ class Settings(BaseSettings):
     max_frameworks_per_newsletter: int = 3
 
     class Config:
-        env_file = ".env"
+        # Check for Render secret file first, then fall back to local .env
+        env_file = os.getenv("SECRETS_FILE", ".env")
         case_sensitive = False
 
 

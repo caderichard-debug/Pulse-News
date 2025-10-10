@@ -19,6 +19,8 @@ services:
         fromDatabase:
           name: pulse-db
           property: connectionString
+      - key: SECRETS_FILE
+        value: /etc/secrets/.env
       - key: FRONTEND_URL
         value: https://pulse-frontend-pfrt.onrender.com
       - key: CACHE_BUST
@@ -49,17 +51,7 @@ services:
         value: onboarding@resend.dev
       - key: FROM_NAME
         value: Pulse News
-      # These need to be set manually in Render dashboard (secrets)
-      - key: SECRET_KEY
-        sync: false
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: RESEND_API_KEY
-        sync: false
-      - key: GOOGLE_FACT_CHECK_API_KEY
-        sync: false
-      - key: GOOGLE_SEARCH_ENGINE_ID
-        sync: false
+      # Secrets are loaded from /etc/secrets/.env (Secret File in Render dashboard)
 
   # Frontend Static Site
   - type: web
