@@ -6,7 +6,25 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ## 2025-10-10 (Current Session)
 
-**CRITICAL FIX: Database Enum Mismatch + Migration** ✅
+**Improved Article Date Display on Feed Page** ✅
+
+### What Changed
+- Enhanced the `formatTimeAgo()` function in [frontend/src/app/feed/page.tsx](frontend/src/app/feed/page.tsx:102-122) to show more precise timestamps:
+  - Minutes ago (for articles < 1 hour old): "5m ago", "30m ago"
+  - Hours ago (for articles < 24 hours old): "2h ago", "12h ago"
+  - Days ago (for articles < 7 days old): "3d ago", "6d ago"
+  - Weeks ago (for articles < 30 days old): "2w ago", "3w ago"
+  - Actual date for older articles: "Oct 8", "Jan 15, 2024"
+- Added `read_time_minutes` field to backend API response in [backend/app/routes/feed.py](backend/app/routes/feed.py:32,144)
+- Calculates read time from word count (200 words/minute)
+- Fixed incorrect test in [backend/tests/routes/test_feed.py](backend/tests/routes/test_feed.py:184-190) that expected auth requirement (feed is public)
+
+### Test Results
+- ✅ Backend: 12/12 tests passing in `test_feed.py`
+- ✅ Frontend: 24/24 tests passing in feed page tests
+- ✅ Frontend build: Successful compilation with no errors
+
+**Previous Session: CRITICAL FIX: Database Enum Mismatch + Migration** ✅
 
 ### Issue Fixed
 - **CI e2e test failing**: All feed endpoints returning 500 errors due to database enum type mismatch
