@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { gotoAndWait } from './helpers';
 
 test.describe('Authentication Flow', () => {
   test.beforeEach(async ({ page }) => {
-    // Start from the home page
-    await page.goto('/');
+    // Start from the home page and wait for hydration
+    await gotoAndWait(page, '/');
   });
 
   test('should display landing page correctly', async ({ page }) => {
@@ -12,12 +13,16 @@ test.describe('Authentication Flow', () => {
 
     // Check for CTA buttons
     await expect(page.getByRole('link', { name: /get started/i })).toBeVisible();
-    await expect(page.getByRole('link', { name: /sign in/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /log in/i })).toBeVisible();
   });
 
   test('should navigate to signup page', async ({ page }) => {
     // Click "Get Started" button
     await page.getByRole('link', { name: /get started/i }).first().click();
+
+    // Wait for navigation and hydration
+    await page.waitForURL(/\/signup/);
+    await page.waitForLoadState('networkidle');
 
     // Should be on signup page
     await expect(page).toHaveURL(/\/signup/);
@@ -25,8 +30,12 @@ test.describe('Authentication Flow', () => {
   });
 
   test('should navigate to login page', async ({ page }) => {
-    // Click "Sign In" button
-    await page.getByRole('link', { name: /sign in/i }).first().click();
+    // Click "Log In" button
+    await page.getByRole('link', { name: /log in/i }).first().click();
+
+    // Wait for navigation and hydration
+    await page.waitForURL(/\/login/);
+    await page.waitForLoadState('networkidle');
 
     // Should be on login page
     await expect(page).toHaveURL(/\/login/);
@@ -34,8 +43,8 @@ test.describe('Authentication Flow', () => {
   });
 
   test('should complete full signup flow', async ({ page }) => {
-    // Navigate to signup
-    await page.goto('/signup');
+    // Navigate to signup and wait for hydration
+    await gotoAndWait(page, '/signup');
 
     // Fill in user details (Step 1)
     const timestamp = Date.now();
