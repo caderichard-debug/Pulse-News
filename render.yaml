@@ -15,8 +15,10 @@ services:
     plan: starter
     healthCheckPath: /health
     # Enable PR previews
-    previewsEnabled: true
-    previewsExpireAfterDays: 3
+    previews:
+      generation: automatic
+    previews:
+      expireAfterDays: 3
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -69,8 +71,10 @@ services:
     startCommand: npm start
     plan: free
     # Enable PR previews
-    previewsEnabled: true
-    previewsExpireAfterDays: 3
+    previews:
+      generation: automati
+    previews:
+      expireAfterDays: 3
     envVars:
       - key: NODE_ENV
         value: production
