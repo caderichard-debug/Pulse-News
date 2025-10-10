@@ -6,11 +6,11 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ## 2025-10-10 (Current Session)
 
-**CRITICAL FIX: Database Enum Mismatch** ✅
+**CRITICAL FIX: Database Enum Mismatch + Migration** ✅
 
 ### Issue Fixed
 - **CI e2e test failing**: All feed endpoints returning 500 errors due to database enum type mismatch
-- **Root cause**: Python enum had lowercase values (`"completed"`) but database enum expected uppercase (`"COMPLETED"`)
+- **Root cause**: Initial migration created lowercase enum, but code was updated to use uppercase
 
 ### Complete Analysis
 After initial e2e test improvements, discovered the real issue from log analysis:
@@ -19,57 +19,66 @@ psycopg2.errors.InvalidTextRepresentation: invalid input value for enum processi
 ```
 
 **The Problem:**
-- Database enum: `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED` (uppercase)
-- Python enum in models.py: `"pending"`, `"processing"`, `"completed"`, `"failed"` (lowercase)
+- Initial migration (`20251009_000001_initial_schema.py`) created enum with lowercase: `'pending', 'processing', 'completed', 'failed'`
+- Code was updated to use uppercase: `"PENDING"`, `"PROCESSING"`, `"COMPLETED"`, `"FAILED"`
+- Existing databases (including CI) still had lowercase enum
 - All feed API calls failed because SQLAlchemy couldn't match enum values
 
 ### Changes Made
 
-**Backend Code (3 commits total):**
+**4 Commits Total:**
 
-1. **Fixed enum definition** in [models.py](backend/app/models.py:9-13):
-   - Changed `ProcessingStatus` enum values from lowercase to uppercase
-   - `COMPLETED = "COMPLETED"` (was `"completed"`)
-   - All other values updated to match database
-
-2. **Fixed test fixtures** across multiple files:
-   - [test_feed.py](backend/tests/routes/test_feed.py): Changed `"completed"` to `ProcessingStatus.COMPLETED`
-   - [test_analytics.py](backend/tests/routes/test_analytics.py): Added ProcessingStatus import and fixed values
-   - [test_article_detail.py](backend/tests/routes/test_article_detail.py): Added ProcessingStatus import and fixed all hardcoded values
-   - [test_source_preferences.py](backend/tests/routes/test_source_preferences.py): Fixed enum usage
-   - [test_newsletter_preferences.py](backend/tests/integration/test_newsletter_preferences.py): Fixed enum usage
-   - [test_api_routes.py](backend/tests/routes/test_api_routes.py): Updated assertions from `"completed"` to `"COMPLETED"`
-   - [test_models.py](backend/tests/test_models.py): Updated enum value assertions
-
-**Frontend E2E Tests (2 commits):**
-
-3. **Enhanced e2e test robustness** in [user-journey.spec.ts](frontend/e2e/user-journey.spec.ts):
+1. **Fixed e2e test selectors** in [user-journey.spec.ts](frontend/e2e/user-journey.spec.ts):
    - Updated heading selector to match emoji: `/📰.*article feed/i`
-   - Added defensive waiting for content to load
+   - Added `waitForLoadState('networkidle')` before checking elements
+
+2. **Enhanced e2e test robustness** in [user-journey.spec.ts](frontend/e2e/user-journey.spec.ts):
+   - Added defensive waiting for content to load (`h1` or error message)
    - Added loading spinner detection
    - Added error state detection with descriptive messages
-   - Added `waitForLoadState('networkidle')` before checking elements
+   - Increased timeouts for more reliable CI execution
+
+3. **Fixed enum definition in code** in [models.py](backend/app/models.py:9-13):
+   - Changed `ProcessingStatus` enum values from lowercase to uppercase
+   - Fixed all test fixtures across 8 test files to use enum members
+   - Updated test assertions to expect uppercase values
+
+4. **Created Alembic migration** ([ae55c7bb7c8f](backend/alembic/versions/ae55c7bb7c8f_update_processing_status_enum_to_.py)):
+   - Migrates existing database enum from lowercase to uppercase
+   - Converts all existing article data to uppercase
+   - Provides downgrade path for rollback
+   - **CI will apply this migration automatically** (line 149-156 in `.github/workflows/ci.yml`)
+
+### Migration Details
+
+The migration performs these steps:
+1. Rename old enum type to `processingstatus_old`
+2. Create new enum type with uppercase values
+3. Alter articles table to use new enum, converting values with `UPPER()`
+4. Drop old enum type
 
 ### Test Results
 
-✅ **All tests passing**:
+✅ **All tests passing locally**:
 - **Backend**: 127 tests passing (including all feed, analytics, article detail tests)
 - **Frontend E2E**: 23/23 tests passing locally
 - **Feed endpoints**: Now returning 200 OK with correct data
+- **Migration tested**: Successfully migrated 356 COMPLETED, 85 PENDING, 144 FAILED articles
 
 ### Why This Fix Was Critical
 
 The e2e test improvements alone wouldn't have solved the problem - the API was returning 500 errors!
 1. Feed page couldn't load because API calls were failing
 2. No amount of waiting or defensive checks would fix a 500 error
-3. Once enum values matched database, all endpoints started working
-4. E2e test enhancements then ensured reliable test execution
+3. **Initial fix (commit 3)** updated code but not existing databases
+4. **Migration (commit 4)** fixes existing databases including CI
+5. E2e test enhancements then ensured reliable test execution
 
 **Code References:**
 - Enum definition: [backend/app/models.py](backend/app/models.py:9-13)
-- Feed routes: [backend/app/routes/feed.py](backend/app/routes/feed.py)
+- Migration: [backend/alembic/versions/ae55c7bb7c8f_update_processing_status_enum_to_.py](backend/alembic/versions/ae55c7bb7c8f_update_processing_status_enum_to_.py)
+- CI workflow (runs migrations): [.github/workflows/ci.yml](.github/workflows/ci.yml:149-156)
 - E2E tests: [frontend/e2e/user-journey.spec.ts](frontend/e2e/user-journey.spec.ts)
-- Test fixtures: [backend/tests/routes/](backend/tests/routes/)
 
 ---
 
