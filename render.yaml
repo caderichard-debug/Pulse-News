@@ -11,7 +11,7 @@ services:
     repo: https://github.com/caderichard-debug/Pulse-News
     branch: render_setup
     rootDir: backend
-    dockerfilePath: backend/Dockerfile
+    dockerfilePath: ./Dockerfile
     plan: starter
     healthCheckPath: /health
     envVars:
