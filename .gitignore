@@ -45,6 +45,9 @@ yarn-error.log*
 out/
 *.tsbuildinfo
 
+# Test results
+**/*test-results*/
+
 # IDE
 .vscode/
 .idea/

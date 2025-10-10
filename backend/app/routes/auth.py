@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8)
+    name: Optional[str] = Field(default=None, description="User's full name")
     topic_ids: Optional[List[int]] = Field(default=None, description="Initial topic preferences")
 
 
@@ -115,6 +116,7 @@ def register(
     # Create user
     user = User(
         email=request.email,
+        name=request.name,
         hashed_password=hash_password(request.password),
         is_active=True,
         email_verified=False  # Requires verification
