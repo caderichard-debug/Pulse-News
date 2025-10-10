@@ -40,10 +40,14 @@ test.describe('Complete User Journey', () => {
 
     // Step 2: Navigate to Dashboard
     await page.getByRole('button', { name: /📊.*dashboard/i }).click();
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
+
+    // Wait for page to hydrate and render
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000); // Allow React to hydrate
 
     // Verify dashboard elements
-    await expect(page.getByText(/articles read/i)).toBeVisible();
+    await expect(page.getByText(/articles read/i)).toBeVisible({ timeout: 10000 });
     await expect(page.getByText(/newsletters/i)).toBeVisible();
     await expect(page.getByText(/topics tracked/i)).toBeVisible();
 
@@ -55,20 +59,28 @@ test.describe('Complete User Journey', () => {
 
     // Step 3: Navigate to Feed
     await page.getByRole('button', { name: /📰.*feed/i }).click();
-    await expect(page).toHaveURL(/\/feed/);
+    await expect(page).toHaveURL(/\/feed/, { timeout: 10000 });
+
+    // Wait for page to hydrate and render
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000); // Allow React to hydrate
 
     // Verify feed page elements
-    await expect(page.getByRole('heading', { name: /article feed/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /article feed/i })).toBeVisible({ timeout: 10000 });
 
     // Check for filters
-    await expect(page.getByRole('combobox').first()).toBeVisible(); // Topic filter
+    await expect(page.getByRole('combobox').first()).toBeVisible({ timeout: 10000 }); // Topic filter
 
     // Step 4: Go back to Preferences
     await page.getByRole('button', { name: /⚙️.*preferences/i }).click();
-    await expect(page).toHaveURL(/\/preferences/);
+    await expect(page).toHaveURL(/\/preferences/, { timeout: 10000 });
+
+    // Wait for page to hydrate and render
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000); // Allow React to hydrate
 
     // Verify tabs are present
-    await expect(page.getByRole('button', { name: /topics/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /topics/i })).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('button', { name: /sources/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /settings/i })).toBeVisible();
 
@@ -92,10 +104,14 @@ test.describe('Complete User Journey', () => {
 
     // Step 5: Navigate to How It Works
     await page.getByRole('button', { name: /💡.*how it works/i }).click();
-    await expect(page).toHaveURL(/\/how-it-works/);
+    await expect(page).toHaveURL(/\/how-it-works/, { timeout: 10000 });
+
+    // Wait for page to hydrate and render
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000); // Allow React to hydrate
 
     // Verify educational content
-    await expect(page.getByRole('heading', { name: /how pulse works/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /how pulse works/i })).toBeVisible({ timeout: 10000 });
 
     // Step 6: Logout
     await page.getByRole('button', { name: /logout/i }).click();
@@ -195,24 +211,30 @@ test.describe('Navigation Flow', () => {
   test('should navigate between all main pages using navbar', async ({ page }) => {
     // Test Dashboard button
     await page.getByRole('button', { name: /📊.*dashboard/i }).click();
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
+    await page.waitForLoadState('domcontentloaded');
 
     // Test Feed button
     await page.getByRole('button', { name: /📰.*feed/i }).click();
-    await expect(page).toHaveURL(/\/feed/);
+    await expect(page).toHaveURL(/\/feed/, { timeout: 10000 });
+    await page.waitForLoadState('domcontentloaded');
 
     // Test Preferences button (in navbar, not the user menu)
     await page.getByRole('button', { name: /⚙️.*preferences/i }).click();
-    await expect(page).toHaveURL(/\/preferences/);
+    await expect(page).toHaveURL(/\/preferences/, { timeout: 10000 });
+    await page.waitForLoadState('domcontentloaded');
 
     // Test How It Works button
     await page.getByRole('button', { name: /💡.*how it works/i }).click();
-    await expect(page).toHaveURL(/\/how-it-works/);
+    await expect(page).toHaveURL(/\/how-it-works/, { timeout: 10000 });
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should highlight active page in navbar', async ({ page }) => {
     // Go to dashboard
     await page.getByRole('button', { name: /📊.*dashboard/i }).click();
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(500);
 
     // Dashboard button should be highlighted
     const dashboardButton = page.getByRole('button', { name: /📊.*dashboard/i });
@@ -220,6 +242,8 @@ test.describe('Navigation Flow', () => {
 
     // Go to feed
     await page.getByRole('button', { name: /📰.*feed/i }).click();
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(500);
 
     // Feed button should be highlighted
     const feedButton = page.getByRole('button', { name: /📰.*feed/i });
