@@ -121,6 +121,9 @@ test.describe('Preferences Management', () => {
     await page.getByLabel(/^password/i).first().fill(userPassword);
     await page.getByLabel(/confirm password/i).fill(userPassword);
     await page.getByRole('button', { name: /continue/i }).click();
+
+    // Wait for topic selection page
+    await expect(page.getByRole('heading', { name: /choose.*topics/i })).toBeVisible();
     await page.getByRole('checkbox').first().check();
     await page.getByRole('button', { name: /create account/i }).click();
 
@@ -180,6 +183,9 @@ test.describe('Navigation Flow', () => {
     await page.getByLabel(/^password/i).first().fill(password);
     await page.getByLabel(/confirm password/i).fill(password);
     await page.getByRole('button', { name: /continue/i }).click();
+
+    // Wait for topic selection page
+    await expect(page.getByRole('heading', { name: /choose.*topics/i })).toBeVisible();
     await page.getByRole('checkbox').first().check();
     await page.getByRole('button', { name: /create account/i }).click();
 
@@ -254,6 +260,9 @@ test.describe('Error Handling', () => {
     await page.getByLabel(/^password/i).first().fill(password);
     await page.getByLabel(/confirm password/i).fill(password);
     await page.getByRole('button', { name: /continue/i }).click();
+
+    // Wait for topic selection page
+    await expect(page.getByRole('heading', { name: /choose.*topics/i })).toBeVisible();
     await page.getByRole('checkbox').first().check();
     await page.getByRole('button', { name: /create account/i }).click();
 
