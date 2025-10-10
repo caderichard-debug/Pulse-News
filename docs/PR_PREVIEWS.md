@@ -19,14 +19,18 @@ PR previews are enabled in [render.yaml](../render.yaml) with these settings:
 services:
   - type: web
     name: pulse-backend
-    previewsEnabled: true
-    previewsExpireAfterDays: 3
+    previews:
+      enabled: automatic
+    previews:
+      expireAfterDays: 3
     # ... rest of config
 
   - type: web
     name: pulse-frontend
-    previewsEnabled: true
-    previewsExpireAfterDays: 3
+    previews:
+      generation: automatic
+    previews:
+      expireAfterDays: 3
     # ... rest of config
 ```
 
