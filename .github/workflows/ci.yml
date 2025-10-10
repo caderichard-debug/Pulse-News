@@ -155,6 +155,15 @@ jobs:
           cd backend
           alembic upgrade head
 
+      - name: Seed database
+        env:
+          DATABASE_URL: postgresql://postgres:testpassword@localhost:5432/test_db
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SECRET_KEY: test-secret-key-for-e2e
+        run: |
+          cd backend
+          python -m app.seed_data
+
       - name: Start backend server
         env:
           DATABASE_URL: postgresql://postgres:testpassword@localhost:5432/test_db
