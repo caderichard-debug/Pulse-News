@@ -17,7 +17,6 @@ services:
     # Enable PR previews
     previews:
       generation: automatic
-      expireAfterDays: 3
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -32,7 +31,7 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: IS_PULL_REQUEST
-        isPreview: true
+        value: true
       - key: DEBUG
         value: false
       - key: AI_MODEL
@@ -71,8 +70,7 @@ services:
     plan: free
     # Enable PR previews
     previews:
-      generation: automati
-      expireAfterDays: 3
+      generation: automatic
     envVars:
       - key: NODE_ENV
         value: production
