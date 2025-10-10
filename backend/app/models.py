@@ -157,7 +157,10 @@ class Article(SQLModel, table=True):
     # Processing status
     processing_status: ProcessingStatus = Field(
         default=ProcessingStatus.PENDING,
-        index=True
+        sa_column=Column(
+            SQLEnum(ProcessingStatus, values_callable=lambda x: [e.value for e in x]),
+            index=True
+        )
     )
     processed_at: Optional[datetime] = Field(default=None)
 
@@ -183,13 +186,18 @@ class ArticleAnalysis(SQLModel, table=True):
     # AI-generated analysis
     summary: str = Field(max_length=1000)  # 100-150 word summary
     sentiment_score: int = Field(ge=-10, le=10)  # -10 (negative) to +10 (positive)
-    political_lean: PoliticalLean
+    political_lean: PoliticalLean = Field(
+        sa_column=Column(SQLEnum(PoliticalLean, values_callable=lambda x: [e.value for e in x]))
+    )
     bias_indicators: Optional[str] = Field(default=None, max_length=500)
 
     # Statistics extraction
     key_stats: Optional[str] = Field(default=None)  # JSON string of extracted stats
     stats_verified: Optional[bool] = Field(default=None)
-    stats_verification_status: VerificationStatus = Field(default=VerificationStatus.UNVERIFIED)
+    stats_verification_status: VerificationStatus = Field(
+        default=VerificationStatus.UNVERIFIED,
+        sa_column=Column(SQLEnum(VerificationStatus, values_callable=lambda x: [e.value for e in x]))
+    )
     stats_verification_date: Optional[datetime] = Field(default=None)
 
     # Context generation
@@ -294,8 +302,14 @@ class StatisticVerification(SQLModel, table=True):
     # Statistic details
     statistic_text: str = Field(max_length=500)
     context: Optional[str] = Field(default=None, max_length=1000)
-    verification_status: VerificationStatus = Field(default=VerificationStatus.UNVERIFIED)
-    verification_method: Optional[VerificationMethod] = Field(default=None)
+    verification_status: VerificationStatus = Field(
+        default=VerificationStatus.UNVERIFIED,
+        sa_column=Column(SQLEnum(VerificationStatus, values_callable=lambda x: [e.value for e in x]))
+    )
+    verification_method: Optional[VerificationMethod] = Field(
+        default=None,
+        sa_column=Column(SQLEnum(VerificationMethod, values_callable=lambda x: [e.value for e in x]))
+    )
     confidence_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
 
     # V2: Source Tracing
