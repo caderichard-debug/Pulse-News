@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { formatTimeAgo } from '@/lib/dateUtils';
 import Navbar from '@/components/Navbar';
 
 interface Article {
@@ -97,19 +98,6 @@ export default function FeedPage() {
     if (lean === 'left') return 'text-blue-600';
     if (lean === 'center') return 'text-purple-600';
     return 'text-red-600';
-  }
-
-  function formatTimeAgo(dateString: string): string {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffHours < 1) return 'Just now';
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
   }
 
   if (error && !feedData) {
