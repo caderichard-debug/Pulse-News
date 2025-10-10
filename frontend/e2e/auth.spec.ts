@@ -21,8 +21,11 @@ test.describe('Authentication Flow', () => {
     await page.getByRole('link', { name: /get started/i }).first().click();
 
     // Wait for navigation and hydration
-    await page.waitForURL(/\/signup/);
-    await page.waitForLoadState('networkidle');
+    await page.waitForURL(/\/signup/, { timeout: 10000 });
+    await page.waitForLoadState('domcontentloaded');
+
+    // Wait for the heading to be visible (indicates page is fully loaded)
+    await page.getByRole('heading', { name: /create.*account/i }).waitFor({ state: 'visible', timeout: 10000 });
 
     // Should be on signup page
     await expect(page).toHaveURL(/\/signup/);
@@ -34,8 +37,11 @@ test.describe('Authentication Flow', () => {
     await page.getByRole('link', { name: /log in/i }).first().click();
 
     // Wait for navigation and hydration
-    await page.waitForURL(/\/login/);
-    await page.waitForLoadState('networkidle');
+    await page.waitForURL(/\/login/, { timeout: 10000 });
+    await page.waitForLoadState('domcontentloaded');
+
+    // Wait for the heading to be visible (indicates page is fully loaded)
+    await page.getByRole('heading', { name: /welcome back/i }).waitFor({ state: 'visible', timeout: 10000 });
 
     // Should be on login page
     await expect(page).toHaveURL(/\/login/);
@@ -74,7 +80,7 @@ test.describe('Authentication Flow', () => {
 
   test('should login with valid credentials', async ({ page }) => {
     // First, create an account
-    await page.goto('/signup');
+    await gotoAndWait(page, '/signup');
 
     const timestamp = Date.now();
     const email = `login${timestamp}@example.com`;
@@ -95,7 +101,7 @@ test.describe('Authentication Flow', () => {
     await page.getByRole('button', { name: /logout/i }).click();
 
     // Now login
-    await page.goto('/login');
+    await gotoAndWait(page, '/login');
     await page.getByLabel(/email/i).fill(email);
     await page.getByLabel(/password/i).fill(password);
     await page.getByRole('button', { name: /sign in/i }).click();
@@ -105,7 +111,7 @@ test.describe('Authentication Flow', () => {
   });
 
   test('should show error for invalid login credentials', async ({ page }) => {
-    await page.goto('/login');
+    await gotoAndWait(page, '/login');
 
     await page.getByLabel(/email/i).fill('nonexistent@example.com');
     await page.getByLabel(/password/i).fill('WrongPassword123!');
@@ -116,7 +122,7 @@ test.describe('Authentication Flow', () => {
   });
 
   test('should validate password requirements on signup', async ({ page }) => {
-    await page.goto('/signup');
+    await gotoAndWait(page, '/signup');
 
     await page.getByLabel(/name/i).fill('Test User');
     await page.getByLabel(/email/i).fill('test@example.com');
@@ -130,7 +136,7 @@ test.describe('Authentication Flow', () => {
   });
 
   test('should validate password match on signup', async ({ page }) => {
-    await page.goto('/signup');
+    await gotoAndWait(page, '/signup');
 
     await page.getByLabel(/name/i).fill('Test User');
     await page.getByLabel(/email/i).fill('test@example.com');
@@ -147,7 +153,7 @@ test.describe('Authentication Flow', () => {
     const email = `duplicate${Date.now()}@example.com`;
 
     // First registration
-    await page.goto('/signup');
+    await gotoAndWait(page, '/signup');
     await page.getByLabel(/name/i).fill('First User');
     await page.getByLabel(/email/i).fill(email);
     await page.getByLabel(/^password/i).first().fill('Password123!');
@@ -160,7 +166,7 @@ test.describe('Authentication Flow', () => {
     await page.getByRole('button', { name: /logout/i }).click();
 
     // Try to register again with same email
-    await page.goto('/signup');
+    await gotoAndWait(page, '/signup');
     await page.getByLabel(/name/i).fill('Second User');
     await page.getByLabel(/email/i).fill(email);
     await page.getByLabel(/^password/i).first().fill('Password123!');

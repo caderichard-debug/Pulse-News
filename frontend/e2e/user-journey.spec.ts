@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { gotoAndWait } from './helpers';
 
 /**
  * Complete user journey E2E tests
@@ -18,7 +19,7 @@ test.describe('Complete User Journey', () => {
 
   test('should complete full user journey from signup to reading articles', async ({ page }) => {
     // Step 1: Sign up
-    await page.goto('/signup');
+    await gotoAndWait(page, '/signup');
 
     await page.getByLabel(/name/i).fill('Journey User');
     await page.getByLabel(/email/i).fill(userEmail);
@@ -111,7 +112,7 @@ test.describe('Preferences Management', () => {
     userEmail = `prefs${timestamp}@example.com`;
     userPassword = 'PrefsPassword123!';
 
-    await page.goto('/signup');
+    await gotoAndWait(page, '/signup');
     await page.getByLabel(/name/i).fill('Prefs User');
     await page.getByLabel(/email/i).fill(userEmail);
     await page.getByLabel(/^password/i).first().fill(userPassword);
@@ -165,7 +166,7 @@ test.describe('Navigation Flow', () => {
     const email = `nav${timestamp}@example.com`;
     const password = 'NavPassword123!';
 
-    await page.goto('/signup');
+    await gotoAndWait(page, '/signup');
     await page.getByLabel(/name/i).fill('Nav User');
     await page.getByLabel(/email/i).fill(email);
     await page.getByLabel(/^password/i).first().fill(password);
@@ -219,7 +220,7 @@ test.describe('Navigation Flow', () => {
 
 test.describe('Error Handling', () => {
   test('should handle 404 pages gracefully', async ({ page }) => {
-    await page.goto('/nonexistent-page');
+    await gotoAndWait(page, '/nonexistent-page');
 
     // Next.js should show 404 page
     await expect(page.getByText(/404|not found/i)).toBeVisible();
@@ -227,7 +228,7 @@ test.describe('Error Handling', () => {
 
   test('should redirect to login when accessing protected route without auth', async ({ page }) => {
     // Try to access dashboard without authentication
-    await page.goto('/dashboard');
+    await gotoAndWait(page, '/dashboard');
 
     // Should redirect to login
     await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
@@ -239,7 +240,7 @@ test.describe('Error Handling', () => {
     const email = `persist${timestamp}@example.com`;
     const password = 'PersistPassword123!';
 
-    await page.goto('/signup');
+    await gotoAndWait(page, '/signup');
     await page.getByLabel(/name/i).fill('Persist User');
     await page.getByLabel(/email/i).fill(email);
     await page.getByLabel(/^password/i).first().fill(password);
