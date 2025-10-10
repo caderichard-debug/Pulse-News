@@ -1,7 +1,6 @@
 databases:
   - name: pulse-db
     databaseName: news_db
-    user: postgres
     plan: free
 
 services:
