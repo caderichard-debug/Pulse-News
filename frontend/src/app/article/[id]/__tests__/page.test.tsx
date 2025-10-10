@@ -189,7 +189,7 @@ describe('ArticleDetailPage', () => {
       render(<ArticleDetailPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Verified Statistics')).toBeInTheDocument();
+        expect(screen.getByText('Key Statistics')).toBeInTheDocument();
       });
     });
 
@@ -220,13 +220,12 @@ describe('ArticleDetailPage', () => {
       });
     });
 
-    it('should display credibility stars', async () => {
+    it('should display credibility rating as X/5 format', async () => {
       render(<ArticleDetailPage />);
 
       await waitFor(() => {
-        // 0.9 * 5 = 4.5, rounds to 5 stars
-        const stars = screen.getByText('⭐⭐⭐⭐⭐');
-        expect(stars).toBeInTheDocument();
+        // 0.9 * 5 = 4.5
+        expect(screen.getByText(/4\.5\/5/)).toBeInTheDocument();
       });
     });
 
@@ -475,7 +474,7 @@ describe('ArticleDetailPage', () => {
         expect(screen.getByText('Test Article Title')).toBeInTheDocument();
       });
 
-      expect(screen.queryByText('Verified Statistics')).not.toBeInTheDocument();
+      expect(screen.queryByText('Key Statistics')).not.toBeInTheDocument();
     });
 
     it('should not render frameworks section when empty', async () => {
