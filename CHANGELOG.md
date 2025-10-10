@@ -6,31 +6,41 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ## 2025-10-10 (Current Session)
 
-**E2E Test Fixes** ✅
+**E2E Test Fixes - Enhanced** ✅
 
 ### Issue Fixed
-- **CI e2e test failing**: "Article Feed" heading not found on feed page
+- **CI e2e test failing**: "Article Feed" heading not found on feed page (still failing after first fix)
 
-### Root Causes
+### Root Causes (Updated Analysis)
 1. **Heading selector mismatch**: Test was looking for `/article feed/i` but page has `"📰 Article Feed"` with emoji
 2. **Insufficient hydration time**: Network requests weren't completing before element checks
 3. **Race conditions**: React hydration timing issues on feed page
+4. **Missing defensive checks**: Test didn't handle loading states or error states properly
+5. **No wait for content**: Test was checking for heading before any content loaded
 
-### Changes Made
-- Updated heading selector to `/📰.*article feed/i` to match emoji in [user-journey.spec.ts](frontend/e2e/user-journey.spec.ts:70)
+### Changes Made (Second Iteration)
+- Updated heading selector to `/📰.*article feed/i` to match emoji in [user-journey.spec.ts](frontend/e2e/user-journey.spec.ts:93)
 - Added `waitForLoadState('networkidle')` before checking for feed elements
-- Increased hydration timeout from 1s to 2s on feed page
+- **Added defensive waiting**: Wait for either h1 or error message to appear before proceeding
+- **Added loading state check**: Detect and wait for loading spinner to disappear
+- **Added error detection**: Throw descriptive error if error message appears instead of content
+- Increased timeout from 10s to 15s for initial content appearance
 - Applied `networkidle` waits to all navigation tests for consistency
 
 ### Files Modified
 - [frontend/e2e/user-journey.spec.ts](frontend/e2e/user-journey.spec.ts)
-  - Line 66-70: Feed page hydration + heading selector
-  - Lines 217, 223, 229, 235, 242, 252: Added networkidle waits to navigation tests
+  - Lines 68-93: Enhanced feed page loading detection with defensive checks
+  - Lines 240, 246, 252, 258, 265, 275: Added networkidle waits to navigation tests
 
-### Expected Result
-- E2E tests should now consistently find the "📰 Article Feed" heading
-- Navigation tests should be more reliable with proper wait states
-- CI should pass all e2e tests
+### Why This Should Work Now
+1. **Waits for actual content**: Uses `waitForSelector('h1, .bg-red-50')` to ensure something loads
+2. **Handles all states**: Checks for loading spinner, error message, and normal content
+3. **Better debugging**: Console logs and descriptive errors help identify issues
+4. **More defensive**: Won't fail immediately if timing is slightly off
+
+### Local Test Results
+✅ All 23 e2e tests passing locally with backend running
+- Including the previously failing "Complete User Journey" test
 
 **Code References:**
 - Test file: [frontend/e2e/user-journey.spec.ts](frontend/e2e/user-journey.spec.ts)

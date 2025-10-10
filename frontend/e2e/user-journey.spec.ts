@@ -64,9 +64,32 @@ test.describe('Complete User Journey', () => {
     // Wait for page to hydrate and render
     await page.waitForLoadState('domcontentloaded');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000); // Allow React to hydrate and render
 
-    // Verify feed page elements - match the heading with emoji
+    // Wait for either the heading or error message to appear (defensive)
+    await page.waitForSelector('h1, .bg-red-50', { timeout: 15000 }).catch(() => {
+      console.log('Neither heading nor error appeared on feed page');
+    });
+
+    // Additional wait for React hydration
+    await page.waitForTimeout(1000);
+
+    // Check if there's an error message (which would prevent the heading from showing)
+    const errorMessage = page.locator('.bg-red-50');
+    const hasError = await errorMessage.isVisible().catch(() => false);
+    if (hasError) {
+      const errorText = await errorMessage.textContent();
+      throw new Error(`Feed page showed error: ${errorText}`);
+    }
+
+    // Check if page is still loading
+    const loadingSpinner = page.locator('.animate-spin');
+    const isLoading = await loadingSpinner.isVisible().catch(() => false);
+    if (isLoading) {
+      console.log('Feed page still showing loading spinner, waiting...');
+      await page.waitForSelector('.animate-spin', { state: 'hidden', timeout: 10000 });
+    }
+
+    // Verify feed page elements - the heading should now be visible
     await expect(page.getByRole('heading', { name: /📰.*article feed/i })).toBeVisible({ timeout: 10000 });
 
     // Check for filters
