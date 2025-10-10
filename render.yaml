@@ -20,10 +20,7 @@ services:
           name: pulse-db
           property: connectionString
       - key: FRONTEND_URL
-        fromService:
-          type: web
-          name: pulse-frontend
-          property: host
+        value: https://pulse-frontend-pfrt.onrender.com
       - key: ENVIRONMENT
         value: production
       - key: DEBUG
@@ -76,7 +73,4 @@ services:
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_API_URL
-        fromService:
-          type: web
-          name: pulse-backend
-          property: host
+        value: https://pulse-backend-4h7y.onrender.com
