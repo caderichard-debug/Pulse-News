@@ -281,6 +281,7 @@ Newsletter includes articles from selected topics + suggested frameworks.
 ## 📚 Documentation
 
 - **[Setup Guide](docs/SETUP.md)** - Installation and configuration
+- **[Render Deployment](docs/RENDER_DEPLOYMENT.md)** - Deploy to Render with Blueprint
 - **[API Reference](docs/API.md)** - Complete API documentation
 - **[Architecture](docs/ARCHITECTURE.md)** - System design and data flow
 - **[Testing Guide](docs/TESTING.md)** - Running and writing tests

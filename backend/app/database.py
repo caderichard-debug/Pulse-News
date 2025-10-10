@@ -31,7 +31,7 @@ def create_db_and_tables():
             logger.info("DB connected and tables created!")
             break
         except OperationalError as e:
-            logger.info("OperationalError: ", e)
+            logger.info(f"OperationalError: {e}")
             logger.info(f"Database not ready, retrying... ({attempt + 1}/{max_retries})")
             time.sleep(1)
     else:

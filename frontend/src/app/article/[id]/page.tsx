@@ -205,24 +205,28 @@ export default function ArticleDetailPage() {
       {/* Sentiment & Bias */}
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-8">
         <h2 className="text-lg font-semibold mb-4">Analysis</h2>
-        <div className="grid grid-cols-2 gap-4">
-          {article.sentiment_score !== null && (
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Sentiment Score</p>
-              <p className={`text-2xl font-bold ${getSentimentColor(article.sentiment_score)}`}>
-                {article.sentiment_score > 0 ? '+' : ''}{article.sentiment_score.toFixed(1)}
-              </p>
-            </div>
-          )}
-          {article.political_lean && (
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Political Lean</p>
-              <p className={`text-2xl font-bold ${getLeanColor(article.political_lean)}`}>
-                {article.political_lean.charAt(0).toUpperCase() + article.political_lean.slice(1)}
-              </p>
-            </div>
-          )}
-        </div>
+        {article.sentiment_score !== null || article.political_lean ? (
+          <div className="grid grid-cols-2 gap-4">
+            {article.sentiment_score !== null && (
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Sentiment Score</p>
+                <p className={`text-2xl font-bold ${getSentimentColor(article.sentiment_score)}`}>
+                  {article.sentiment_score > 0 ? '+' : ''}{article.sentiment_score.toFixed(1)}
+                </p>
+              </div>
+            )}
+            {article.political_lean && (
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Political Lean</p>
+                <p className={`text-2xl font-bold ${getLeanColor(article.political_lean)}`}>
+                  {article.political_lean.charAt(0).toUpperCase() + article.political_lean.slice(1)}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-gray-500 italic text-sm">AI analysis pending... Check back soon for sentiment and bias analysis.</p>
+        )}
       </div>
 
       {/* Summary */}

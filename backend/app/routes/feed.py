@@ -10,7 +10,7 @@ from ..models import (
     Framework, Source, Topic, UserTopicPreference,
     UserSourceSubscription, PoliticalLean, ProcessingStatus
 )
-from ..routes.auth import get_current_user
+from ..routes.auth import get_optional_user
 from pydantic import BaseModel
 from typing import List, Optional, Dict
 from datetime import datetime
@@ -49,7 +49,7 @@ class FeedResponse(BaseModel):
 
 @router.get("/articles", response_model=FeedResponse)
 async def get_feed_articles(
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     topic: Optional[str] = Query(default=None, description="Filter by topic name"),
@@ -59,15 +59,15 @@ async def get_feed_articles(
     session: Session = Depends(get_session)
 ):
     """
-    Get personalized article feed with filtering and sorting.
+    Get article feed with filtering and sorting (public access).
 
     Returns paginated list of articles with analysis data.
     """
-    # Build base query
+    # Build base query (LEFT JOIN so articles without analysis still show)
     query = (
         select(Article, ArticleAnalysis, Source)
-        .join(ArticleAnalysis, ArticleAnalysis.article_id == Article.id)
         .join(Source, Source.id == Article.source_id)
+        .outerjoin(ArticleAnalysis, ArticleAnalysis.article_id == Article.id)
         .where(Article.processing_status == ProcessingStatus.COMPLETED)
     )
 
@@ -131,9 +131,9 @@ async def get_feed_articles(
             source_name=source.name,
             source_id=source.id,
             topic_category=article.topic_category,
-            summary=analysis.summary,
-            sentiment_score=analysis.sentiment_score,
-            political_lean=analysis.political_lean.value if analysis.political_lean else None,
+            summary=analysis.summary if analysis else None,
+            sentiment_score=analysis.sentiment_score if analysis else None,
+            political_lean=analysis.political_lean.value if analysis and analysis.political_lean else None,
             primary_framework=framework_data[0] if framework_data else None,
             framework_position=framework_data[1] if framework_data else None
         ))
@@ -148,11 +148,11 @@ async def get_feed_articles(
 
 @router.get("/topics")
 async def get_available_topics(
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
     session: Session = Depends(get_session)
 ):
     """
-    Get list of topics that have articles available.
+    Get list of topics that have articles available (public access).
     """
     topics = session.exec(
         select(Article.topic_category, func.count(Article.id).label('count'))
@@ -170,11 +170,11 @@ async def get_available_topics(
 
 @router.get("/sources")
 async def get_available_sources(
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
     session: Session = Depends(get_session)
 ):
     """
-    Get list of sources that have articles available.
+    Get list of sources that have articles available (public access).
     """
     sources = session.exec(
         select(Source, func.count(Article.id).label('count'))

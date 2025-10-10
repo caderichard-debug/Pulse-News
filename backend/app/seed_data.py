@@ -1,12 +1,17 @@
 """
 Seed initial data for the news aggregator.
-Run this once after creating the database to populate sources, topics, and seed frameworks.
+Run this once after creating the database to populate sources, topics, seed frameworks,
+and trigger initial article scraping.
 """
 
 from sqlmodel import Session, select
 from .database import engine
 from .models import Source, Topic, Framework, SourceTopicLink
 from datetime import datetime
+import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # News Sources
@@ -228,5 +233,51 @@ def seed_database():
         print(f"   - {len(FRAMEWORKS)} frameworks")
 
 
+def run_initial_scraping():
+    """
+    Trigger initial article scraping pipeline after seeding.
+    This populates the database with actual articles.
+    """
+    print("\n🚀 Starting initial article scraping pipeline...")
+
+    try:
+        # Import here to avoid circular dependencies
+        from .jobs.tasks import scrape_job, extract_job, analyze_job, framework_job
+
+        # Step 1: Scrape RSS feeds
+        print("\n1️⃣  Scraping RSS feeds...")
+        scrape_job()
+        print("   ✓ Scraping complete, waiting 10 seconds...")
+        time.sleep(10)
+
+        # Step 2: Extract article content
+        print("\n2️⃣  Extracting article content...")
+        extract_job()
+        print("   ✓ Extraction complete, waiting 30 seconds...")
+        time.sleep(30)
+
+        # Step 3: AI analysis
+        print("\n3️⃣  Running AI analysis...")
+        analyze_job()
+        print("   ✓ Analysis complete, waiting 30 seconds...")
+        time.sleep(30)
+
+        # Step 4: Framework mapping
+        print("\n4️⃣  Mapping articles to frameworks...")
+        framework_job()
+        print("   ✓ Framework mapping complete!")
+
+        print("\n✅ Initial scraping pipeline complete!")
+        print("   Articles are now available in the feed.")
+
+    except Exception as e:
+        logger.error(f"Error during initial scraping: {e}")
+        print(f"\n⚠️  Warning: Initial scraping failed: {e}")
+        print("   You can manually trigger scraping via: POST /admin/jobs/scrape")
+
+
 if __name__ == "__main__":
     seed_database()
+
+    # Run initial scraping to populate articles
+    run_initial_scraping()

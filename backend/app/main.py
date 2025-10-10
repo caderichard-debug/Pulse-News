@@ -36,9 +36,6 @@ app = FastAPI(
 
 # CORS middleware for frontend
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-# Handle empty string from .env
-if not frontend_url or frontend_url.strip() == "":
-    frontend_url = "http://localhost:3000"
 
 app.add_middleware(
     CORSMiddleware,
@@ -65,6 +62,12 @@ def root():
         "version": "0.1.0",
         "docs": "/docs"
     }
+
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint for monitoring"""
+    return {"status": "healthy"}
 
 # Expose port for render
 if __name__ == "__main__":

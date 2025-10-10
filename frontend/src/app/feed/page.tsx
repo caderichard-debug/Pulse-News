@@ -251,8 +251,10 @@ export default function FeedPage() {
                   </h2>
 
                   {/* Summary */}
-                  {article.summary && (
+                  {article.summary ? (
                     <p className="text-gray-700 mb-4 line-clamp-2">{article.summary}</p>
+                  ) : (
+                    <p className="text-gray-500 italic mb-4 text-sm">Analysis pending...</p>
                   )}
 
                   {/* Metadata */}
