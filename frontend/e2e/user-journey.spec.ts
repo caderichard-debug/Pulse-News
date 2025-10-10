@@ -63,10 +63,11 @@ test.describe('Complete User Journey', () => {
 
     // Wait for page to hydrate and render
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(1000); // Allow React to hydrate
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000); // Allow React to hydrate and render
 
-    // Verify feed page elements
-    await expect(page.getByRole('heading', { name: /article feed/i })).toBeVisible({ timeout: 10000 });
+    // Verify feed page elements - match the heading with emoji
+    await expect(page.getByRole('heading', { name: /📰.*article feed/i })).toBeVisible({ timeout: 10000 });
 
     // Check for filters
     await expect(page.getByRole('combobox').first()).toBeVisible({ timeout: 10000 }); // Topic filter
@@ -213,27 +214,32 @@ test.describe('Navigation Flow', () => {
     await page.getByRole('button', { name: /📊.*dashboard/i }).click();
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
 
     // Test Feed button
     await page.getByRole('button', { name: /📰.*feed/i }).click();
     await expect(page).toHaveURL(/\/feed/, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
 
     // Test Preferences button (in navbar, not the user menu)
     await page.getByRole('button', { name: /⚙️.*preferences/i }).click();
     await expect(page).toHaveURL(/\/preferences/, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
 
     // Test How It Works button
     await page.getByRole('button', { name: /💡.*how it works/i }).click();
     await expect(page).toHaveURL(/\/how-it-works/, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
   });
 
   test('should highlight active page in navbar', async ({ page }) => {
     // Go to dashboard
     await page.getByRole('button', { name: /📊.*dashboard/i }).click();
     await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
     await page.waitForTimeout(500);
 
     // Dashboard button should be highlighted
@@ -243,6 +249,7 @@ test.describe('Navigation Flow', () => {
     // Go to feed
     await page.getByRole('button', { name: /📰.*feed/i }).click();
     await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
     await page.waitForTimeout(500);
 
     // Feed button should be highlighted
