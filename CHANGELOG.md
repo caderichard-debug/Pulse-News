@@ -48,10 +48,12 @@ This file tracks significant changes, decisions, and progress throughout develop
 - Separated test user creation into `create_test_user()` function
 - Updated seed script to create test user even if database is already seeded
 - Updated [docs/RENDER_DEPLOYMENT.md](docs/RENDER_DEPLOYMENT.md) with test user credentials and security notes
-<<<<<<< HEAD
+- Created [backend/TEST_USER.md](backend/TEST_USER.md) with comprehensive documentation
 =======
 - Created [backend/TEST_USER.md](backend/TEST_USER.md) with comprehensive documentation
->>>>>>> d393c31 (Set up PR previews on render.)
+=======
+>>>>>>> 2cb0ce9 (Updated db to have a test user)
+>>>>>>> 9d74166 (Updated db to have a test user)
 
 ### Test Results
 - ✅ Auth tests: 10/10 passing
