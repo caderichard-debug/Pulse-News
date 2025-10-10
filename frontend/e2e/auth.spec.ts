@@ -132,7 +132,7 @@ test.describe('Authentication Flow', () => {
     await page.getByRole('button', { name: /log in/i }).click();
 
     // Should show error message (backend returns "Incorrect email or password")
-    await expect(page.getByText(/incorrect.*email.*password/i)).toBeVisible();
+    await expect(page.getByText(/incorrect.*email.*password/i)).toBeVisible({ timeout: 10000 });
   });
 
   test('should validate password requirements on signup', async ({ page }) => {

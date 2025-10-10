@@ -29,7 +29,7 @@ export default function Navbar() {
 
   const handleLogout = () => {
     api.clearToken();
-    router.push('/login');
+    router.push('/');
   };
 
   const navItems = [

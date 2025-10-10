@@ -24,8 +24,8 @@ export default function LoginPage() {
       // Save token
       api.setToken(response.access_token);
 
-      // Redirect to preferences page
-      router.push('/preferences');
+      // Redirect to dashboard page
+      router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
       setLoading(false);

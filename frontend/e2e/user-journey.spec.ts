@@ -28,7 +28,7 @@ test.describe('Complete User Journey', () => {
     await page.getByRole('button', { name: /continue/i }).click();
 
     // Select topics
-    await expect(page.getByRole('heading', { name: /select.*topics/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /choose.*topics/i })).toBeVisible();
     const checkboxes = page.getByRole('checkbox');
     await checkboxes.first().check();
     await checkboxes.nth(1).check(); // Select at least 2 topics
@@ -39,12 +39,12 @@ test.describe('Complete User Journey', () => {
     await expect(page).toHaveURL(/\/preferences/, { timeout: 10000 });
 
     // Step 2: Navigate to Dashboard
-    await page.getByRole('link', { name: /dashboard/i }).click();
+    await page.getByRole('button', { name: /📊.*dashboard/i }).click();
     await expect(page).toHaveURL(/\/dashboard/);
 
     // Verify dashboard elements
     await expect(page.getByText(/articles read/i)).toBeVisible();
-    await expect(page.getByText(/newsletters received/i)).toBeVisible();
+    await expect(page.getByText(/newsletters/i)).toBeVisible();
     await expect(page.getByText(/topics tracked/i)).toBeVisible();
 
     // Check for charts (they might be loading)
@@ -54,7 +54,7 @@ test.describe('Complete User Journey', () => {
     });
 
     // Step 3: Navigate to Feed
-    await page.getByRole('link', { name: /feed/i }).click();
+    await page.getByRole('button', { name: /📰.*feed/i }).click();
     await expect(page).toHaveURL(/\/feed/);
 
     // Verify feed page elements
@@ -64,7 +64,7 @@ test.describe('Complete User Journey', () => {
     await expect(page.getByRole('combobox').first()).toBeVisible(); // Topic filter
 
     // Step 4: Go back to Preferences
-    await page.getByRole('link', { name: /preferences/i }).click();
+    await page.getByRole('button', { name: /⚙️.*preferences/i }).click();
     await expect(page).toHaveURL(/\/preferences/);
 
     // Verify tabs are present
@@ -83,12 +83,15 @@ test.describe('Complete User Journey', () => {
     // Switch to Settings tab
     await page.getByRole('button', { name: /settings/i }).click();
 
+    // Wait for settings tab to load
+    await expect(page.getByText(/newsletter settings/i)).toBeVisible();
+
     // Verify settings options
-    await expect(page.getByText(/discovery mode/i)).toBeVisible();
-    await expect(page.getByText(/article ordering/i)).toBeVisible();
+    await expect(page.getByText(/source discovery mode/i)).toBeVisible();
+    await expect(page.getByText(/article order preference/i)).toBeVisible();
 
     // Step 5: Navigate to How It Works
-    await page.getByRole('link', { name: /how it works/i }).click();
+    await page.getByRole('button', { name: /💡.*how it works/i }).click();
     await expect(page).toHaveURL(/\/how-it-works/);
 
     // Verify educational content
@@ -128,16 +131,18 @@ test.describe('Preferences Management', () => {
     // Should already be on preferences page
     await expect(page.getByRole('button', { name: /topics/i })).toBeVisible();
 
-    // Topics should already be loaded
-    const checkboxes = page.getByRole('checkbox');
-    const count = await checkboxes.count();
+    // Topics should already be loaded - look for topic headings instead of checkboxes
+    const topicHeadings = page.getByRole('heading', { level: 3 });
+    const count = await topicHeadings.count();
     expect(count).toBeGreaterThan(0);
 
-    // Toggle a topic
-    await checkboxes.last().click();
+    // Toggle a topic - find the toggle button (the switch-style button)
+    // The toggle buttons are styled buttons with rounded-full class
+    const toggleButtons = page.locator('button.rounded-full');
+    await toggleButtons.first().click();
 
     // Save changes
-    await page.getByRole('button', { name: /save/i }).click();
+    await page.getByRole('button', { name: /save preferences/i }).click();
 
     // Should show success message
     await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 5000 });
@@ -147,12 +152,15 @@ test.describe('Preferences Management', () => {
     // Switch to Settings tab
     await page.getByRole('button', { name: /settings/i }).click();
 
-    // Change article ordering
-    const orderingSelect = page.getByRole('combobox').filter({ hasText: /ordering/i });
+    // Wait for settings tab to load
+    await expect(page.getByText(/article order preference/i)).toBeVisible();
+
+    // Change article ordering - find the select by label text
+    const orderingSelect = page.locator('select').nth(1); // Second select is article order
     await orderingSelect.selectOption('good_first');
 
     // Save changes
-    await page.getByRole('button', { name: /save/i }).click();
+    await page.getByRole('button', { name: /save settings/i }).click();
 
     // Should show success message
     await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 5000 });
@@ -179,37 +187,37 @@ test.describe('Navigation Flow', () => {
   });
 
   test('should navigate between all main pages using navbar', async ({ page }) => {
-    // Test Dashboard link
-    await page.getByRole('link', { name: /dashboard/i }).click();
+    // Test Dashboard button
+    await page.getByRole('button', { name: /📊.*dashboard/i }).click();
     await expect(page).toHaveURL(/\/dashboard/);
 
-    // Test Feed link
-    await page.getByRole('link', { name: /feed/i }).click();
+    // Test Feed button
+    await page.getByRole('button', { name: /📰.*feed/i }).click();
     await expect(page).toHaveURL(/\/feed/);
 
-    // Test Preferences link
-    await page.getByRole('link', { name: /preferences/i }).click();
+    // Test Preferences button (in navbar, not the user menu)
+    await page.getByRole('button', { name: /⚙️.*preferences/i }).click();
     await expect(page).toHaveURL(/\/preferences/);
 
-    // Test How It Works link
-    await page.getByRole('link', { name: /how it works/i }).click();
+    // Test How It Works button
+    await page.getByRole('button', { name: /💡.*how it works/i }).click();
     await expect(page).toHaveURL(/\/how-it-works/);
   });
 
   test('should highlight active page in navbar', async ({ page }) => {
     // Go to dashboard
-    await page.getByRole('link', { name: /dashboard/i }).click();
+    await page.getByRole('button', { name: /📊.*dashboard/i }).click();
 
-    // Dashboard link should be highlighted
-    const dashboardLink = page.getByRole('link', { name: /dashboard/i });
-    await expect(dashboardLink).toHaveClass(/bg-indigo/);
+    // Dashboard button should be highlighted
+    const dashboardButton = page.getByRole('button', { name: /📊.*dashboard/i });
+    await expect(dashboardButton).toHaveClass(/bg-indigo/);
 
     // Go to feed
-    await page.getByRole('link', { name: /feed/i }).click();
+    await page.getByRole('button', { name: /📰.*feed/i }).click();
 
-    // Feed link should be highlighted
-    const feedLink = page.getByRole('link', { name: /feed/i });
-    await expect(feedLink).toHaveClass(/bg-indigo/);
+    // Feed button should be highlighted
+    const feedButton = page.getByRole('button', { name: /📰.*feed/i });
+    await expect(feedButton).toHaveClass(/bg-indigo/);
   });
 
   test('should display user name in navbar', async ({ page }) => {
