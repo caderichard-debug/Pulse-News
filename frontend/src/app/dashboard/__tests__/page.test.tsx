@@ -214,7 +214,7 @@ describe('DashboardPage', () => {
       await user.click(logoutButton);
 
       expect(api.clearToken).toHaveBeenCalled();
-      expect(mockPush).toHaveBeenCalledWith('/login');
+      expect(mockPush).toHaveBeenCalledWith('/');
     });
 
     it('should navigate to preferences page', async () => {

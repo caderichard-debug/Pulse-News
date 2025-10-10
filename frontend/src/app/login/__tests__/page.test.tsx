@@ -81,7 +81,7 @@ describe('LoginPage', () => {
     });
 
     expect(api.setToken).toHaveBeenCalledWith('fake-token');
-    expect(mockPush).toHaveBeenCalledWith('/preferences');
+    expect(mockPush).toHaveBeenCalledWith('/dashboard');
   });
 
   it('shows loading state during submission', async () => {
@@ -201,7 +201,7 @@ describe('LoginPage', () => {
     expect(passwordInput).toHaveAttribute('placeholder', '••••••••');
   });
 
-  it('redirects to /preferences after successful login', async () => {
+  it('redirects to /dashboard after successful login', async () => {
     (api.login as jest.Mock).mockResolvedValue({
       access_token: 'test-token',
       user: { id: 1, email: 'test@example.com' },
@@ -218,7 +218,7 @@ describe('LoginPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /log in/i }));
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/preferences');
+      expect(mockPush).toHaveBeenCalledWith('/dashboard');
     });
   });
 });

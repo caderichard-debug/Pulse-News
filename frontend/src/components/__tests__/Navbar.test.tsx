@@ -133,14 +133,14 @@ describe('Navbar', () => {
     expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
   });
 
-  it('clears token and navigates to login on logout', () => {
+  it('clears token and navigates to landing page on logout', () => {
     render(<Navbar />);
 
     const logoutButton = screen.getByRole('button', { name: /logout/i });
     fireEvent.click(logoutButton);
 
     expect(api.clearToken).toHaveBeenCalled();
-    expect(mockPush).toHaveBeenCalledWith('/login');
+    expect(mockPush).toHaveBeenCalledWith('/');
   });
 
   it('handles user fetch error gracefully', async () => {
