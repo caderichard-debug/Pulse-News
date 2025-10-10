@@ -74,4 +74,4 @@ services:
         fromService:
           type: web
           name: pulse-backend
-          property: host
+          property: url
