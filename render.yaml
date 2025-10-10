@@ -19,6 +19,11 @@ services:
         fromDatabase:
           name: pulse-db
           property: connectionString
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: pulse-frontend
+          property: url
       - key: ENVIRONMENT
         value: production
       - key: DEBUG
