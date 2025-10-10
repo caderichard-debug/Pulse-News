@@ -15,6 +15,9 @@ The Blueprint automatically:
 - Sets up environment variables
 - Configures health checks
 - Links frontend to backend API
+- **Enables Pull Request Previews** for testing before merge
+
+> 📚 **See Also**: [PR Previews Guide](./PR_PREVIEWS.md) for detailed information about preview environments
 
 ---
 

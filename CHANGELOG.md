@@ -6,6 +6,37 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ## 2025-10-10 (Current Session)
 
+**Enabled Pull Request Previews on Render** ✅
+
+### What Changed
+- Updated [render.yaml](render.yaml) to enable PR preview environments:
+  - Added `previewsEnabled: true` for both backend and frontend services
+  - Set `previewsExpireAfterDays: 3` to auto-cleanup after PR close
+  - Added `IS_PULL_REQUEST` environment variable for preview detection
+  - Updated `CACHE_BUST` to v2 to force rebuild
+- Created [docs/PR_PREVIEWS.md](docs/PR_PREVIEWS.md) - comprehensive guide covering:
+  - How PR previews work on Render
+  - Automatic deployment workflow
+  - Preview URLs and accessing them
+  - Environment variable handling
+  - Testing and best practices
+  - Troubleshooting common issues
+  - Cost considerations
+
+### How It Works
+- When you create a PR, Render automatically creates preview deployments
+- Each PR gets unique URLs: `pulse-backend-pr-{NUMBER}.onrender.com` and `pulse-frontend-pr-{NUMBER}.onrender.com`
+- Previews are automatically updated when you push new commits
+- Previews are deleted 3 days after PR is closed/merged
+
+### Benefits
+- ✅ Test changes in production-like environment before merging
+- ✅ Share preview links with reviewers
+- ✅ Catch deployment issues early
+- ✅ Automatic cleanup (no manual intervention needed)
+
+---
+
 **Added Test User to Seed Data** ✅
 
 ### What Changed
@@ -17,6 +48,10 @@ This file tracks significant changes, decisions, and progress throughout develop
 - Separated test user creation into `create_test_user()` function
 - Updated seed script to create test user even if database is already seeded
 - Updated [docs/RENDER_DEPLOYMENT.md](docs/RENDER_DEPLOYMENT.md) with test user credentials and security notes
+<<<<<<< HEAD
+=======
+- Created [backend/TEST_USER.md](backend/TEST_USER.md) with comprehensive documentation
+>>>>>>> d393c31 (Set up PR previews on render.)
 
 ### Test Results
 - ✅ Auth tests: 10/10 passing
@@ -48,7 +83,9 @@ This file tracks significant changes, decisions, and progress throughout develop
 - ✅ Frontend: 24/24 tests passing in feed page tests
 - ✅ Frontend build: Successful compilation with no errors
 
-**Previous Session: CRITICAL FIX: Database Enum Mismatch + Migration** ✅
+---
+
+**CRITICAL FIX: Database Enum Mismatch + Migration** ✅
 
 ### Issue Fixed
 - **CI e2e test failing**: All feed endpoints returning 500 errors due to database enum type mismatch
