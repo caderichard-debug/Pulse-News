@@ -135,7 +135,7 @@ export default function FeedPage() {
             <select
               value={selectedTopic}
               onChange={(e) => { setSelectedTopic(e.target.value); setPage(1); }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
             >
               <option value="">All Topics</option>
               {topics.map((topic) => (
@@ -152,7 +152,7 @@ export default function FeedPage() {
             <select
               value={selectedSource || ''}
               onChange={(e) => { setSelectedSource(e.target.value ? Number(e.target.value) : null); setPage(1); }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
             >
               <option value="">All Sources</option>
               {sources.map((source) => (
@@ -169,7 +169,7 @@ export default function FeedPage() {
             <select
               value={selectedLean}
               onChange={(e) => { setSelectedLean(e.target.value); setPage(1); }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
             >
               <option value="">All Leans</option>
               <option value="left">Left</option>
@@ -184,7 +184,7 @@ export default function FeedPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
             >
               <option value="newest">Newest</option>
               <option value="oldest">Oldest</option>

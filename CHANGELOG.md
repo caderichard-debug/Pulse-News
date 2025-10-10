@@ -6,6 +6,61 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ## 2025-10-10 (Current Session)
 
+**Enhanced Statistic Verification Cards on Article Detail Page** ✅
+
+### What Changed
+- Redesigned statistic verification section to match newsletter-style cards
+- Updated [frontend/src/app/article/[id]/page.tsx](frontend/src/app/article/[id]/page.tsx) with enhanced verification UI:
+  - Changed heading from "Verified Statistics" to "Key Statistics"
+  - Yellow-themed container (`bg-yellow-50` with `border-yellow-400` accent)
+  - Individual cards with lighter yellow background
+  - **Color-coded text badges** for verification status (Verified, Disputed, False, Unverified)
+    - Green badge for verified statistics
+    - Orange badge for disputed statistics
+    - Red badge for false statistics
+    - Gray badge for unverified statistics
+  - Source name with clickable link
+  - Credibility rating in `X/5` format (e.g., "4.5/5") instead of stars
+  - Confidence percentage with label
+  - Fact-check details in blue-bordered section when available
+  - Support for inline context text with statistics
+- Updated test suite in [frontend/src/app/article/[id]/__tests__/page.test.tsx](frontend/src/app/article/[id]/__tests__/page.test.tsx):
+  - Changed assertions to check for text badges
+  - Updated credibility display tests (stars → X/5 format)
+  - Updated section title tests ("Verified Statistics" → "Key Statistics")
+
+### Design Features
+Inspired by the newsletter template with improvements for web readability:
+
+1. **Container**: Yellow background with left border accent
+2. **Individual stat cards**:
+   - Statistic text with optional context in italics
+   - Single-line verification metadata
+   - **Color-coded text badges** instead of emoji icons for better accessibility
+   - Source credibility as numerical rating
+3. **Fact-check integration**: Blue section for external fact-check details with "Read more" links
+
+### TypeScript Interface Updates
+- Added optional fields to `ArticleDetail.statistics`:
+  - `context?: string | null` - Contextual information about the statistic
+  - `fact_check_details?: string | null` - Detailed fact-check information
+  - `fact_check_url?: string | null` - Link to full fact-check article
+
+### Code Cleanup
+- Removed unused helper functions:
+  - `getVerificationBadge()` - Replaced with inline badge rendering
+  - `getCredibilityStars()` - Replaced with numerical rating display
+
+### Test Results
+- All 51 article detail page tests passing ✅
+- Frontend build successful with no TypeScript errors ✅
+
+**Code References:**
+- Main component: [article/[id]/page.tsx:222-318](frontend/src/app/article/[id]/page.tsx#L222-L318)
+- Tests: [page.test.tsx](frontend/src/app/article/[id]/__tests__/page.test.tsx)
+
+---
+
 **Fixed Article Date Display - No More "Just Now" for All Articles** ✅
 
 ### What Changed
