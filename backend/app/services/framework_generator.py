@@ -125,7 +125,7 @@ def map_articles_to_frameworks(
                     article_id=article.id,
                     framework_id=framework_id,
                     relevance_score=mapping.get('relevance_score', 0.5),
-                    position_on_axis=mapping.get('position', 0),
+                    position_on_axis=mapping.get('position_on_axis', mapping.get('position', 0)),
                     ai_explanation=mapping.get('explanation', '')[:500],
                     created_at=datetime.utcnow()
                 )

@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     secret_key: str = "your-secret-key-change-in-production"
     environment: str = "development"
     debug: bool = True
+    frontend_url: str = "http://localhost:3000"
 
     # Scraping Configuration
     scrape_interval_hours: int = 3
