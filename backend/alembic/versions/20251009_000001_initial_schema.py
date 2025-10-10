@@ -26,7 +26,7 @@ def upgrade() -> None:
     political_lean = postgresql.ENUM('left', 'center', 'right', name='politicallean', create_type=False)
     political_lean.create(op.get_bind(), checkfirst=True)
 
-    subscription_tier = postgresql.ENUM('free', 'premium', name='subscriptiontier', create_type=False)
+    subscription_tier = postgresql.ENUM('FREE', 'PREMIUM', name='subscriptiontier', create_type=False)
     subscription_tier.create(op.get_bind(), checkfirst=True)
 
     verification_status = postgresql.ENUM('verified', 'unverified', 'disputed', 'false', name='verificationstatus', create_type=False)
@@ -70,7 +70,7 @@ def upgrade() -> None:
         sa.Column('email_verified', sa.Boolean(), nullable=False, server_default='false'),
         sa.Column('hashed_password', sa.String(length=255), nullable=False),
         sa.Column('name', sa.String(length=200), nullable=True),
-        sa.Column('subscription_tier', postgresql.ENUM('free', 'premium', name='subscriptiontier', create_type=False), nullable=False, server_default='free'),
+        sa.Column('subscription_tier', postgresql.ENUM('FREE', 'PREMIUM', name='subscriptiontier', create_type=False), nullable=False, server_default='FREE'),
         sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'),
         sa.Column('source_discovery_mode', sa.String(length=20), nullable=False, server_default='some'),
         sa.Column('article_order_preference', sa.String(length=20), nullable=False, server_default='mixed'),
