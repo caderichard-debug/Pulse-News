@@ -41,8 +41,9 @@ This file tracks significant changes, decisions, and progress throughout develop
 - Feed route: [feed.py:82-85](backend/app/routes/feed.py#L82-L85) (already correct)
 - Analytics: [analytics.py:179](backend/app/routes/analytics.py#L179) (already correct)
 
-**Deployment Note:**
-After deploying, run `alembic upgrade head` to apply the migration and convert existing data.
+**Deployment Automation:**
+- ✅ Updated [Dockerfile](backend/Dockerfile:34) to run `alembic upgrade head` automatically on startup
+- Migrations now run automatically on every deployment - no manual intervention needed!
 
 ---
 
