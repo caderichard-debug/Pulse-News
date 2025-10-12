@@ -23,10 +23,20 @@ def upgrade() -> None:
     # This fixes the LookupError where SQLAlchemy can't find uppercase enum values
 
     # Step 1: Add lowercase values to the enum type
-    # PostgreSQL requires ALTER TYPE ADD VALUE for each new enum value
-    op.execute("ALTER TYPE politicallean ADD VALUE IF NOT EXISTS 'left'")
-    op.execute("ALTER TYPE politicallean ADD VALUE IF NOT EXISTS 'center'")
-    op.execute("ALTER TYPE politicallean ADD VALUE IF NOT EXISTS 'right'")
+    # PostgreSQL requires ALTER TYPE ADD VALUE to be in its own transaction
+    # We need to use get_bind() to access the connection directly
+    connection = op.get_bind()
+
+    # Add enum values with COMMIT after each one
+    # Note: ALTER TYPE ADD VALUE cannot run inside a transaction block,
+    # so we need to commit the transaction and run outside of it
+    connection.execute(sa.text("COMMIT"))
+    connection.execute(sa.text("ALTER TYPE politicallean ADD VALUE IF NOT EXISTS 'left'"))
+    connection.execute(sa.text("COMMIT"))
+    connection.execute(sa.text("ALTER TYPE politicallean ADD VALUE IF NOT EXISTS 'center'"))
+    connection.execute(sa.text("COMMIT"))
+    connection.execute(sa.text("ALTER TYPE politicallean ADD VALUE IF NOT EXISTS 'right'"))
+    connection.execute(sa.text("COMMIT"))
 
     # Step 2: Convert existing data to lowercase
     # Map uppercase to lowercase values
