@@ -226,7 +226,7 @@ class OpenAIClient:
 For each article, provide:
 1. **Summary**: A concise 100-word summary of the main points
 2. **Sentiment**: An integer from -10 (very negative) to +10 (very positive)
-3. **Political Lean**: One of: "LEFT", "CENTER", or "RIGHT"
+3. **Political Lean**: One of: "left", "center", or "right" (lowercase)
 4. **Bias Indicators**: Brief description of any detected bias (or "neutral" if none)
 5. **Key Statistics**: Any important numbers, percentages, or data points mentioned
 
@@ -237,7 +237,7 @@ Return your analysis as a JSON object with this structure:
     {{
       "summary": "100-word summary here",
       "sentiment_score": 0,
-      "political_lean": "CENTER",
+      "political_lean": "center",
       "bias_indicators": "Brief description or 'neutral'",
       "key_stats": ["stat 1", "stat 2"]
     }},

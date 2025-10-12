@@ -68,12 +68,16 @@ def analyze_articles_batch(session: Session, batch_size: int = 5) -> int:
     # Process each analysis result
     for article, analysis_data in zip(articles_to_analyze, analyses):
         try:
-            # Map political lean string to enum
-            lean_str = analysis_data.get('political_lean', 'CENTER').upper()
+            # Map political lean string to enum using the enum value (lowercase)
+            lean_str = analysis_data.get('political_lean', 'center').lower()
             try:
-                political_lean = PoliticalLean[lean_str]
-            except KeyError:
-                logger.warning(f"Invalid political lean '{lean_str}', defaulting to CENTER")
+                # Match by enum value, not by enum name
+                political_lean = next(
+                    (lean for lean in PoliticalLean if lean.value == lean_str),
+                    PoliticalLean.CENTER
+                )
+            except StopIteration:
+                logger.warning(f"Invalid political lean '{lean_str}', defaulting to center")
                 political_lean = PoliticalLean.CENTER
 
             # Create analysis record
