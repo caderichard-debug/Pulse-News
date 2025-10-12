@@ -417,6 +417,10 @@ CLAIMBUSTER_API_KEY=...
 
 ## 🚨 Important Conventions
 
+### AI Assistant Workflow
+- **DO NOT push commits automatically** - Always wait for explicit user approval before pushing to remote
+- Stage changes and prepare commits, but let the user decide when to push
+
 ### Code Organization
 - **Services**: Pure business logic, no FastAPI dependencies
 - **Routes**: API endpoints only, delegate to services

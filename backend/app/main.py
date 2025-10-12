@@ -18,6 +18,26 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Pulse News Aggregator...")
     create_db_and_tables()
 
+    # Run seed_data if needed (includes initial scraping on first run)
+    try:
+        from .seed_data import seed_database, run_initial_scraping
+        from sqlmodel import Session, select
+        from .models import Article
+        from .database import engine
+
+        # Check if we need initial scraping (no articles exist)
+        with Session(engine) as session:
+            existing_articles = session.exec(select(Article)).first()
+            if not existing_articles:
+                logger.info("No articles found - running initial data population...")
+                seed_database()  # Ensure sources/topics/frameworks exist
+                run_initial_scraping()  # Scrape initial articles
+                logger.info("Initial data population complete")
+            else:
+                logger.info("Articles exist - skipping initial scraping")
+    except Exception as e:
+        logger.warning(f"Could not run initial scraping: {e}")
+
     # Start background job scheduler
     start_scheduler()
 

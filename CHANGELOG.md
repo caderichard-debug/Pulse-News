@@ -4,6 +4,49 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-11 21:05
+
+**Fixed Production Crash - PoliticalLean Enum Case Mismatch** ✅
+
+### What Changed
+- Fixed `KeyError: 'CENTER'` crash in production by ensuring enum values are consistently lowercase
+- Updated [ai_analyzer.py](backend/app/services/ai_analyzer.py:72-81) to match enum by **value** (not name), converting to lowercase
+- Updated [openai_client.py](backend/app/utils/openai_client.py:229-240) to instruct AI to return lowercase values
+- Verified **all enum usage across entire codebase** is proper (ProcessingStatus, PoliticalLean, VerificationStatus, VerificationMethod)
+
+### The Problem
+- Production backend was crashing with `KeyError: 'CENTER'` when reading database records
+- SQLAlchemy couldn't match uppercase database values to lowercase enum values
+- The `PoliticalLean` enum expects: `"left"`, `"center"`, `"right"` (lowercase)
+- But the AI was returning: `"LEFT"`, `"CENTER"`, `"RIGHT"` (uppercase)
+- Old code used `PoliticalLean['CENTER']` (accessing by enum member name) which worked but stored uppercase values
+
+### The Solution
+- Changed enum matching to use `.value` property and case-insensitive comparison
+- Updated AI prompt to explicitly request lowercase values
+- Made code resilient to both uppercase and lowercase inputs from AI
+- **Created database migration** to convert existing uppercase values to lowercase: [c03e17942bf4](backend/alembic/versions/c03e17942bf4_convert_political_lean_values_to_.py)
+- Comprehensive audit showed all other enum usage is already correct
+
+### Enum Usage Audit Results
+**✅ ProcessingStatus**: All usage proper (12 locations checked)
+**✅ PoliticalLean**: Now fixed + all usage proper (verified ai_analyzer.py, feed.py, analytics.py)
+**✅ VerificationStatus**: All usage proper (8 locations checked)
+**✅ VerificationMethod**: All usage proper (3 locations checked)
+
+**Code References:**
+- Main fix: [ai_analyzer.py:72-81](backend/app/services/ai_analyzer.py#L72-L81)
+- AI prompt: [openai_client.py:229-240](backend/app/utils/openai_client.py#L229-L240)
+- **Migration**: [c03e17942bf4_convert_political_lean_values_to_.py](backend/alembic/versions/c03e17942bf4_convert_political_lean_values_to_.py)
+- Feed route: [feed.py:82-85](backend/app/routes/feed.py#L82-L85) (already correct)
+- Analytics: [analytics.py:179](backend/app/routes/analytics.py#L179) (already correct)
+
+**Deployment Automation:**
+- ✅ Updated [Dockerfile](backend/Dockerfile:34) to run `alembic upgrade head` automatically on startup
+- Migrations now run automatically on every deployment - no manual intervention needed!
+
+---
+
 ## 2025-10-10 (Current Session)
 
 **Enhanced Statistic Verification Cards on Article Detail Page** ✅
