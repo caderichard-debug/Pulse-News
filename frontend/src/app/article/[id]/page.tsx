@@ -328,8 +328,8 @@ export default function ArticleDetailPage() {
             This article relates to underlying ethical debates. Understanding these frameworks helps you think critically about the issues.
           </p>
           <div className="space-y-4">
-            {article.frameworks.map((fw, index) => (
-              <div key={`framework-${fw.framework_id}-${index}`} className="bg-gradient-to-br from-purple-600 to-indigo-700 text-white rounded-lg p-6 shadow-lg">
+            {article.frameworks.map((fw) => (
+              <div key={fw.framework_id} className="bg-gradient-to-br from-purple-600 to-indigo-700 text-white rounded-lg p-6 shadow-lg">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-xl font-semibold">{fw.framework_name}</h3>
                   <span className="text-xs bg-white/20 px-3 py-1 rounded-full">
