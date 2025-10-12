@@ -22,12 +22,30 @@ def upgrade() -> None:
     # Convert all existing political_lean values from uppercase to lowercase
     # This fixes the LookupError where SQLAlchemy can't find uppercase enum values
 
-    # Update article_analysis table
-    # Note: We need to cast the enum to text before using LOWER()
+    # Step 1: Add lowercase values to the enum type
+    # PostgreSQL requires ALTER TYPE ADD VALUE for each new enum value
+    op.execute("ALTER TYPE politicallean ADD VALUE IF NOT EXISTS 'left'")
+    op.execute("ALTER TYPE politicallean ADD VALUE IF NOT EXISTS 'center'")
+    op.execute("ALTER TYPE politicallean ADD VALUE IF NOT EXISTS 'right'")
+
+    # Step 2: Convert existing data to lowercase
+    # Map uppercase to lowercase values
     op.execute("""
         UPDATE article_analysis
-        SET political_lean = LOWER(political_lean::text)::politicallean
-        WHERE political_lean::text IN ('LEFT', 'CENTER', 'RIGHT')
+        SET political_lean = 'left'::politicallean
+        WHERE political_lean::text = 'LEFT'
+    """)
+
+    op.execute("""
+        UPDATE article_analysis
+        SET political_lean = 'center'::politicallean
+        WHERE political_lean::text = 'CENTER'
+    """)
+
+    op.execute("""
+        UPDATE article_analysis
+        SET political_lean = 'right'::politicallean
+        WHERE political_lean::text = 'RIGHT'
     """)
 
 
@@ -35,6 +53,18 @@ def downgrade() -> None:
     # Convert back to uppercase if needed (though we shouldn't need to)
     op.execute("""
         UPDATE article_analysis
-        SET political_lean = UPPER(political_lean::text)::politicallean
-        WHERE political_lean::text IN ('left', 'center', 'right')
+        SET political_lean = 'LEFT'::politicallean
+        WHERE political_lean::text = 'left'
+    """)
+
+    op.execute("""
+        UPDATE article_analysis
+        SET political_lean = 'CENTER'::politicallean
+        WHERE political_lean::text = 'center'
+    """)
+
+    op.execute("""
+        UPDATE article_analysis
+        SET political_lean = 'RIGHT'::politicallean
+        WHERE political_lean::text = 'right'
     """)
