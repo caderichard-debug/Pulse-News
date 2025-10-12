@@ -57,17 +57,48 @@ def run_command(cmd: list[str], description: str) -> bool:
         return False
 
 
+def drop_all_tables():
+    """Drop all tables and start fresh. USE WITH CAUTION!"""
+    logger.warning("⚠️  FORCE REBUILD: Dropping all tables...")
+
+    with engine.connect() as conn:
+        # Drop all tables
+        conn.execute(text("""
+            DROP SCHEMA public CASCADE;
+            CREATE SCHEMA public;
+            GRANT ALL ON SCHEMA public TO postgres;
+            GRANT ALL ON SCHEMA public TO public;
+        """))
+        conn.commit()
+
+    logger.info("✓ All tables dropped. Database reset to empty state.")
+
+
 def init_migrations():
     """
     Initialize Alembic migrations intelligently.
 
     Strategy:
-    1. If alembic_version exists: Run migrations normally
-    2. If tables exist but no alembic_version: Stamp with initial migration, then upgrade
-    3. If no tables: Run migrations normally (creates everything)
+    1. If FORCE_REBUILD=true: Drop everything and rebuild from scratch (ONE TIME ONLY)
+    2. If alembic_version exists: Run migrations normally
+    3. If tables exist but no alembic_version: Stamp with initial migration, then upgrade
+    4. If no tables: Run migrations normally (creates everything)
     """
+    import os
 
     logger.info("=== Initializing Database Migrations ===")
+
+    # Check for force rebuild flag (should be set in render.yaml for next deployment only)
+    force_rebuild = os.getenv("FORCE_REBUILD", "false").lower() == "true"
+
+    if force_rebuild:
+        logger.warning("🔥 FORCE_REBUILD=true detected - This will drop all tables!")
+        drop_all_tables()
+        logger.info("Fresh database after force rebuild - running all migrations")
+        if not run_command(["alembic", "upgrade", "head"], "Creating database schema"):
+            sys.exit(1)
+        logger.info("=== Migration initialization complete ===\n")
+        return
 
     # Check current state
     has_alembic_version = check_alembic_version_exists()
