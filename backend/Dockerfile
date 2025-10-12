@@ -30,6 +30,11 @@ COPY . /app
 # Expose port
 EXPOSE 8000
 
-# Start server
-CMD ["sh", "-c", "python -m app.seed_data && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Start server with proper initialization sequence
+# 1. Initialize Alembic version tracking (if needed)
+# 2. Run migrations to ensure schema is up-to-date
+# 3. Seed initial data (sources, topics, frameworks) if not exists
+# 4. Start the FastAPI server (background jobs will handle article scraping)
+# Note: Each step must succeed (&&) before proceeding to the next
+CMD ["sh", "-c", "set -e && python -m app.migrate_init && python -m app.init_db && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
 
