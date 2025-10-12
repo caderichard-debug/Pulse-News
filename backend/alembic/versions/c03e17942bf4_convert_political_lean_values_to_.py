@@ -23,10 +23,11 @@ def upgrade() -> None:
     # This fixes the LookupError where SQLAlchemy can't find uppercase enum values
 
     # Update article_analysis table
+    # Note: We need to cast the enum to text before using LOWER()
     op.execute("""
         UPDATE article_analysis
-        SET political_lean = LOWER(political_lean)
-        WHERE political_lean IN ('LEFT', 'CENTER', 'RIGHT')
+        SET political_lean = LOWER(political_lean::text)::politicallean
+        WHERE political_lean::text IN ('LEFT', 'CENTER', 'RIGHT')
     """)
 
 
@@ -34,6 +35,6 @@ def downgrade() -> None:
     # Convert back to uppercase if needed (though we shouldn't need to)
     op.execute("""
         UPDATE article_analysis
-        SET political_lean = UPPER(political_lean)
-        WHERE political_lean IN ('left', 'center', 'right')
+        SET political_lean = UPPER(political_lean::text)::politicallean
+        WHERE political_lean::text IN ('left', 'center', 'right')
     """)
