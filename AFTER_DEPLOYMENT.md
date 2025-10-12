@@ -1,10 +1,34 @@
-# Post-Deployment Checklist
+# Deployment Strategy
 
-## After Next Deployment (with FORCE_REBUILD=true)
+## You Need TWO Separate Deployments
 
-**IMPORTANT**: Once the next deployment completes successfully, you MUST remove the FORCE_REBUILD flag:
+**Why?** Render deploys the latest commit on the branch. If you remove FORCE_REBUILD before merging, the rebuild won't happen.
 
-### Step 1: Remove FORCE_REBUILD from render.yaml
+---
+
+## Deployment 1: Force Rebuild (⚠️ WIPES DATABASE)
+
+This merges your current branch to main with `FORCE_REBUILD=true`, triggering a complete database reset.
+
+```bash
+# Make sure you're on fix/enum-fix branch
+git checkout fix/enum-fix
+
+# Merge to main and push
+git checkout main
+git merge fix/enum-fix
+git push origin main
+
+# ⏳ Wait for Render to deploy (check logs for "🔥 FORCE_REBUILD=true detected")
+```
+
+---
+
+## Deployment 2: Remove FORCE_REBUILD (REQUIRED!)
+
+**⚠️ DO THIS IMMEDIATELY** after Deployment 1 succeeds, or every future deployment will wipe your database!
+
+### Step 1: Remove the flag from render.yaml
 
 Edit [render.yaml](render.yaml) and **delete** these lines:
 
@@ -13,12 +37,15 @@ Edit [render.yaml](render.yaml) and **delete** these lines:
         value: "true"
 ```
 
-### Step 2: Commit and Push
+### Step 2: Commit directly to main
 
 ```bash
+# On main branch
 git add render.yaml
-git commit -m "Remove FORCE_REBUILD flag after successful deployment"
-git push
+git commit -m "Remove FORCE_REBUILD flag after successful rebuild"
+git push origin main
+
+# ✅ This triggers Deployment 2 with normal migrations
 ```
 
 ### Why This Matters
