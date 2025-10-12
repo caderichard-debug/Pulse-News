@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import text
 
 
 # revision identifiers, used by Alembic.
@@ -19,62 +20,49 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Convert all existing political_lean values from uppercase to lowercase
-    # This fixes the LookupError where SQLAlchemy can't find uppercase enum values
+    # This migration handles production databases that may have uppercase enum values.
+    # The initial schema migration creates lowercase values, but production was created
+    # with uppercase values before migrations were added.
 
-    # Step 1: Add lowercase values to the enum type
-    # PostgreSQL requires ALTER TYPE ADD VALUE to be in its own transaction
-    # We need to use get_bind() to access the connection directly
     connection = op.get_bind()
 
-    # Add enum values with COMMIT after each one
-    # Note: ALTER TYPE ADD VALUE cannot run inside a transaction block,
-    # so we need to commit the transaction and run outside of it
-    connection.execute(sa.text("COMMIT"))
-    connection.execute(sa.text("ALTER TYPE politicallean ADD VALUE IF NOT EXISTS 'left'"))
-    connection.execute(sa.text("COMMIT"))
-    connection.execute(sa.text("ALTER TYPE politicallean ADD VALUE IF NOT EXISTS 'center'"))
-    connection.execute(sa.text("COMMIT"))
-    connection.execute(sa.text("ALTER TYPE politicallean ADD VALUE IF NOT EXISTS 'right'"))
-    connection.execute(sa.text("COMMIT"))
+    # Check if we need to add lowercase enum values
+    result = connection.execute(text("""
+        SELECT e.enumlabel
+        FROM pg_enum e
+        JOIN pg_type t ON e.enumtypid = t.oid
+        WHERE t.typname = 'politicallean'
+    """))
+    existing_values = {row[0] for row in result}
 
-    # Step 2: Convert existing data to lowercase
-    # Map uppercase to lowercase values
+    # Add missing lowercase values using autocommit (required for ALTER TYPE ADD VALUE)
+    values_needed = {'left', 'center', 'right'} - existing_values
+
+    if values_needed:
+        raw_connection = connection.connection
+        old_isolation = raw_connection.isolation_level
+
+        try:
+            raw_connection.set_isolation_level(0)  # autocommit mode
+            cursor = raw_connection.cursor()
+            for value in sorted(values_needed):  # sorted for consistency
+                cursor.execute(f"ALTER TYPE politicallean ADD VALUE '{value}'")
+            cursor.close()
+        finally:
+            raw_connection.set_isolation_level(old_isolation)
+
+    # Convert any uppercase data to lowercase
     op.execute("""
         UPDATE article_analysis
-        SET political_lean = 'left'::politicallean
-        WHERE political_lean::text = 'LEFT'
-    """)
-
-    op.execute("""
-        UPDATE article_analysis
-        SET political_lean = 'center'::politicallean
-        WHERE political_lean::text = 'CENTER'
-    """)
-
-    op.execute("""
-        UPDATE article_analysis
-        SET political_lean = 'right'::politicallean
-        WHERE political_lean::text = 'RIGHT'
+        SET political_lean = LOWER(political_lean::text)::politicallean
+        WHERE political_lean::text IN ('LEFT', 'CENTER', 'RIGHT')
     """)
 
 
 def downgrade() -> None:
-    # Convert back to uppercase if needed (though we shouldn't need to)
+    # Convert back to uppercase (though this should rarely be needed)
     op.execute("""
         UPDATE article_analysis
-        SET political_lean = 'LEFT'::politicallean
-        WHERE political_lean::text = 'left'
-    """)
-
-    op.execute("""
-        UPDATE article_analysis
-        SET political_lean = 'CENTER'::politicallean
-        WHERE political_lean::text = 'center'
-    """)
-
-    op.execute("""
-        UPDATE article_analysis
-        SET political_lean = 'RIGHT'::politicallean
-        WHERE political_lean::text = 'right'
+        SET political_lean = UPPER(political_lean::text)::politicallean
+        WHERE political_lean::text IN ('left', 'center', 'right')
     """)
