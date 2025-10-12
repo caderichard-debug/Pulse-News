@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import text
 
 
 # revision identifiers, used by Alembic.
@@ -19,27 +20,54 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Convert all existing political_lean values from uppercase to lowercase
-    # This fixes the LookupError where SQLAlchemy can't find uppercase enum values
+    # This migration converts uppercase political_lean enum values to lowercase.
+    #
+    # Challenge: ALTER TYPE ADD VALUE cannot run inside a transaction,
+    # but Alembic runs migrations in transactions by default.
+    #
+    # Solution: Get the raw connection, check what enum values exist,
+    # and add lowercase values if needed using connection.execute with autocommit
 
-    # Step 1: Add lowercase values to the enum type
-    # PostgreSQL requires ALTER TYPE ADD VALUE to be in its own transaction
-    # We need to use get_bind() to access the connection directly
     connection = op.get_bind()
 
-    # Add enum values with COMMIT after each one
-    # Note: ALTER TYPE ADD VALUE cannot run inside a transaction block,
-    # so we need to commit the transaction and run outside of it
-    connection.execute(sa.text("COMMIT"))
-    connection.execute(sa.text("ALTER TYPE politicallean ADD VALUE IF NOT EXISTS 'left'"))
-    connection.execute(sa.text("COMMIT"))
-    connection.execute(sa.text("ALTER TYPE politicallean ADD VALUE IF NOT EXISTS 'center'"))
-    connection.execute(sa.text("COMMIT"))
-    connection.execute(sa.text("ALTER TYPE politicallean ADD VALUE IF NOT EXISTS 'right'"))
-    connection.execute(sa.text("COMMIT"))
+    # Step 1: Check what enum values currently exist
+    result = connection.execute(text("""
+        SELECT e.enumlabel
+        FROM pg_enum e
+        JOIN pg_type t ON e.enumtypid = t.oid
+        WHERE t.typname = 'politicallean'
+    """))
+    existing_values = {row[0] for row in result}
 
-    # Step 2: Convert existing data to lowercase
-    # Map uppercase to lowercase values
+    # Step 2: If we need to add lowercase values, do so outside transaction
+    values_to_add = []
+    if 'left' not in existing_values:
+        values_to_add.append('left')
+    if 'center' not in existing_values:
+        values_to_add.append('center')
+    if 'right' not in existing_values:
+        values_to_add.append('right')
+
+    if values_to_add:
+        # We need to add enum values outside of a transaction
+        # Get the raw DBAPI connection and set autocommit
+        raw_connection = connection.connection
+        old_isolation = raw_connection.isolation_level
+
+        try:
+            # Set autocommit mode (isolation_level = 0)
+            raw_connection.set_isolation_level(0)
+
+            cursor = raw_connection.cursor()
+            for value in values_to_add:
+                cursor.execute(f"ALTER TYPE politicallean ADD VALUE '{value}'")
+            cursor.close()
+
+        finally:
+            # Restore original isolation level
+            raw_connection.set_isolation_level(old_isolation)
+
+    # Step 3: Convert existing data from uppercase to lowercase
     op.execute("""
         UPDATE article_analysis
         SET political_lean = 'left'::politicallean
