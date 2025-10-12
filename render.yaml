@@ -28,8 +28,6 @@ services:
         value: https://pulse-frontend-pfrt.onrender.com
       - key: CACHE_BUST
         value: "2025-10-10-v2"
-      - key: FORCE_REBUILD
-        value: "true"
       - key: ENVIRONMENT
         value: production
       - key: IS_PULL_REQUEST
