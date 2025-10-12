@@ -181,10 +181,13 @@ class TestFeedEndpoints:
         assert data["total_count"] == 4  # Now includes article without analysis
         assert len(data["articles"]) == 4
 
-    def test_feed_requires_auth(self, client):
-        """Test that feed endpoints require authentication."""
+    def test_feed_allows_public_access(self, client):
+        """Test that feed endpoints allow public access (no auth required)."""
         response = client.get("/feed/articles")
-        assert response.status_code == 401
+        assert response.status_code == 200
+        data = response.json()
+        assert "articles" in data
+        assert "total_count" in data
 
     def test_feed_filter_by_topic(self, client, auth_token, test_data):
         """Test filtering articles by topic."""
