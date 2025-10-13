@@ -213,11 +213,11 @@ def map_bias_string_to_enum(bias_string: str) -> Optional[OrganizationalBias]:
     # Handle AllSides format
     if bias_lower in ["left", "extreme left"]:
         return OrganizationalBias.LEFT
-    elif bias_lower in ["lean left", "left-center"]:
+    elif bias_lower in ["lean left", "left-center", "center-left"]:
         return OrganizationalBias.CENTER_LEFT
     elif bias_lower in ["center", "least biased", "mixed"]:
         return OrganizationalBias.CENTER
-    elif bias_lower in ["lean right", "right-center"]:
+    elif bias_lower in ["lean right", "right-center", "center-right"]:
         return OrganizationalBias.CENTER_RIGHT
     elif bias_lower in ["right", "extreme right"]:
         return OrganizationalBias.RIGHT
