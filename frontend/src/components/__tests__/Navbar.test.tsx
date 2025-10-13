@@ -42,6 +42,7 @@ describe('Navbar', () => {
     render(<Navbar />);
 
     expect(screen.getByRole('button', { name: /📰 feed/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /📑 sources/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /📊 analytics/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /⚙️ preferences/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /💡 how it works/i })).toBeInTheDocument();
@@ -98,6 +99,15 @@ describe('Navbar', () => {
     fireEvent.click(feedButton);
 
     expect(mockPush).toHaveBeenCalledWith('/feed');
+  });
+
+  it('navigates to Sources when clicking Sources button', () => {
+    render(<Navbar />);
+
+    const sourcesButton = screen.getByRole('button', { name: /📑 sources/i });
+    fireEvent.click(sourcesButton);
+
+    expect(mockPush).toHaveBeenCalledWith('/sources');
   });
 
   it('navigates to Preferences when clicking Preferences button', () => {
@@ -159,8 +169,9 @@ describe('Navbar', () => {
   it('shows all navigation icons', () => {
     render(<Navbar />);
 
-    expect(screen.getByText('📊')).toBeInTheDocument();
     expect(screen.getByText('📰')).toBeInTheDocument();
+    expect(screen.getByText('📑')).toBeInTheDocument();
+    expect(screen.getByText('📊')).toBeInTheDocument();
     expect(screen.getByText('⚙️')).toBeInTheDocument();
     expect(screen.getByText('💡')).toBeInTheDocument();
   });

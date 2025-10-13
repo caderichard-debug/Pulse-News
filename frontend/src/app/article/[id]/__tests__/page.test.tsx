@@ -164,11 +164,11 @@ describe('ArticleDetailPage', () => {
       });
     });
 
-    it('should display political lean', async () => {
+    it('should display article bias', async () => {
       render(<ArticleDetailPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Political Lean')).toBeInTheDocument();
+        expect(screen.getByText('Article Bias')).toBeInTheDocument();
         expect(screen.getByText('Center')).toBeInTheDocument();
       });
     });
