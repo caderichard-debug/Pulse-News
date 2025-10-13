@@ -71,13 +71,15 @@ class ArticleDetailResponse(BaseModel):
     published_at: datetime
     source_name: str
     source_url: str
+    source_bias: Optional[str]  # Organizational bias of the source
     topic_category: Optional[str]
     content_preview: str  # First 500 chars
+    read_time_minutes: Optional[int]
 
     # Analysis
     summary: Optional[str]
     sentiment_score: Optional[float]
-    political_lean: Optional[str]
+    political_lean: Optional[str]  # Article-level bias
 
     # Verified statistics
     statistics: List[VerifiedStatistic]
@@ -278,8 +280,10 @@ async def get_article_detail(
         published_at=article.published_at,
         source_name=source.name,
         source_url=source.url,
+        source_bias=source.organizational_bias.value if source.organizational_bias else None,
         topic_category=article.topic_category,
         content_preview=content_preview,
+        read_time_minutes=article.word_count // 200 if article.word_count else None,
         summary=analysis.summary if analysis else None,
         sentiment_score=analysis.sentiment_score if analysis else None,
         political_lean=analysis.political_lean.value if analysis and analysis.political_lean else None,
