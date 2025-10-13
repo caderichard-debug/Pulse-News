@@ -267,6 +267,7 @@ class ApiClient {
         published_at: string;
         source_name: string;
         source_id: number;
+        source_bias: string | null;
         topic_category: string | null;
         summary: string | null;
         sentiment_score: number | null;
@@ -309,12 +310,13 @@ class ApiClient {
       published_at: string;
       source_name: string;
       source_url: string;
+      source_bias: string | null;
       topic_category: string | null;
       content_preview: string;
+      read_time_minutes: number | null;
       summary: string | null;
       sentiment_score: number | null;
       political_lean: string | null;
-      read_time_minutes: number | null;
       statistics: Array<{
         statistic: string;
         verification_status: string;
@@ -350,6 +352,49 @@ class ApiClient {
         significance: string | null;
       } | null;
     }>(`/articles/${articleId}`);
+  }
+
+  // Sources endpoints
+  async getAllSources(params?: {
+    bias?: string;
+    active_only?: boolean;
+    sort_by?: string;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params?.bias) queryParams.append('bias', params.bias);
+    if (params?.active_only !== undefined) queryParams.append('active_only', params.active_only.toString());
+    if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
+
+    return this.request<{
+      sources: Array<{
+        id: number;
+        name: string;
+        url: string;
+        rss_feed_url: string;
+        description: string | null;
+        trust_score: number;
+        organizational_bias: string | null;
+        bias_description: string | null;
+        is_active: boolean;
+        created_at: string;
+        article_count: number;
+      }>;
+      total_count: number;
+    }>(`/sources?${queryParams}`);
+  }
+
+  async createSource(data: {
+    name: string;
+    url: string;
+    rss_feed_url: string;
+    description?: string;
+    trust_score?: number;
+    fetch_bias?: boolean;
+  }) {
+    return this.request('/sources', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 }
 
