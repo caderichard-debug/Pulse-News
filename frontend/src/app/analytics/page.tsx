@@ -63,11 +63,11 @@ export default function AnalyticsPage() {
   }));
 
   // Get all unique lean names across all data points (not just the first one)
-  const leanNames = Array.from(
-    new Set(
-      sentimentData.flatMap(item => Object.keys(item.values))
-    )
-  ).sort(); // Sort to ensure consistent order: Center, Left, Right
+  // Sort in political order: Left, Center, Right (not alphabetically)
+  const leanOrder = ['Left', 'Center', 'Right'];
+  const leanNames = leanOrder.filter(lean =>
+    sentimentData.some(item => lean in item.values)
+  );
 
   // Map lean names to colors
   const leanColors: Record<string, string> = {
