@@ -100,11 +100,11 @@ test.describe('Complete User Journey', () => {
 
     // Verify tabs are present
     await expect(page.getByRole('button', { name: /topics/i })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole('button', { name: /sources/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /sources \(/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /settings/i })).toBeVisible();
 
     // Switch to Sources tab
-    await page.getByRole('button', { name: /sources/i }).click();
+    await page.getByRole('button', { name: /sources \(/i }).click();
 
     // Verify sources are displayed
     await expect(page.getByText(/trust score/i).first()).toBeVisible({ timeout: 5000 }).catch(() => {
