@@ -32,6 +32,7 @@ class VerifiedStatistic(BaseModel):
     source_credibility_score: Optional[float]
     fact_check_status: Optional[str]
     fact_check_source: Optional[str]
+    verification_notes: Optional[str]
 
 
 class FrameworkPosition(BaseModel):
@@ -192,7 +193,8 @@ async def get_article_detail(
             source_url=stat.source_url,
             source_credibility_score=stat.source_credibility_score,
             fact_check_status=stat.fact_check_status,
-            fact_check_source=stat.fact_check_source
+            fact_check_source=stat.fact_check_source,
+            verification_notes=stat.verification_notes
         )
         for stat in stats
     ]

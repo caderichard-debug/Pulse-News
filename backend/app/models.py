@@ -330,6 +330,7 @@ class StatisticVerification(SQLModel, table=True):
     # Metadata
     verified_at: Optional[datetime] = Field(default=None)
     last_checked: Optional[datetime] = Field(default=None)
+    verification_notes: Optional[str] = Field(default=None, max_length=500)  # Failure reasons or additional info
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

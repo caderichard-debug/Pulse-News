@@ -207,7 +207,7 @@ describe('ArticleDetailPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText('GDP grew by 3% this quarter')).toBeInTheDocument();
-        expect(screen.getByText('Unverified')).toBeInTheDocument();
+        expect(screen.getByText('Pending')).toBeInTheDocument();
       });
     });
 
@@ -555,12 +555,12 @@ describe('ArticleDetailPage', () => {
       });
     });
 
-    it('should display unverified badge', async () => {
+    it('should display pending badge for unverified statistics', async () => {
       render(<ArticleDetailPage />);
 
       await waitFor(() => {
-        const unverifiedBadge = screen.getByText('Unverified');
-        expect(unverifiedBadge).toHaveClass('text-gray-800');
+        const pendingBadge = screen.getByText('Pending');
+        expect(pendingBadge).toHaveClass('text-gray-800');
       });
     });
 

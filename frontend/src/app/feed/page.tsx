@@ -20,6 +20,9 @@ interface Article {
   primary_framework: string | null;
   framework_position: number | null;
   read_time_minutes: number | null;
+  stats_count: number;
+  stats_verified_count: number;
+  has_stats: boolean;
 }
 
 interface FeedResponse {
@@ -290,6 +293,34 @@ export default function FeedPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* Statistics section */}
+                  {article.has_stats && (
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-gray-600 font-medium">📊 Statistics:</span>
+                        <span className="text-gray-700">
+                          {article.stats_count} found
+                        </span>
+                        {article.stats_verified_count > 0 && (
+                          <>
+                            <span className="text-gray-400">•</span>
+                            <span className="text-green-600 font-medium">
+                              {article.stats_verified_count} verified
+                            </span>
+                          </>
+                        )}
+                        {article.stats_verified_count === 0 && (
+                          <>
+                            <span className="text-gray-400">•</span>
+                            <span className="text-gray-500">
+                              none verified
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

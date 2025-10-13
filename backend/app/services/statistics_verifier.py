@@ -224,6 +224,12 @@ def verify_statistic_v2(
             verification.fact_check_url = fact_check_result.get("fact_check_url")
             verification.fact_check_details = fact_check_result.get("fact_check_details")
 
+        # Set verification notes if no source was found
+        if not verification.source_url and not verification.source_name:
+            verification.verification_notes = "No source found in article text or web search"
+        elif not verification.source_url and verification.source_name:
+            verification.verification_notes = f"Source mentioned ({verification.source_name}) but no URL found"
+
         # Determine final verification status
         verification.verification_status = _determine_final_status(verification)
         verification.confidence_score = _calculate_final_confidence(verification)

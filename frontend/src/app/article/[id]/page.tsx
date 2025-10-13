@@ -31,6 +31,8 @@ interface ArticleDetail {
     context?: string | null;
     fact_check_details?: string | null;
     fact_check_url?: string | null;
+    verification_notes?: string | null;
+    last_checked?: string | null;
   }>;
   frameworks: Array<{
     framework_id: number;
@@ -448,7 +450,7 @@ export default function ArticleDetailPage() {
                       {stat.verification_status === 'verified' && 'Verified'}
                       {stat.verification_status === 'disputed' && 'Disputed'}
                       {stat.verification_status === 'false' && 'False'}
-                      {stat.verification_status === 'unverified' && 'Unverified'}
+                      {stat.verification_status === 'unverified' && (stat.last_checked ? 'Unverified' : 'Pending')}
                     </span>
 
                     {/* Source name with link */}
@@ -501,6 +503,13 @@ export default function ArticleDetailPage() {
                           Read more
                         </a>
                       )}
+                    </div>
+                  )}
+
+                  {/* Verification notes (failure reason) */}
+                  {stat.verification_notes && stat.verification_status === 'unverified' && (
+                    <div className="mt-2 text-xs text-gray-600 italic">
+                      <strong>Note:</strong> {stat.verification_notes}
                     </div>
                   )}
                 </div>
