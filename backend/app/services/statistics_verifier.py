@@ -82,8 +82,10 @@ def extract_statistics_from_article(
     Returns:
         List of StatisticVerification objects (not yet committed)
     """
+    logger.info(f"[EXTRACT] Starting extraction for article {article.id}: '{article.title[:80]}'")
+
     if not settings.openai_api_key:
-        logger.warning("OpenAI API key not configured, skipping statistics extraction")
+        logger.warning("[EXTRACT] OpenAI API key not configured, skipping statistics extraction")
         return []
 
     # Check if we already extracted stats for this article
@@ -93,12 +95,15 @@ def extract_statistics_from_article(
     ).all()
 
     if existing:
-        logger.debug(f"Statistics already extracted for article {article.id}")
+        logger.info(f"[EXTRACT] Statistics already extracted for article {article.id} ({len(existing)} stats)")
         return []
 
     try:
         # Prepare prompt
         existing_stats = analysis.key_stats if analysis.key_stats else "None listed"
+
+        logger.debug(f"[EXTRACT] Article {article.id} - Summary length: {len(analysis.summary) if analysis.summary else 0} chars")
+        logger.debug(f"[EXTRACT] Article {article.id} - Key stats from analysis: {existing_stats[:100] if existing_stats != 'None listed' else 'None'}")
 
         prompt = STATISTICS_EXTRACTION_PROMPT.format(
             title=article.title,
@@ -108,9 +113,10 @@ def extract_statistics_from_article(
 
         # Call OpenAI
         if not openai_api:
-            logger.error("OpenAI API not configured")
+            logger.error("[EXTRACT] OpenAI API not configured")
             return []
 
+        logger.debug(f"[EXTRACT] Article {article.id} - Calling OpenAI for extraction...")
         response = openai_api.chat.completions.create(
             model=settings.ai_model,
             messages=[
@@ -123,6 +129,7 @@ def extract_statistics_from_article(
 
         # Parse response
         content = response.choices[0].message.content.strip()
+        logger.debug(f"[EXTRACT] Article {article.id} - AI response length: {len(content)} chars")
 
         # Remove markdown code blocks if present
         if content.startswith("```"):
@@ -133,29 +140,37 @@ def extract_statistics_from_article(
         statistics = json.loads(content)
 
         if not isinstance(statistics, list):
-            logger.error(f"Expected list of statistics, got {type(statistics)}")
+            logger.error(f"[EXTRACT] Article {article.id} - Expected list of statistics, got {type(statistics)}")
+            return []
+
+        if len(statistics) == 0:
+            logger.info(f"[EXTRACT] Article {article.id} - No statistics found by AI")
             return []
 
         # Create StatisticVerification objects
         verifications = []
-        for stat in statistics:
+        for idx, stat in enumerate(statistics):
+            stat_text = stat.get("exact_quote", "")
+            logger.debug(f"[EXTRACT] Article {article.id} - Stat {idx+1}: '{stat_text[:50]}...' (confidence: {stat.get('confidence', 0.5)})")
+
             verification = StatisticVerification(
                 article_id=article.id,
-                statistic_text=stat.get("exact_quote", ""),
+                statistic_text=stat_text,
                 context=stat.get("context", ""),
                 verification_status=VerificationStatus.UNVERIFIED,
                 confidence_score=stat.get("confidence", 0.5)
             )
             verifications.append(verification)
 
-        logger.info(f"Extracted {len(verifications)} statistics from article {article.id}")
+        logger.info(f"[EXTRACT] ✅ Extracted {len(verifications)} statistics from article {article.id}")
         return verifications
 
     except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse AI response as JSON: {e}")
+        logger.error(f"[EXTRACT] ❌ Article {article.id} - Failed to parse AI response as JSON: {e}")
+        logger.error(f"[EXTRACT] Raw response: {content[:500]}")
         return []
     except Exception as e:
-        logger.error(f"Error extracting statistics: {e}", exc_info=True)
+        logger.error(f"[EXTRACT] ❌ Article {article.id} - Error extracting statistics: {e}", exc_info=True)
         return []
 
 
@@ -178,17 +193,25 @@ def verify_statistic_v2(
     Returns:
         True if verification was attempted, False otherwise
     """
+    stat_preview = verification.statistic_text[:60]
+    logger.info(f"[VERIFY] Starting V2 verification for: '{stat_preview}'")
+
     try:
         # Get article content (prefer full text, fallback to summary)
         article_content = article.content_text
+        content_source = "full text"
         if not article_content:
             analysis = session.exec(
                 select(ArticleAnalysis)
                 .where(ArticleAnalysis.article_id == article.id)
             ).first()
             article_content = analysis.summary if analysis else ""
+            content_source = "summary" if article_content else "none"
+
+        logger.debug(f"[VERIFY] Using article content from: {content_source} (length: {len(article_content) if article_content else 0})")
 
         # Stage 1: Trace source
+        logger.info(f"[VERIFY] Stage 1: Tracing source for '{stat_preview}'")
         source_tracer = get_source_tracer()
         source_info = source_tracer.trace_statistic_source(
             statistic_text=verification.statistic_text,
@@ -202,16 +225,27 @@ def verify_statistic_v2(
             verification.source_name = source_info.get("source_name")
             verification.source_excerpt = source_info.get("source_excerpt")
 
+            logger.info(f"[VERIFY] ✅ Stage 1: Found source - '{verification.source_name}' via {source_info.get('method', 'unknown')}")
+            logger.debug(f"[VERIFY] Source URL: {verification.source_url}")
+            logger.debug(f"[VERIFY] Source excerpt: {verification.source_excerpt[:100] if verification.source_excerpt else 'None'}")
+
             # Stage 2: Rate source credibility
             if verification.source_url and verification.source_name:
+                logger.info(f"[VERIFY] Stage 2: Rating credibility for '{verification.source_name}'")
                 credibility_rater = get_credibility_rater()
                 verification.source_credibility_score = credibility_rater.rate_source_credibility(
                     source_url=verification.source_url,
                     source_name=verification.source_name,
                     session=session
                 )
+                logger.info(f"[VERIFY] ✅ Stage 2: Credibility score: {verification.source_credibility_score:.2f}")
+            else:
+                logger.warning(f"[VERIFY] ⚠️ Stage 2: Skipping credibility rating (missing URL or name)")
+        else:
+            logger.warning(f"[VERIFY] ⚠️ Stage 1: No source found for '{stat_preview}'")
 
         # Stage 3: Fact-check (regardless of whether we found a source)
+        logger.info(f"[VERIFY] Stage 3: Fact-checking '{stat_preview}'")
         fact_checker = get_fact_check_integrator()
         fact_check_result = fact_checker.verify_statistic(
             statistic_text=verification.statistic_text,
@@ -223,6 +257,17 @@ def verify_statistic_v2(
             verification.fact_check_source = fact_check_result.get("fact_check_source")
             verification.fact_check_url = fact_check_result.get("fact_check_url")
             verification.fact_check_details = fact_check_result.get("fact_check_details")
+            logger.info(f"[VERIFY] ✅ Stage 3: Fact-check status: {verification.fact_check_status} from {verification.fact_check_source}")
+        else:
+            logger.debug(f"[VERIFY] Stage 3: No fact-check results available")
+
+        # Set verification notes if no source was found
+        if not verification.source_url and not verification.source_name:
+            verification.verification_notes = "No source found in article text or web search"
+            logger.info(f"[VERIFY] Setting note: No source found")
+        elif not verification.source_url and verification.source_name:
+            verification.verification_notes = f"Source mentioned ({verification.source_name}) but no URL found"
+            logger.info(f"[VERIFY] Setting note: Source mentioned but no URL")
 
         # Determine final verification status
         verification.verification_status = _determine_final_status(verification)
@@ -235,14 +280,16 @@ def verify_statistic_v2(
         session.commit()
 
         logger.info(
-            f"Verified statistic '{verification.statistic_text[:50]}': "
-            f"{verification.verification_status.value} (confidence: {verification.confidence_score:.2f})"
+            f"[VERIFY] ✅ COMPLETE: '{stat_preview}' -> "
+            f"Status: {verification.verification_status.value}, "
+            f"Confidence: {verification.confidence_score:.2f}, "
+            f"Method: {verification.verification_method.value if verification.verification_method else 'none'}"
         )
 
         return True
 
     except Exception as e:
-        logger.error(f"Error in V2 verification: {e}", exc_info=True)
+        logger.error(f"[VERIFY] ❌ ERROR: Failed to verify '{stat_preview}': {e}", exc_info=True)
         return False
 
 
@@ -455,3 +502,91 @@ def get_article_statistics(article_id: int, session: Session) -> List[Dict]:
         }
         for v in verifications
     ]
+
+
+def reverify_all_statistics(session: Session, limit: int = None) -> Dict[str, int]:
+    """
+    Re-verify all existing statistics in the database.
+
+    This function will:
+    1. Find all statistics in the database
+    2. Re-run the V2 verification pipeline on each
+    3. Update verification status and metadata
+
+    Args:
+        session: Database session
+        limit: Optional limit on number of statistics to re-verify (for testing)
+
+    Returns:
+        Dict with statistics: total_processed, newly_verified, failed
+    """
+    stats = {
+        "total_processed": 0,
+        "newly_verified": 0,
+        "improved": 0,
+        "failed": 0
+    }
+
+    # Get all statistics
+    query = select(StatisticVerification).join(Article)
+    if limit:
+        query = query.limit(limit)
+
+    all_verifications = session.exec(query).all()
+
+    logger.info(f"Re-verifying {len(all_verifications)} statistics")
+
+    for verification in all_verifications:
+        try:
+            # Get the article for this verification
+            article = session.get(Article, verification.article_id)
+            if not article:
+                logger.warning(f"Article {verification.article_id} not found for verification {verification.id}")
+                stats["failed"] += 1
+                continue
+
+            # Store old status for comparison
+            old_status = verification.verification_status
+            old_confidence = verification.confidence_score
+            old_source_url = verification.source_url
+
+            # Reset verification fields to re-verify
+            verification.source_url = None
+            verification.source_name = None
+            verification.source_excerpt = None
+            verification.source_credibility_score = None
+            verification.fact_check_status = None
+            verification.fact_check_source = None
+            verification.fact_check_url = None
+            verification.fact_check_details = None
+            verification.verification_notes = None
+
+            # Re-verify using V2 pipeline
+            success = verify_statistic_v2(verification, article, session)
+
+            if success:
+                stats["total_processed"] += 1
+
+                # Check if verification improved
+                if old_status == VerificationStatus.UNVERIFIED and verification.verification_status == VerificationStatus.VERIFIED:
+                    stats["newly_verified"] += 1
+                    logger.info(f"Newly verified: {verification.statistic_text[:50]}")
+                elif verification.source_url != old_source_url or (verification.confidence_score or 0) > (old_confidence or 0):
+                    stats["improved"] += 1
+                    logger.info(f"Improved verification: {verification.statistic_text[:50]}")
+            else:
+                stats["failed"] += 1
+                logger.warning(f"Failed to re-verify: {verification.statistic_text[:50]}")
+
+        except Exception as e:
+            logger.error(f"Error re-verifying statistic {verification.id}: {e}", exc_info=True)
+            stats["failed"] += 1
+            continue
+
+    logger.info(
+        f"Re-verification complete: {stats['total_processed']} processed, "
+        f"{stats['newly_verified']} newly verified, {stats['improved']} improved, "
+        f"{stats['failed']} failed"
+    )
+
+    return stats

@@ -319,7 +319,7 @@ class TestGetArticleStatistics:
             statistic_text="50%",
             verification_status=VerificationStatus.VERIFIED,
             confidence_score=0.9,
-            notes="GDP growth",
+            context="GDP growth",
             verified_at=datetime.utcnow()
         )
         v2 = StatisticVerification(
@@ -327,7 +327,7 @@ class TestGetArticleStatistics:
             statistic_text="3.5%",
             verification_status=VerificationStatus.UNVERIFIED,
             confidence_score=0.7,
-            notes="Unemployment"
+            context="Unemployment"
         )
         session.add_all([v1, v2])
         session.commit()

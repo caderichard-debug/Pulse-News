@@ -425,7 +425,7 @@ export default function PreferencesPage() {
                   <select
                     value={settings.source_discovery_mode}
                     onChange={(e) => setSettings({ ...settings, source_discovery_mode: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                   >
                     <option value="none">None - Only use my selected sources</option>
                     <option value="some">Some - Occasionally include new sources</option>
@@ -444,7 +444,7 @@ export default function PreferencesPage() {
                   <select
                     value={settings.article_order_preference}
                     onChange={(e) => setSettings({ ...settings, article_order_preference: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                   >
                     <option value="good_first">Good News First - Positive sentiment first</option>
                     <option value="good_last">Good News Last - Negative sentiment first</option>
