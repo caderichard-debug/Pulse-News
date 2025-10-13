@@ -102,7 +102,7 @@ describe('AnalyticsPage', () => {
       expect(screen.getByText('Sentiment Over Time')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Track how sentiment changes across different topics')).toBeInTheDocument();
+    expect(screen.getByText(/Track daily sentiment trends across different political leans/)).toBeInTheDocument();
     expect(screen.getByTestId('line-chart')).toBeInTheDocument();
   });
 
@@ -113,7 +113,7 @@ describe('AnalyticsPage', () => {
       expect(screen.getByText('Source Bias Distribution')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Weekly breakdown of political lean across news sources')).toBeInTheDocument();
+    expect(screen.getByText(/This chart shows the political lean of articles from your news sources/)).toBeInTheDocument();
     expect(screen.getByTestId('area-chart')).toBeInTheDocument();
   });
 
