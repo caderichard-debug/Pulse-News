@@ -34,6 +34,7 @@ export default function Navbar() {
 
   const navItems = [
     { name: 'Feed', path: '/feed', icon: '📰' },
+    { name: 'Sources', path: '/sources', icon: '📑' },
     { name: 'Analytics', path: '/analytics', icon: '📊' },
     { name: 'Preferences', path: '/preferences', icon: '⚙️' },
     { name: 'How It Works', path: '/how-it-works', icon: '💡' },
