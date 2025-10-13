@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/dateUtils';
 import Navbar from '@/components/Navbar';
+import SourceBiasBadge from '@/components/SourceBiasBadge';
 
 interface ArticleDetail {
   id: number;
@@ -13,6 +14,7 @@ interface ArticleDetail {
   published_at: string;
   source_name: string;
   source_url: string;
+  source_bias: string | null;
   topic_category: string | null;
   content_preview: string;
   summary: string | null;
@@ -154,10 +156,13 @@ export default function ArticleDetailPage() {
 
       {/* Article header */}
       <div className="mb-8">
-        <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+        <div className="flex items-center gap-2 text-sm text-gray-600 mb-3 flex-wrap">
           <a href={article.source_url} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">
             {article.source_name}
           </a>
+          {article.source_bias && (
+            <SourceBiasBadge bias={article.source_bias} size="sm" />
+          )}
           {article.topic_category && (
             <>
               <span>•</span>
@@ -201,10 +206,11 @@ export default function ArticleDetailPage() {
             )}
             {article.political_lean && (
               <div>
-                <p className="text-sm text-gray-600 mb-1">Political Lean</p>
+                <p className="text-sm text-gray-600 mb-1">Article Bias</p>
                 <p className={`text-2xl font-bold ${getLeanColor(article.political_lean)}`}>
                   {article.political_lean.charAt(0).toUpperCase() + article.political_lean.slice(1)}
                 </p>
+                <p className="text-xs text-gray-500 mt-1">Article-level analysis</p>
               </div>
             )}
           </div>

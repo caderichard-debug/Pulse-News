@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { formatTimeAgo } from '@/lib/dateUtils';
 import Navbar from '@/components/Navbar';
+import SourceBiasBadge from '@/components/SourceBiasBadge';
 
 interface Article {
   id: number;
@@ -13,6 +14,7 @@ interface Article {
   published_at: string;
   source_name: string;
   source_id: number;
+  source_bias: string | null;
   topic_category: string | null;
   summary: string | null;
   sentiment_score: number | null;
@@ -251,8 +253,11 @@ export default function FeedPage() {
                   onClick={() => router.push(`/article/${article.id}`)}
                 >
                   {/* Header */}
-                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-2 flex-wrap">
                     <span className="font-medium text-indigo-600">{article.source_name}</span>
+                    {article.source_bias && (
+                      <SourceBiasBadge bias={article.source_bias} size="sm" />
+                    )}
                     {article.topic_category && (
                       <>
                         <span>•</span>
@@ -294,7 +299,7 @@ export default function FeedPage() {
 
                     {article.political_lean && (
                       <div className="flex items-center gap-1">
-                        <span className="text-gray-600">Lean:</span>
+                        <span className="text-gray-600">Article Bias:</span>
                         <span className={`font-semibold ${getLeanColor(article.political_lean)}`}>
                           {article.political_lean.charAt(0).toUpperCase() + article.political_lean.slice(1)}
                         </span>
