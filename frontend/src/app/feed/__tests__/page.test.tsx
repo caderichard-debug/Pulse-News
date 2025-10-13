@@ -170,6 +170,29 @@ describe('FeedPage', () => {
     expect(screen.queryByText('📊 Statistics:')).not.toBeInTheDocument();
   });
 
+  it('should filter by verified statistics when checkbox is checked', async () => {
+    const user = userEvent.setup();
+    render(<FeedPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Article 1')).toBeInTheDocument();
+    });
+
+    // Find and click the verified stats checkbox
+    const checkbox = screen.getByLabelText('Show only articles with verified statistics');
+    await user.click(checkbox);
+
+    // Should call API with only_verified_stats parameter
+    await waitFor(() => {
+      expect(api.getFeedArticles).toHaveBeenCalledWith(
+        expect.objectContaining({
+          only_verified_stats: true,
+          page: 1,
+        })
+      );
+    });
+  });
+
   describe('Filters', () => {
     it('should render topic filter with options', async () => {
       render(<FeedPage />);

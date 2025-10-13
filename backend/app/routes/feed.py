@@ -8,7 +8,7 @@ from ..database import get_session
 from ..models import (
     User, Article, ArticleAnalysis, ArticleFrameworkLink,
     Framework, Source, Topic, UserTopicPreference,
-    UserSourceSubscription, PoliticalLean, ProcessingStatus
+    UserSourceSubscription, PoliticalLean, ProcessingStatus, StatisticVerification
 )
 from ..routes.auth import get_optional_user
 from pydantic import BaseModel
@@ -39,6 +39,11 @@ class ArticleFeedItem(BaseModel):
     primary_framework: Optional[str]
     framework_position: Optional[int]
 
+    # Statistics summary
+    stats_count: int
+    stats_verified_count: int
+    has_stats: bool
+
 
 class FeedResponse(BaseModel):
     articles: List[ArticleFeedItem]
@@ -57,6 +62,7 @@ async def get_feed_articles(
     political_lean: Optional[str] = Query(default=None, description="Filter by political lean: left, center, right"),
     sort_by: str = Query(default="newest", description="Sort order: newest, oldest, sentiment_high, sentiment_low"),
     only_analyzed: bool = Query(default=False, description="Show only articles with analysis"),
+    only_verified_stats: bool = Query(default=False, description="Show only articles with verified statistics"),
     session: Session = Depends(get_session)
 ):
     """
@@ -86,6 +92,15 @@ async def get_feed_articles(
 
     if only_analyzed:
         query = query.where(ArticleAnalysis.id.isnot(None))
+
+    if only_verified_stats:
+        # Filter for articles that have at least one verified statistic
+        verified_articles_subquery = (
+            select(StatisticVerification.article_id)
+            .where(StatisticVerification.verification_status == 'verified')
+            .distinct()
+        )
+        query = query.where(Article.id.in_(verified_articles_subquery))
 
     # Get total count before pagination
     count_query = select(func.count()).select_from(query.subquery())
@@ -122,10 +137,27 @@ async def get_feed_articles(
         if link.article_id not in article_frameworks:
             article_frameworks[link.article_id] = (framework.name, link.position_on_axis)
 
+    # Get statistics data for articles
+    stats_data = session.exec(
+        select(
+            StatisticVerification.article_id,
+            func.count(StatisticVerification.id).label('total'),
+            func.count(func.nullif(StatisticVerification.verification_status == 'verified', False)).label('verified')
+        )
+        .where(StatisticVerification.article_id.in_(article_ids))
+        .group_by(StatisticVerification.article_id)
+    ).all()
+
+    # Map statistics to articles
+    article_stats: Dict[int, tuple] = {}
+    for article_id, total, verified in stats_data:
+        article_stats[article_id] = (total, verified or 0)
+
     # Build response
     articles = []
     for article, analysis, source in results:
         framework_data = article_frameworks.get(article.id)
+        stats = article_stats.get(article.id, (0, 0))
 
         articles.append(ArticleFeedItem(
             id=article.id,
@@ -139,7 +171,10 @@ async def get_feed_articles(
             sentiment_score=analysis.sentiment_score if analysis else None,
             political_lean=analysis.political_lean.value if analysis and analysis.political_lean else None,
             primary_framework=framework_data[0] if framework_data else None,
-            framework_position=framework_data[1] if framework_data else None
+            framework_position=framework_data[1] if framework_data else None,
+            stats_count=stats[0],
+            stats_verified_count=stats[1],
+            has_stats=stats[0] > 0
         ))
 
     return FeedResponse(

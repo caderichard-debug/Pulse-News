@@ -46,6 +46,7 @@ export default function FeedPage() {
   const [selectedLean, setSelectedLean] = useState<string>('');
   const [sortBy, setSortBy] = useState('newest');
   const [onlyAnalyzed, setOnlyAnalyzed] = useState(false);
+  const [onlyVerifiedStats, setOnlyVerifiedStats] = useState(false);
   const [page, setPage] = useState(1);
 
   const loadFeedData = useCallback(async () => {
@@ -59,6 +60,7 @@ export default function FeedPage() {
         political_lean: selectedLean || undefined,
         sort_by: sortBy,
         only_analyzed: onlyAnalyzed,
+        only_verified_stats: onlyVerifiedStats,
       });
       setFeedData(data);
       setError(null);
@@ -68,12 +70,12 @@ export default function FeedPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed]);
+  }, [page, selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed, onlyVerifiedStats]);
 
   useEffect(() => {
     loadFeedData();
     loadFilters();
-  }, [selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed, page, loadFeedData]);
+  }, [selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed, onlyVerifiedStats, page, loadFeedData]);
 
   async function loadFilters() {
     try {
@@ -197,18 +199,33 @@ export default function FeedPage() {
           </div>
             </div>
 
-            {/* Only analyzed checkbox */}
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="only-analyzed"
-                checked={onlyAnalyzed}
-                onChange={(e) => { setOnlyAnalyzed(e.target.checked); setPage(1); }}
-                className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-              />
-              <label htmlFor="only-analyzed" className="ml-2 text-sm font-medium text-gray-700">
-                Show only analyzed articles
-              </label>
+            {/* Filter checkboxes */}
+            <div className="flex flex-wrap items-center gap-6">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="only-analyzed"
+                  checked={onlyAnalyzed}
+                  onChange={(e) => { setOnlyAnalyzed(e.target.checked); setPage(1); }}
+                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                />
+                <label htmlFor="only-analyzed" className="ml-2 text-sm font-medium text-gray-700">
+                  Show only analyzed articles
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="only-verified-stats"
+                  checked={onlyVerifiedStats}
+                  onChange={(e) => { setOnlyVerifiedStats(e.target.checked); setPage(1); }}
+                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                />
+                <label htmlFor="only-verified-stats" className="ml-2 text-sm font-medium text-gray-700">
+                  Show only articles with verified statistics
+                </label>
+              </div>
             </div>
           </div>
 
