@@ -274,6 +274,9 @@ class ApiClient {
         primary_framework: string | null;
         framework_position: number | null;
         read_time_minutes: number | null;
+        stats_count: number;
+        stats_verified_count: number;
+        has_stats: boolean;
       }>;
       total_count: number;
       page: number;
