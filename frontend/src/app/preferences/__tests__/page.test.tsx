@@ -284,6 +284,6 @@ describe('PreferencesPage', () => {
     await user.click(logoutButton);
 
     expect(api.clearToken).toHaveBeenCalled();
-    expect(mockPush).toHaveBeenCalledWith('/');
+    expect(mockPush).toHaveBeenCalledWith('/feed');
   });
 });

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import {
@@ -17,14 +16,6 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-interface UserStats {
-  articles_read: number;
-  newsletters_received: number;
-  topics_tracked: number;
-  sources_subscribed: number;
-  views_changed: number;
-}
-
 interface SentimentData {
   date: string;
   values: Record<string, number>;
@@ -37,37 +28,28 @@ interface BiasData {
   right: number;
 }
 
-export default function DashboardPage() {
-  const router = useRouter();
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
+export default function AnalyticsPage() {
   const [sentimentData, setSentimentData] = useState<SentimentData[]>([]);
   const [biasData, setBiasData] = useState<BiasData[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState(30);
 
   useEffect(() => {
-    loadDashboardData();
+    loadAnalyticsData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRange]);
 
-  const loadDashboardData = async () => {
+  const loadAnalyticsData = async () => {
     try {
-      const [stats, sentiment, bias] = await Promise.all([
-        api.getUserStats(),
+      const [sentiment, bias] = await Promise.all([
         api.getSentimentOverTime(timeRange),
         api.getBiasDistribution(4),
       ]);
 
-      setUserStats(stats);
       setSentimentData(sentiment);
       setBiasData(bias);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '';
-      if (errorMessage.includes('401') || errorMessage.includes('403')) {
-        router.push('/login');
-      } else {
-        console.error('Failed to load dashboard data:', err);
-      }
+      console.error('Failed to load analytics data:', err);
     } finally {
       setLoading(false);
     }
@@ -94,7 +76,7 @@ export default function DashboardPage() {
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading dashboard...</p>
+            <p className="mt-4 text-gray-600">Loading analytics...</p>
           </div>
         </div>
       </>
@@ -109,36 +91,10 @@ export default function DashboardPage() {
           {/* Header */}
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">📊 Dashboard</h1>
-              <p className="text-gray-600 mt-1">Your discourse analytics</p>
+              <h1 className="text-3xl font-bold text-gray-900">📊 Data Analysis</h1>
+              <p className="text-gray-600 mt-1">Explore sentiment trends and bias distribution across the news</p>
             </div>
           </div>
-
-        {/* Stats Overview */}
-        {userStats && (
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="text-sm font-medium text-gray-600">Articles Read</div>
-              <div className="text-3xl font-bold text-gray-900 mt-2">{userStats.articles_read}</div>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="text-sm font-medium text-gray-600">Newsletters</div>
-              <div className="text-3xl font-bold text-gray-900 mt-2">{userStats.newsletters_received}</div>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="text-sm font-medium text-gray-600">Topics Tracked</div>
-              <div className="text-3xl font-bold text-gray-900 mt-2">{userStats.topics_tracked}</div>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="text-sm font-medium text-gray-600">Sources</div>
-              <div className="text-3xl font-bold text-gray-900 mt-2">{userStats.sources_subscribed}</div>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="text-sm font-medium text-gray-600">Views Changed</div>
-              <div className="text-3xl font-bold text-gray-900 mt-2">{userStats.views_changed}</div>
-            </div>
-          </div>
-        )}
 
         {/* Time Range Selector */}
         <div className="flex justify-end mb-4">
@@ -163,7 +119,7 @@ export default function DashboardPage() {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Sentiment Over Time</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Track how sentiment changes across your topics
+            Track how sentiment changes across different topics
           </p>
           {sentimentChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={350}>
@@ -195,7 +151,7 @@ export default function DashboardPage() {
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Source Bias Distribution</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Weekly breakdown of political lean in your news sources
+            Weekly breakdown of political lean across news sources
           </p>
           {biasData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
