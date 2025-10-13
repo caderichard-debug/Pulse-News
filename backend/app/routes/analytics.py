@@ -51,82 +51,63 @@ class FrameworkAxis(BaseModel):
 async def get_sentiment_over_time(
     current_user: User = Depends(get_current_user),
     days: int = Query(default=30, ge=1, le=90),
-    topic_ids: Optional[str] = Query(default=None, description="Comma-separated topic IDs"),
+    topic_ids: Optional[str] = Query(default=None, description="Comma-separated topic IDs (currently unused)"),
     session: Session = Depends(get_session)
 ):
     """
-    Get daily average sentiment scores by topic.
+    Get daily average sentiment scores by political lean.
 
     Returns data formatted for multi-line charts:
     [
       {
         "date": "2025-10-01",
-        "values": {"Politics": -2.3, "Technology": 4.5}
+        "values": {"Left": -2.3, "Center": 1.2, "Right": 3.5}
       },
       ...
     ]
+
+    Note: Currently groups by political lean instead of topics since articles
+    don't have topic_category assigned yet.
     """
-    # Parse topic IDs
-    if topic_ids:
-        topic_id_list = [int(tid.strip()) for tid in topic_ids.split(",")]
-    else:
-        # Get user's preferred topics
-        user_prefs = session.exec(
-            select(UserTopicPreference)
-            .where(UserTopicPreference.user_id == current_user.id)
-            .where(UserTopicPreference.include_in_newsletter == True)
-        ).all()
-        topic_id_list = [pref.topic_id for pref in user_prefs]
-
-    if not topic_id_list:
-        # Fallback to all topics
-        all_topics = session.exec(select(Topic)).all()
-        topic_id_list = [topic.id for topic in all_topics]
-
-    # Get topic names
-    topics = session.exec(
-        select(Topic).where(Topic.id.in_(topic_id_list))
-    ).all()
-    topic_map = {topic.id: topic.name for topic in topics}
-
     # Calculate date range
     end_date = datetime.utcnow().date()
     start_date = end_date - timedelta(days=days)
 
-    # Query sentiment data grouped by date and topic
-    # Use database-agnostic date grouping
+    # Get all articles with sentiment in date range
+    query = (
+        select(Article, ArticleAnalysis)
+        .join(ArticleAnalysis)
+        .where(Article.published_at >= start_date)
+    )
+
+    results = session.exec(query).all()
+
+    # Group by date and political lean in Python
     result_data = {}
 
-    for topic_id in topic_id_list:
-        # Get articles for this topic with sentiment
-        query = (
-            select(Article, ArticleAnalysis)
-            .join(ArticleAnalysis)
-            .where(Article.published_at >= start_date)
-            .where(Article.topic_category == topic_map.get(topic_id))
-        )
+    for article, analysis in results:
+        date_str = article.published_at.date().isoformat()
+        if date_str not in result_data:
+            result_data[date_str] = {"left": [], "center": [], "right": []}
 
-        results = session.exec(query).all()
+        # Group by political lean
+        lean_key = analysis.political_lean.value if analysis.political_lean else "center"
+        result_data[date_str][lean_key].append(analysis.sentiment_score)
 
-        # Group by date in Python (works with any database)
-        date_sentiments = {}
-        for article, analysis in results:
-            date_str = article.published_at.date().isoformat()
-            if date_str not in date_sentiments:
-                date_sentiments[date_str] = []
-            date_sentiments[date_str].append(analysis.sentiment_score)
+    # Calculate averages and format response
+    response = []
+    for date_str, lean_data in sorted(result_data.items()):
+        values = {}
+        for lean in ["left", "center", "right"]:
+            sentiments = lean_data[lean]
+            if sentiments:
+                # Capitalize for display
+                lean_display = lean.capitalize()
+                values[lean_display] = round(sum(sentiments) / len(sentiments), 2)
 
-        # Calculate averages
-        for date_str, sentiments in date_sentiments.items():
-            if date_str not in result_data:
-                result_data[date_str] = {}
-            result_data[date_str][topic_map[topic_id]] = round(sum(sentiments) / len(sentiments), 2)
-
-    # Convert to list format
-    response = [
-        {"date": date, "values": values}
-        for date, values in sorted(result_data.items())
-    ]
+        # Only add dates that have at least one data point
+        if values:
+            response.append({"date": date_str, "values": values})
 
     return response
 

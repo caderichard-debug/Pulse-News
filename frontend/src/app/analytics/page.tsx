@@ -62,12 +62,19 @@ export default function AnalyticsPage() {
     ...item.values
   }));
 
-  // Get unique topic names for chart lines
-  const topicNames = sentimentData.length > 0
-    ? Object.keys(sentimentData[0].values)
-    : [];
+  // Get all unique lean names across all data points (not just the first one)
+  const leanNames = Array.from(
+    new Set(
+      sentimentData.flatMap(item => Object.keys(item.values))
+    )
+  ).sort(); // Sort to ensure consistent order: Center, Left, Right
 
-  const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+  // Map lean names to colors
+  const leanColors: Record<string, string> = {
+    'Left': '#3b82f6',    // Blue
+    'Center': '#8b5cf6',  // Purple
+    'Right': '#ef4444',   // Red
+  };
 
   if (loading) {
     return (
@@ -119,7 +126,9 @@ export default function AnalyticsPage() {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Sentiment Over Time</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Track how sentiment changes across different topics
+            Track daily sentiment trends across different political leans. Positive values indicate more optimistic/positive coverage,
+            while negative values suggest more critical/negative reporting. Lines show the average sentiment for left-leaning (blue),
+            center (purple), and right-leaning (red) news sources.
           </p>
           {sentimentChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={350}>
@@ -129,13 +138,14 @@ export default function AnalyticsPage() {
                 <YAxis domain={[-10, 10]} />
                 <Tooltip />
                 <Legend />
-                {topicNames.map((topic, idx) => (
+                {leanNames.map((lean) => (
                   <Line
-                    key={topic}
+                    key={lean}
                     type="monotone"
-                    dataKey={topic}
-                    stroke={colors[idx % colors.length]}
+                    dataKey={lean}
+                    stroke={leanColors[lean] || '#8b5cf6'}
                     strokeWidth={2}
+                    connectNulls={true}
                   />
                 ))}
               </LineChart>
@@ -151,7 +161,9 @@ export default function AnalyticsPage() {
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Source Bias Distribution</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Weekly breakdown of political lean across news sources
+            This chart shows the political lean of articles from your news sources over the past 4 weeks.
+            Each week is represented as a stacked area showing the percentage of articles classified as left-leaning (blue),
+            center/neutral (gray), or right-leaning (red). This helps you understand the balance of perspectives in your news consumption.
           </p>
           {biasData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
