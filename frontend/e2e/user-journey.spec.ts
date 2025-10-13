@@ -135,8 +135,8 @@ test.describe('Complete User Journey', () => {
     // Step 7: Logout
     await page.getByRole('button', { name: /logout/i }).click();
 
-    // Should redirect to landing page
-    await expect(page).toHaveURL('/', { timeout: 5000 });
+    // Should redirect to login page (feed is protected, redirects to login)
+    await expect(page).toHaveURL('/login', { timeout: 5000 });
   });
 });
 
