@@ -120,8 +120,8 @@ test.describe('Authentication Flow', () => {
     await page.getByLabel(/password/i).fill(password);
     await page.getByRole('button', { name: /log in/i }).click();
 
-    // Should redirect to dashboard
-    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
+    // Should redirect to feed
+    await expect(page).toHaveURL(/\/feed/, { timeout: 10000 });
   });
 
   test('should show error for invalid login credentials', async ({ page }) => {
