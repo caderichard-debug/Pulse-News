@@ -420,6 +420,8 @@ CLAIMBUSTER_API_KEY=...
 ### AI Assistant Workflow
 - **DO NOT push commits automatically** - Always wait for explicit user approval before pushing to remote
 - Stage changes and prepare commits, but let the user decide when to push
+- **Organize commits logically** - Group related changes into well-structured commits with clear messages
+- Commit locally but never push without explicit user approval
 
 ### Code Organization
 - **Services**: Pure business logic, no FastAPI dependencies
