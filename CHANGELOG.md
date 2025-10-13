@@ -4,6 +4,127 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-12 22:19
+
+**Source Bias Rating System & Supported Sources Page** ✅
+
+### What Changed
+Major feature addition: Organizational bias ratings for news sources with complete UI integration.
+
+#### Backend Changes:
+1. **Database Schema** ([models.py](backend/app/models.py:22-27)):
+   - Added `OrganizationalBias` enum: `left`, `center-left`, `center`, `center-right`, `right`
+   - Added `organizational_bias` field to `Source` model
+   - Added `bias_description` field (500 char max) for context
+   - Created Alembic migration: [e29da670f9de](backend/alembic/versions/e29da670f9de_add_source_bias_fields.py)
+   - Populated 8 existing sources with bias ratings (AP/Reuters: center, NPR/NYT: center-left, etc.)
+
+2. **Bias Data Service** ([bias_data_fetcher.py](backend/app/services/bias_data_fetcher.py)):
+   - Created service for fetching organizational bias from external APIs
+   - Manual lookup table with 25+ major news sources
+   - Placeholder for AllSides API / MBFC integration
+   - Automatic bias fetching when adding new sources
+
+3. **API Endpoints** ([sources.py](backend/app/routes/sources.py)):
+   - `GET /sources` - List all sources with filtering (bias, active status) and sorting
+   - `POST /sources` - Add new source with automatic bias fetching
+   - `GET /sources/{id}` - Get source details
+   - `PUT /sources/{id}` - Update source information
+   - `DELETE /sources/{id}` - Soft/hard delete
+   - `POST /sources/{id}/fetch-bias` - Manually trigger bias data fetch
+
+4. **Updated Existing Endpoints**:
+   - [feed.py](backend/app/routes/feed.py:31,171) - Added `source_bias` to article feed responses
+   - [articles.py](backend/app/routes/articles.py:74,283) - Added `source_bias` to article detail
+   - [feed.py](backend/app/routes/feed.py:235) - Added `organizational_bias` to sources list
+
+#### Frontend Changes:
+1. **SourceBiasBadge Component** ([SourceBiasBadge.tsx](frontend/src/components/SourceBiasBadge.tsx)):
+   - Color-coded badges for all 5 bias levels
+   - Three sizes: sm, md, lg
+   - Blue (left), Purple (center), Red (right) color scheme
+
+2. **Feed Page Updates** ([feed/page.tsx](frontend/src/app/feed/page.tsx)):
+   - Source bias badge next to source name in article cards
+   - Changed "Lean:" to "Article Bias:" to distinguish from source bias
+   - Added `source_bias` to Article interface
+
+3. **Article Detail Page Updates** ([article/[id]/page.tsx](frontend/src/app/article/[id]/page.tsx)):
+   - Source bias badge in article header (next to source name)
+   - "Political Lean" renamed to "Article Bias" with clarification text
+   - Clear separation: **Source Bias** (organizational) vs **Article Bias** (content-level)
+
+4. **New Sources Page** ([sources/page.tsx](frontend/src/app/sources/page.tsx)):
+   - Full directory of supported news sources
+   - Filter by bias (5 options) + Sort by name/trust score/article count
+   - Source cards showing: name, bias badge, description, trust score, article count
+   - Links to source website and filtered feed view
+   - Informational box explaining bias ratings
+
+5. **Navbar Update** ([Navbar.tsx](frontend/src/components/Navbar.tsx:37)):
+   - Added "Sources" link with 📑 icon between Feed and Analytics
+
+6. **API Client** ([api.ts](frontend/src/lib/api.ts)):
+   - Added `getAllSources()` method with filter/sort parameters
+   - Added `createSource()` method
+   - Updated feed and article types to include `source_bias`
+
+### Design Decisions
+
+**Bias Scale**: Using detailed 5-point scale (left, center-left, center, center-right, right) rather than simple 3-point for nuanced ratings.
+
+**Separation of Concerns**:
+- **Organizational Bias** = Source-level editorial perspective
+- **Article Bias** = Individual article analysis by AI
+- Both displayed separately to avoid confusion
+
+**Color Scheme**:
+- Left: blue-600
+- Center-Left: blue-400
+- Center: purple-600
+- Center-Right: red-400
+- Right: red-600
+
+**Bias Data Sources**:
+- Manual lookup table for common sources (primary)
+- Placeholders for AllSides API / MBFC integration (future)
+- Automatic fetching when adding new sources
+
+### Known Bias Ratings (8 sources populated):
+- **Center**: Associated Press, Reuters, Politico, Ars Technica
+- **Center-Left**: NPR, BBC News, The New York Times, The Atlantic
+
+### Test Results
+- ✅ Backend builds and runs successfully
+- ✅ Feed endpoint returns `source_bias` field
+- ✅ Frontend builds successfully (107 tests still passing)
+- ✅ TypeScript compilation successful
+
+### Code References:
+**Backend:**
+- Models: [models.py:22-27](backend/app/models.py#L22-L27), [models.py:117-122](backend/app/models.py#L117-L122)
+- Migration: [e29da670f9de_add_source_bias_fields.py](backend/alembic/versions/e29da670f9de_add_source_bias_fields.py)
+- Bias Service: [bias_data_fetcher.py](backend/app/services/bias_data_fetcher.py)
+- Sources Route: [sources.py](backend/app/routes/sources.py)
+- Feed Updates: [feed.py:31](backend/app/routes/feed.py#L31), [feed.py:171](backend/app/routes/feed.py#L171)
+- Article Updates: [articles.py:74](backend/app/routes/articles.py#L74), [articles.py:283](backend/app/routes/articles.py#L283)
+
+**Frontend:**
+- Badge Component: [SourceBiasBadge.tsx](frontend/src/components/SourceBiasBadge.tsx)
+- Feed Page: [feed/page.tsx:17](frontend/src/app/feed/page.tsx#L17), [feed/page.tsx:258-260](frontend/src/app/feed/page.tsx#L258-L260)
+- Article Detail: [article/[id]/page.tsx:17](frontend/src/app/article/[id]/page.tsx#L17), [article/[id]/page.tsx:163-165](frontend/src/app/article/[id]/page.tsx#L163-L165)
+- Sources Page: [sources/page.tsx](frontend/src/app/sources/page.tsx)
+- Navbar: [Navbar.tsx:37](frontend/src/components/Navbar.tsx#L37)
+- API Client: [api.ts:270](frontend/src/lib/api.ts#L270), [api.ts:357-397](frontend/src/lib/api.ts#L357-L397)
+
+### Next Steps
+- Backend tests for `/sources` endpoints
+- Frontend tests for SourceBiasBadge component
+- Frontend tests for sources page
+- Consider integrating AllSides or MBFC API for automatic bias ratings
+
+---
+
 ## 2025-10-11 21:05
 
 **Fixed Production Crash - PoliticalLean Enum Case Mismatch** ✅
