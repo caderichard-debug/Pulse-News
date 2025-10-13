@@ -192,8 +192,8 @@ export default function ArticleDetailPage() {
       </div>
 
       {/* Sentiment & Bias */}
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-8">
-        <h2 className="text-lg font-semibold mb-4">Analysis</h2>
+      <div className="bg-gray-100 border border-gray-300 rounded-lg p-6 mb-8">
+        <h2 className="text-lg font-semibold mb-4 text-gray-900">Analysis</h2>
         {article.sentiment_score !== null || article.political_lean ? (
           <div className="grid grid-cols-2 gap-4">
             {article.sentiment_score !== null && (
