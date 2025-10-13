@@ -4,6 +4,48 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-13 (Session Continuation)
+
+**UI Improvements & Test Fixes** ✅
+
+### What Changed
+Fixed E2E and unit tests after navigation layout changes (removed Dashboard, added Sources/Analytics pages).
+
+#### UI Improvements:
+1. **Article Detail Page Styling** ([article/[id]/page.tsx](frontend/src/app/article/[id]/page.tsx:110-120)):
+   - Darkened analysis header: `bg-gray-50` → `bg-gray-100`
+   - Darker border: `border-gray-200` → `border-gray-300`
+   - Added `text-gray-900` to heading for better contrast
+   - Commit: [798f5bd](https://github.com/caderichard-debug/Pulse/commit/798f5bd)
+
+#### E2E Test Fixes:
+2. **Navigation Test Updates** ([e2e/](frontend/e2e/)):
+   - [auth.spec.ts](frontend/e2e/auth.spec.ts:123-124): Changed login redirect test from `/dashboard` to `/feed`
+   - [user-journey.spec.ts](frontend/e2e/user-journey.spec.ts:6): Updated flow comment to reflect actual navigation
+   - All navigation tests now use Analytics (📊) instead of Dashboard
+   - Added Sources (📑) navigation tests
+   - Commit: [221eed2](https://github.com/caderichard-debug/Pulse/commit/221eed2)
+
+#### Unit Test Fixes:
+3. **Frontend Unit Tests** ([__tests__/](frontend/src/)):
+   - [article/[id]/__tests__/page.test.tsx](frontend/src/app/article/[id]/__tests__/page.test.tsx:167-174): Changed "Political Lean" → "Article Bias" in analysis section test
+   - [feed/__tests__/page.test.tsx](frontend/src/app/feed/__tests__/page.test.tsx:128,227,291): Updated test names for article bias (filter label still "Political Lean" per design)
+   - [Navbar.test.tsx](frontend/src/components/__tests__/Navbar.test.tsx:45,104-111,173): Added Sources button and icon tests
+   - [preferences/__tests__/page.test.tsx](frontend/src/app/preferences/__tests__/page.test.tsx:133,150,167,188): Fixed tab selector to use `/sources \(/i` to avoid navbar conflict
+   - Commit: [7969429](https://github.com/caderichard-debug/Pulse/commit/7969429)
+
+### Test Results
+- **Backend**: 363 tests passing (unchanged)
+- **Frontend**: 195 tests passing ✅ (all unit tests fixed)
+- **E2E**: Navigation tests updated for new layout
+
+**Code References:**
+- E2E Tests: [e2e/auth.spec.ts](frontend/e2e/auth.spec.ts), [e2e/user-journey.spec.ts](frontend/e2e/user-journey.spec.ts)
+- Unit Tests: [Navbar.test.tsx](frontend/src/components/__tests__/Navbar.test.tsx), [preferences page tests](frontend/src/app/preferences/__tests__/page.test.tsx)
+- Styling: [article detail page](frontend/src/app/article/[id]/page.tsx)
+
+---
+
 ## 2025-10-12 22:19
 
 **Source Bias Rating System & Supported Sources Page** ✅
