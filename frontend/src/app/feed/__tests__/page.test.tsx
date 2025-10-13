@@ -38,6 +38,9 @@ describe('FeedPage', () => {
       primary_framework: 'Individual Liberty vs Collective Welfare',
       framework_position: 3,
       read_time_minutes: 5,
+      stats_count: 3,
+      stats_verified_count: 2,
+      has_stats: true,
     },
     {
       id: 2,
@@ -53,6 +56,9 @@ describe('FeedPage', () => {
       primary_framework: null,
       framework_position: null,
       read_time_minutes: null,
+      stats_count: 0,
+      stats_verified_count: 0,
+      has_stats: false,
     },
   ];
 
@@ -133,6 +139,57 @@ describe('FeedPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/showing 1 - 20 of 50 articles/i)).toBeInTheDocument();
+    });
+  });
+
+  it('should display statistics section for articles with stats', async () => {
+    render(<FeedPage />);
+
+    await waitFor(() => {
+      // First article has stats
+      expect(screen.getByText('📊 Statistics:')).toBeInTheDocument();
+      expect(screen.getByText('3 found')).toBeInTheDocument();
+      expect(screen.getByText('2 verified')).toBeInTheDocument();
+    });
+  });
+
+  it('should not display statistics section for articles without stats', async () => {
+    const noStatsResponse = {
+      ...mockFeedResponse,
+      articles: [mockArticles[1]], // Article 2 has no stats
+    };
+    (api.getFeedArticles as jest.Mock).mockResolvedValue(noStatsResponse);
+
+    render(<FeedPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Article 2')).toBeInTheDocument();
+    });
+
+    // Should not show statistics section
+    expect(screen.queryByText('📊 Statistics:')).not.toBeInTheDocument();
+  });
+
+  it('should filter by verified statistics when checkbox is checked', async () => {
+    const user = userEvent.setup();
+    render(<FeedPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Article 1')).toBeInTheDocument();
+    });
+
+    // Find and click the verified stats checkbox
+    const checkbox = screen.getByLabelText('Show only articles with verified statistics');
+    await user.click(checkbox);
+
+    // Should call API with only_verified_stats parameter
+    await waitFor(() => {
+      expect(api.getFeedArticles).toHaveBeenCalledWith(
+        expect.objectContaining({
+          only_verified_stats: true,
+          page: 1,
+        })
+      );
     });
   });
 

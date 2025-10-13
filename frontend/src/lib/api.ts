@@ -247,6 +247,7 @@ class ApiClient {
     political_lean?: string;
     sort_by?: string;
     only_analyzed?: boolean;
+    only_verified_stats?: boolean;
   }) {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
@@ -256,6 +257,7 @@ class ApiClient {
     if (params?.political_lean) queryParams.append('political_lean', params.political_lean);
     if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
     if (params?.only_analyzed) queryParams.append('only_analyzed', params.only_analyzed.toString());
+    if (params?.only_verified_stats) queryParams.append('only_verified_stats', params.only_verified_stats.toString());
 
     return this.request<{
       articles: Array<{
@@ -272,6 +274,9 @@ class ApiClient {
         primary_framework: string | null;
         framework_position: number | null;
         read_time_minutes: number | null;
+        stats_count: number;
+        stats_verified_count: number;
+        has_stats: boolean;
       }>;
       total_count: number;
       page: number;

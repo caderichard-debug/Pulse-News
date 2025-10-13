@@ -28,6 +28,11 @@ interface ArticleDetail {
     source_credibility_score: number | null;
     fact_check_status: string | null;
     fact_check_source: string | null;
+    context?: string | null;
+    fact_check_details?: string | null;
+    fact_check_url?: string | null;
+    verification_notes?: string | null;
+    last_checked?: string | null;
   }>;
   frameworks: Array<{
     framework_id: number;
@@ -83,28 +88,6 @@ export default function ArticleDetailPage() {
       loadArticle();
     }
   }, [articleId, loadArticle]);
-
-  function getVerificationBadge(status: string) {
-    const badges: Record<string, { color: string; text: string; icon: string }> = {
-      verified: { color: 'bg-green-100 text-green-800 border-green-300', text: 'Verified', icon: '✓' },
-      unverified: { color: 'bg-gray-100 text-gray-800 border-gray-300', text: 'Unverified', icon: '⏳' },
-      disputed: { color: 'bg-orange-100 text-orange-800 border-orange-300', text: 'Disputed', icon: '⚠️' },
-      false: { color: 'bg-red-100 text-red-800 border-red-300', text: 'False', icon: '❌' },
-    };
-    const badge = badges[status] || badges.unverified;
-    return (
-      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border ${badge.color}`}>
-        <span>{badge.icon}</span>
-        {badge.text}
-      </span>
-    );
-  }
-
-  function getCredibilityStars(score: number | null) {
-    if (score === null) return null;
-    const stars = Math.round(score * 5);
-    return '⭐'.repeat(stars);
-  }
 
   function getSentimentColor(score: number | null): string {
     if (score === null) return 'text-gray-500';
@@ -233,52 +216,15 @@ export default function ArticleDetailPage() {
       {/* Summary */}
       {article.summary && (
         <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-3">Summary</h2>
+          <h2 className="text-2xl font-semibold mb-3 text-gray-900">Summary</h2>
           <p className="text-gray-700 leading-relaxed">{article.summary}</p>
-        </div>
-      )}
-
-      {/* Verified Statistics */}
-      {article.statistics.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">Verified Statistics</h2>
-          <div className="space-y-4">
-            {article.statistics.map((stat, idx) => (
-              <div key={idx} className="bg-white border border-gray-200 rounded-lg p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <p className="font-medium text-gray-900 flex-1">{stat.statistic}</p>
-                  {getVerificationBadge(stat.verification_status)}
-                </div>
-                {stat.source_name && (
-                  <div className="text-sm text-gray-600 mt-2">
-                    <span>Source: </span>
-                    {stat.source_url ? (
-                      <a href={stat.source_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                        {stat.source_name}
-                      </a>
-                    ) : (
-                      <span>{stat.source_name}</span>
-                    )}
-                    {stat.source_credibility_score !== null && (
-                      <span className="ml-2">{getCredibilityStars(stat.source_credibility_score)}</span>
-                    )}
-                  </div>
-                )}
-                {stat.confidence !== null && (
-                  <div className="text-sm text-gray-600 mt-1">
-                    Confidence: {(stat.confidence * 100).toFixed(0)}%
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
         </div>
       )}
 
       {/* Ethical Framework Analysis */}
       {article.frameworks.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+          <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2 text-gray-900">
             <span>⚖️</span>
             <span>Ethical Framework Analysis</span>
           </h2>
@@ -427,7 +373,7 @@ export default function ArticleDetailPage() {
       {article.related_articles.length > 0 && (
         <div className="mb-8">
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
-            <h2 className="text-2xl font-semibold mb-2 flex items-center gap-2">
+            <h2 className="text-2xl font-semibold mb-2 flex items-center gap-2 text-gray-900">
               <span>🔗</span>
               <span>Cross-Source Coverage</span>
             </h2>
@@ -463,6 +409,135 @@ export default function ArticleDetailPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Key Statistics - Enhanced with newsletter-style design */}
+      {article.statistics.length > 0 && (
+        <div className="mb-8">
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-md p-6">
+            <h2 className="text-2xl font-semibold mb-6 text-yellow-900">
+              Key Statistics
+            </h2>
+
+            <div className="space-y-4">
+              {article.statistics.map((stat, idx) => {
+                // Check if this is an unverified stat with no source found
+                const noSourceFound = stat.verification_status === 'unverified' &&
+                                     !stat.source_name &&
+                                     !stat.source_url &&
+                                     stat.verification_notes?.includes('No source found');
+
+                return noSourceFound ? (
+                  // Compact card for unverified stats with no source
+                  <div key={idx} className="bg-gray-50/50 rounded-lg p-3 border border-gray-200">
+                    <div className="text-sm text-gray-800 mb-2 font-medium">
+                      {stat.statistic}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border bg-gray-100 text-gray-800 border-gray-300">
+                        Unverified
+                      </span>
+                      <span className="text-xs text-gray-600 italic">
+                        {stat.verification_notes}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  // Full card for all other stats
+                  <div key={idx} className="bg-yellow-50/50 rounded-lg p-4 border border-yellow-200">
+                    {/* Statistic text with context inline */}
+                    <div className="text-sm text-gray-800 mb-3 font-medium">
+                      {stat.statistic}
+                      {stat.context && (
+                        <span className="text-xs text-gray-600 italic font-normal ml-2">
+                          ({stat.context})
+                        </span>
+                      )}
+                    </div>
+
+                    {/* V2 Verification badge - single line with labels */}
+                    <div className="flex items-center gap-3 text-xs flex-wrap">
+                      {/* Status badge */}
+                      <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${
+                        stat.verification_status === 'verified'
+                          ? 'bg-green-100 text-green-800 border-green-300'
+                          : stat.verification_status === 'disputed'
+                          ? 'bg-orange-100 text-orange-800 border-orange-300'
+                          : stat.verification_status === 'false'
+                          ? 'bg-red-100 text-red-800 border-red-300'
+                          : 'bg-gray-100 text-gray-800 border-gray-300'
+                      }`}>
+                        {stat.verification_status === 'verified' && 'Verified'}
+                        {stat.verification_status === 'disputed' && 'Disputed'}
+                        {stat.verification_status === 'false' && 'False'}
+                        {stat.verification_status === 'unverified' && (stat.last_checked ? 'Unverified' : 'Pending')}
+                      </span>
+
+                      {/* Source name with link */}
+                      <span>
+                        {stat.source_name ? (
+                          stat.source_url ? (
+                            <a
+                              href={stat.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-700 hover:underline"
+                            >
+                              {stat.source_name}
+                            </a>
+                          ) : (
+                            <span className="text-blue-700">{stat.source_name}</span>
+                          )
+                        ) : (
+                          <span className="text-gray-500 italic">Source not traced</span>
+                        )}
+                      </span>
+
+                      {/* Credibility rating (numerical) */}
+                      {stat.source_credibility_score !== null && (
+                        <span className="text-gray-800">
+                          Credibility: <strong>{(stat.source_credibility_score * 5).toFixed(1)}/5</strong>
+                        </span>
+                      )}
+
+                      {/* Confidence percentage with label */}
+                      {stat.confidence !== null && (
+                        <span className="text-gray-800 font-semibold ml-auto">
+                          Confidence: {(stat.confidence * 100).toFixed(0)}%
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Fact-check details (if available) */}
+                    {stat.fact_check_details && (
+                      <div className="mt-3 p-3 bg-blue-50 border-l-2 border-blue-700 rounded text-xs text-blue-900">
+                        <strong>Fact-check:</strong> {stat.fact_check_details.substring(0, 200)}
+                        {stat.fact_check_details.length > 200 && '...'}
+                        {stat.fact_check_url && (
+                          <a
+                            href={stat.fact_check_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-2 text-blue-700 underline hover:text-blue-900"
+                          >
+                            Read more
+                          </a>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Verification notes (failure reason) */}
+                    {stat.verification_notes && stat.verification_status === 'unverified' && (
+                      <div className="mt-2 text-xs text-gray-600 italic">
+                        <strong>Note:</strong> {stat.verification_notes}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

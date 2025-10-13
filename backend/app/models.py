@@ -1,5 +1,5 @@
 from sqlmodel import SQLModel, Field, Relationship, Column
-from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import Enum as SQLEnum, UniqueConstraint
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
@@ -63,6 +63,9 @@ class NewsletterArticle(SQLModel, table=True):
 
 class ArticleFrameworkLink(SQLModel, table=True):
     __tablename__ = "article_frameworks"
+    __table_args__ = (
+        UniqueConstraint('article_id', 'framework_id', name='uq_article_framework'),
+    )
 
     id: Optional[int] = Field(default=None, primary_key=True)
     article_id: int = Field(foreign_key="articles.id", index=True)
@@ -327,6 +330,7 @@ class StatisticVerification(SQLModel, table=True):
     # Metadata
     verified_at: Optional[datetime] = Field(default=None)
     last_checked: Optional[datetime] = Field(default=None)
+    verification_notes: Optional[str] = Field(default=None, max_length=500)  # Failure reasons or additional info
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

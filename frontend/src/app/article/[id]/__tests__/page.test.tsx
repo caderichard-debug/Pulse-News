@@ -189,7 +189,7 @@ describe('ArticleDetailPage', () => {
       render(<ArticleDetailPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Verified Statistics')).toBeInTheDocument();
+        expect(screen.getByText('Key Statistics')).toBeInTheDocument();
       });
     });
 
@@ -207,7 +207,7 @@ describe('ArticleDetailPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText('GDP grew by 3% this quarter')).toBeInTheDocument();
-        expect(screen.getByText('Unverified')).toBeInTheDocument();
+        expect(screen.getByText('Pending')).toBeInTheDocument();
       });
     });
 
@@ -220,13 +220,12 @@ describe('ArticleDetailPage', () => {
       });
     });
 
-    it('should display credibility stars', async () => {
+    it('should display credibility rating as X/5 format', async () => {
       render(<ArticleDetailPage />);
 
       await waitFor(() => {
-        // 0.9 * 5 = 4.5, rounds to 5 stars
-        const stars = screen.getByText('⭐⭐⭐⭐⭐');
-        expect(stars).toBeInTheDocument();
+        // 0.9 * 5 = 4.5
+        expect(screen.getByText(/4\.5\/5/)).toBeInTheDocument();
       });
     });
 
@@ -475,7 +474,7 @@ describe('ArticleDetailPage', () => {
         expect(screen.getByText('Test Article Title')).toBeInTheDocument();
       });
 
-      expect(screen.queryByText('Verified Statistics')).not.toBeInTheDocument();
+      expect(screen.queryByText('Key Statistics')).not.toBeInTheDocument();
     });
 
     it('should not render frameworks section when empty', async () => {
@@ -556,12 +555,12 @@ describe('ArticleDetailPage', () => {
       });
     });
 
-    it('should display unverified badge', async () => {
+    it('should display pending badge for unverified statistics', async () => {
       render(<ArticleDetailPage />);
 
       await waitFor(() => {
-        const unverifiedBadge = screen.getByText('Unverified');
-        expect(unverifiedBadge).toHaveClass('text-gray-800');
+        const pendingBadge = screen.getByText('Pending');
+        expect(pendingBadge).toHaveClass('text-gray-800');
       });
     });
 

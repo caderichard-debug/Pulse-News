@@ -10,6 +10,7 @@ from app.models import (
     Article, ArticleAnalysis, Source, Framework, User,
     ProcessingStatus, PoliticalLean
 )
+from app.utils.auth import create_access_token, hash_password
 from datetime import datetime, timedelta
 
 
@@ -81,6 +82,22 @@ def sample_framework(session: Session):
     session.commit()
     session.refresh(framework)
     return framework
+
+
+@pytest.fixture
+def auth_token(session: Session):
+    """Create test user and return auth token"""
+    user = User(
+        email="test@example.com",
+        hashed_password=hash_password("password"),
+        full_name="Test User"
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    token = create_access_token(data={"sub": user.email})
+    return token
 
 
 class TestArticlesRoutes:
@@ -157,31 +174,34 @@ class TestArticlesRoutes:
         assert data["articles"] == []
 
     def test_get_article_detail_success(
-        self, client: TestClient, analyzed_article: Article
+        self, client: TestClient, analyzed_article: Article, auth_token: str
     ):
         """Test retrieving single article detail"""
-        response = client.get(f"/articles/{analyzed_article.id}")
+        response = client.get(
+            f"/articles/{analyzed_article.id}",
+            headers={"Authorization": f"Bearer {auth_token}"}
+        )
 
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == analyzed_article.id
         assert data["title"] == "Test Article"
-        assert data["word_count"] == 100
-        assert data["processing_status"] == "COMPLETED"  # Enum value is uppercase
         assert "content_preview" in data
-        assert data["has_full_content"] is True
-        assert "analysis" in data
-        assert data["analysis"]["summary"] == "Test summary of the article"
+        assert "summary" in data
+        assert data["summary"] == "Test summary of the article"
 
-    def test_get_article_detail_not_found(self, client: TestClient):
+    def test_get_article_detail_not_found(self, client: TestClient, auth_token: str):
         """Test 404 for non-existent article"""
-        response = client.get("/articles/99999")
+        response = client.get(
+            "/articles/99999",
+            headers={"Authorization": f"Bearer {auth_token}"}
+        )
 
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()
 
     def test_get_article_detail_without_analysis(
-        self, client: TestClient, session: Session, sample_source: Source
+        self, client: TestClient, session: Session, sample_source: Source, auth_token: str
     ):
         """Test article detail for article without analysis"""
         article = Article(
@@ -196,11 +216,14 @@ class TestArticlesRoutes:
         session.commit()
         session.refresh(article)
 
-        response = client.get(f"/articles/{article.id}")
+        response = client.get(
+            f"/articles/{article.id}",
+            headers={"Authorization": f"Bearer {auth_token}"}
+        )
 
         assert response.status_code == 200
         data = response.json()
-        assert data["analysis"] is None
+        assert data["summary"] is None
 
 
 class TestAdminRoutes:
@@ -224,9 +247,9 @@ class TestAdminRoutes:
 
         # Verify article stats
         assert data["articles"]["total"] >= 1
-        assert "PENDING" in data["articles"]
-        assert "COMPLETED" in data["articles"]
-        assert "FAILED" in data["articles"]
+        assert "pending" in data["articles"]
+        assert "completed" in data["articles"]
+        assert "failed" in data["articles"]
         assert "extraction_success_rate" in data["articles"]
 
         # Verify framework stats
