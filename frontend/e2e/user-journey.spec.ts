@@ -38,15 +38,15 @@ test.describe('Complete User Journey', () => {
     // Should redirect to preferences
     await expect(page).toHaveURL(/\/preferences/, { timeout: 10000 });
 
-    // Step 2: Navigate to Dashboard
-    await page.getByRole('button', { name: /📊.*dashboard/i }).click();
-    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
+    // Step 2: Navigate to Analytics
+    await page.getByRole('button', { name: /📊.*analytics/i }).click();
+    await expect(page).toHaveURL(/\/analytics/, { timeout: 10000 });
 
     // Wait for page to hydrate and render
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1000); // Allow React to hydrate
 
-    // Verify dashboard elements
+    // Verify analytics elements
     await expect(page.getByText(/articles read/i)).toBeVisible({ timeout: 10000 });
     await expect(page.getByText(/newsletters/i)).toBeVisible();
     await expect(page.getByText(/topics tracked/i)).toBeVisible();
@@ -233,9 +233,9 @@ test.describe('Navigation Flow', () => {
   });
 
   test('should navigate between all main pages using navbar', async ({ page }) => {
-    // Test Dashboard button
-    await page.getByRole('button', { name: /📊.*dashboard/i }).click();
-    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
+    // Test Analytics button
+    await page.getByRole('button', { name: /📊.*analytics/i }).click();
+    await expect(page).toHaveURL(/\/analytics/, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
     await page.waitForLoadState('networkidle');
 
@@ -259,15 +259,15 @@ test.describe('Navigation Flow', () => {
   });
 
   test('should highlight active page in navbar', async ({ page }) => {
-    // Go to dashboard
-    await page.getByRole('button', { name: /📊.*dashboard/i }).click();
+    // Go to analytics
+    await page.getByRole('button', { name: /📊.*analytics/i }).click();
     await page.waitForLoadState('domcontentloaded');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(500);
 
-    // Dashboard button should be highlighted
-    const dashboardButton = page.getByRole('button', { name: /📊.*dashboard/i });
-    await expect(dashboardButton).toHaveClass(/bg-indigo/);
+    // Analytics button should be highlighted
+    const analyticsButton = page.getByRole('button', { name: /📊.*analytics/i });
+    await expect(analyticsButton).toHaveClass(/bg-indigo/);
 
     // Go to feed
     await page.getByRole('button', { name: /📰.*feed/i }).click();
@@ -295,8 +295,8 @@ test.describe('Error Handling', () => {
   });
 
   test('should redirect to login when accessing protected route without auth', async ({ page }) => {
-    // Try to access dashboard without authentication
-    await gotoAndWait(page, '/dashboard');
+    // Try to access analytics without authentication
+    await gotoAndWait(page, '/analytics');
 
     // Should redirect to login
     await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
