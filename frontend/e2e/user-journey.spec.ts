@@ -263,23 +263,25 @@ test.describe('Navigation Flow', () => {
   test('should highlight active page in navbar', async ({ page }) => {
     // Go to analytics
     await page.getByRole('button', { name: /📊.*analytics/i }).click();
+    await expect(page).toHaveURL(/\/analytics/, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000); // Extra wait for React hydration
 
-    // Analytics button should be highlighted
+    // Analytics button should be highlighted (has bg-indigo-50 and text-indigo-700 classes)
     const analyticsButton = page.getByRole('button', { name: /📊.*analytics/i });
-    await expect(analyticsButton).toHaveClass(/bg-indigo/);
+    await expect(analyticsButton).toHaveClass(/bg-indigo-50.*text-indigo-700/);
 
     // Go to feed
     await page.getByRole('button', { name: /📰.*feed/i }).click();
+    await expect(page).toHaveURL(/\/feed/, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000); // Extra wait for React hydration
 
-    // Feed button should be highlighted
+    // Feed button should be highlighted (has bg-indigo-50 and text-indigo-700 classes)
     const feedButton = page.getByRole('button', { name: /📰.*feed/i });
-    await expect(feedButton).toHaveClass(/bg-indigo/);
+    await expect(feedButton).toHaveClass(/bg-indigo-50.*text-indigo-700/);
   });
 
   test('should display user name in navbar', async ({ page }) => {
