@@ -156,8 +156,8 @@ test.describe('Complete User Journey', () => {
     // Step 7: Logout
     await page.getByRole('button', { name: /logout/i }).click();
 
-    // Should redirect to landing page
-    await expect(page).toHaveURL('/', { timeout: 5000 });
+    // Should redirect to login page (feed is protected, redirects to login)
+    await expect(page).toHaveURL('/login', { timeout: 5000 });
   });
 });
 
@@ -258,6 +258,18 @@ test.describe('Navigation Flow', () => {
     // Test Feed button
     await page.getByRole('button', { name: /📰.*feed/i }).click();
     await expect(page).toHaveURL(/\/feed/, { timeout: 10000 });
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
+
+    // Test Sources button
+    await page.getByRole('button', { name: /📑.*sources/i }).click();
+    await expect(page).toHaveURL(/\/sources/, { timeout: 10000 });
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
+
+    // Test Analytics button
+    await page.getByRole('button', { name: /📊.*analytics/i }).click();
+    await expect(page).toHaveURL(/\/analytics/, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
     await page.waitForLoadState('networkidle');
 
