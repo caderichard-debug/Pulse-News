@@ -25,7 +25,7 @@ describe('Navbar', () => {
     (useRouter as jest.Mock).mockReturnValue({
       push: mockPush,
     });
-    (usePathname as jest.Mock).mockReturnValue('/dashboard');
+    (usePathname as jest.Mock).mockReturnValue('/feed');
     (api.getCurrentUser as jest.Mock).mockResolvedValue({
       name: 'John Doe',
       email: 'john@example.com',
@@ -41,8 +41,8 @@ describe('Navbar', () => {
   it('renders all navigation links', () => {
     render(<Navbar />);
 
-    expect(screen.getByRole('button', { name: /📊 dashboard/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /📰 feed/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /📊 analytics/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /⚙️ preferences/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /💡 how it works/i })).toBeInTheDocument();
   });
@@ -64,31 +64,31 @@ describe('Navbar', () => {
   });
 
   it('highlights active page', () => {
-    (usePathname as jest.Mock).mockReturnValue('/dashboard');
-
-    render(<Navbar />);
-
-    const dashboardButton = screen.getByRole('button', { name: /📊 dashboard/i });
-    expect(dashboardButton).toHaveClass('bg-indigo-50', 'text-indigo-700');
-  });
-
-  it('does not highlight inactive pages', () => {
-    (usePathname as jest.Mock).mockReturnValue('/dashboard');
+    (usePathname as jest.Mock).mockReturnValue('/feed');
 
     render(<Navbar />);
 
     const feedButton = screen.getByRole('button', { name: /📰 feed/i });
-    expect(feedButton).toHaveClass('text-gray-600');
-    expect(feedButton).not.toHaveClass('bg-indigo-50');
+    expect(feedButton).toHaveClass('bg-indigo-50', 'text-indigo-700');
   });
 
-  it('navigates to Dashboard when clicking Dashboard button', () => {
+  it('does not highlight inactive pages', () => {
+    (usePathname as jest.Mock).mockReturnValue('/feed');
+
     render(<Navbar />);
 
-    const dashboardButton = screen.getByRole('button', { name: /📊 dashboard/i });
-    fireEvent.click(dashboardButton);
+    const analyticsButton = screen.getByRole('button', { name: /📊 analytics/i });
+    expect(analyticsButton).toHaveClass('text-gray-600');
+    expect(analyticsButton).not.toHaveClass('bg-indigo-50');
+  });
 
-    expect(mockPush).toHaveBeenCalledWith('/dashboard');
+  it('navigates to Analytics when clicking Analytics button', () => {
+    render(<Navbar />);
+
+    const analyticsButton = screen.getByRole('button', { name: /📊 analytics/i });
+    fireEvent.click(analyticsButton);
+
+    expect(mockPush).toHaveBeenCalledWith('/analytics');
   });
 
   it('navigates to Feed when clicking Feed button', () => {
@@ -118,13 +118,13 @@ describe('Navbar', () => {
     expect(mockPush).toHaveBeenCalledWith('/how-it-works');
   });
 
-  it('navigates to Dashboard when clicking Pulse logo', () => {
+  it('navigates to Feed when clicking Pulse logo', () => {
     render(<Navbar />);
 
     const logo = screen.getByText('Pulse');
     fireEvent.click(logo);
 
-    expect(mockPush).toHaveBeenCalledWith('/dashboard');
+    expect(mockPush).toHaveBeenCalledWith('/feed');
   });
 
   it('renders Logout button', () => {
@@ -200,21 +200,21 @@ describe('Navbar', () => {
   it('updates highlighting when pathname changes', () => {
     const { rerender } = render(<Navbar />);
 
-    (usePathname as jest.Mock).mockReturnValue('/feed');
+    (usePathname as jest.Mock).mockReturnValue('/analytics');
     rerender(<Navbar />);
 
-    const feedButton = screen.getByRole('button', { name: /📰 feed/i });
-    expect(feedButton).toHaveClass('bg-indigo-50', 'text-indigo-700');
+    const analyticsButton = screen.getByRole('button', { name: /📊 analytics/i });
+    expect(analyticsButton).toHaveClass('bg-indigo-50', 'text-indigo-700');
 
-    const dashboardButton = screen.getByRole('button', { name: /📊 dashboard/i });
-    expect(dashboardButton).not.toHaveClass('bg-indigo-50');
+    const feedButton = screen.getByRole('button', { name: /📰 feed/i });
+    expect(feedButton).not.toHaveClass('bg-indigo-50');
   });
 
   it('applies hover styles to nav links', () => {
     render(<Navbar />);
 
-    const feedButton = screen.getByRole('button', { name: /📰 feed/i });
-    expect(feedButton).toHaveClass('hover:bg-gray-50', 'hover:text-gray-900');
+    const analyticsButton = screen.getByRole('button', { name: /📊 analytics/i });
+    expect(analyticsButton).toHaveClass('hover:bg-gray-50', 'hover:text-gray-900');
   });
 
   it('applies transition classes to nav links', () => {

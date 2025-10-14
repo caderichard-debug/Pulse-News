@@ -33,8 +33,8 @@ export default function Navbar() {
   };
 
   const navItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: '📊' },
     { name: 'Feed', path: '/feed', icon: '📰' },
+    { name: 'Analytics', path: '/analytics', icon: '📊' },
     { name: 'Preferences', path: '/preferences', icon: '⚙️' },
     { name: 'How It Works', path: '/how-it-works', icon: '💡' },
   ];
@@ -46,7 +46,7 @@ export default function Navbar() {
           {/* Logo/Brand */}
           <div className="flex items-center">
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push('/feed')}
               className="text-2xl font-bold text-indigo-400 hover:text-indigo-700 transition-colors"
             >
               Pulse
