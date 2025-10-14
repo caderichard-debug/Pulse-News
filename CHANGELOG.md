@@ -4,6 +4,51 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-14 19:10
+
+**Database Migration Sync & Local-Container Parity Documentation** ✅
+
+### What Changed
+
+Fixed missing `organizational_bias` column error and established critical workflow for maintaining local-container parity.
+
+#### Issue Discovered:
+- Backend was failing with `ProgrammingError: column "organizational_bias" of relation "sources" does not exist`
+- Migration [e29da670f9de_add_source_bias_fields.py](backend/alembic/versions/e29da670f9de_add_source_bias_fields.py) existed in container but not in local filesystem
+- This created deployment risk: local repo didn't match production-ready container state
+
+#### Resolution:
+1. **Identified existing migration**: Found [e29da670f9de_add_source_bias_fields.py](backend/alembic/versions/e29da670f9de_add_source_bias_fields.py) in container
+   - Adds `organizational_bias` enum column (left, center-left, center, center-right, right)
+   - Adds `bias_description` varchar(500) column
+2. **Synced migrations to local**: Copied all missing migrations from container to local filesystem
+   - `e29da670f9de_add_source_bias_fields.py` (main fix)
+   - `7e947d383738_add_unique_constraint_article_framework.py` (also missing)
+3. **Verified database state**: Confirmed columns exist and backend starts cleanly
+4. **Added comprehensive documentation**: Created [Local-Container Parity section](CLAUDE.md#-local-container-parity-critical) in CLAUDE.md
+
+#### Documentation Added:
+- **Critical workflow** for syncing alembic migrations between container and local
+- **Pre-deployment checklist** to verify parity before commits/deployments
+- **Troubleshooting guide** for common parity issues
+- **Updated AI Assistant conventions** to always maintain parity
+
+### Test Results
+- ✅ **25/25** source tests passing ([test_sources.py](backend/tests/routes/test_sources.py))
+- ✅ **21/21** feed and article detail tests passing
+- ✅ Backend starts without errors
+- ✅ All 7 migrations now synced between container and local
+
+### Why This Matters
+This ensures **zero-overhead deployments**: the local repo is always deployment-ready and matches the production-ready container state. No surprises when deploying to staging/production.
+
+**Code References:**
+- Migration files: [backend/alembic/versions/](backend/alembic/versions/)
+- Documentation: [CLAUDE.md - Local-Container Parity](CLAUDE.md#-local-container-parity-critical)
+- Source model: [models.py:107-133](backend/app/models.py#L107-L133)
+
+---
+
 ## 2025-10-13 (Session Continuation)
 
 **UI Improvements & Test Fixes** ✅
