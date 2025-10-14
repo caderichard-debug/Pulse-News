@@ -256,6 +256,117 @@ docker-compose down
 
 ---
 
+## 🔄 Local-Container Parity (CRITICAL)
+
+**IMPORTANT**: The local filesystem must ALWAYS match the Docker container state for deployment readiness. This ensures zero-overhead deployments to production.
+
+### Critical Rule: Alembic Migrations
+
+**ALWAYS ensure migrations exist in BOTH locations:**
+
+1. **After creating a migration in the container:**
+   ```bash
+   # Create migration (happens in container)
+   docker-compose exec backend alembic revision --autogenerate -m "description"
+
+   # IMMEDIATELY copy to local filesystem
+   docker cp news_backend:/app/alembic/versions/[NEW_FILE].py backend/alembic/versions/
+   ```
+
+2. **After manually creating a migration locally:**
+   ```bash
+   # Create/edit migration file locally
+   vim backend/alembic/versions/XXXXX_description.py
+
+   # IMMEDIATELY copy to container
+   docker cp backend/alembic/versions/XXXXX_description.py news_backend:/app/alembic/versions/
+   ```
+
+3. **Verify parity regularly:**
+   ```bash
+   # List migrations in container
+   docker-compose exec backend ls -la /app/alembic/versions/
+
+   # List migrations locally
+   ls -la backend/alembic/versions/
+
+   # Compare (should be identical except timestamps)
+   diff <(docker-compose exec backend ls /app/alembic/versions/ | sort) \
+        <(ls backend/alembic/versions/ | sort)
+   ```
+
+### Other Local-Container Discrepancies to Watch
+
+1. **Python Dependencies** (`backend/requirements.txt`)
+   - If you `pip install` in container, update requirements.txt locally
+   - Always rebuild after requirements.txt changes: `docker-compose up --build`
+
+2. **Environment Variables** (`backend/.env`)
+   - Container reads from this file via docker-compose volume mount
+   - Changes take effect after `docker-compose restart backend`
+
+3. **Frontend Dependencies** (`frontend/package.json`)
+   - If you install npm packages locally, they're reflected in container via volume mount
+   - If you install in container, copy `package.json` and `package-lock.json` out
+
+4. **Configuration Files**
+   - `backend/alembic.ini` - Database migration config
+   - `backend/app/config.py` - Application settings
+   - `docker-compose.yml` - Service definitions
+   - Always maintain locally, as these are source of truth
+
+### Pre-Deployment Checklist
+
+Before deploying or committing changes:
+
+- [ ] All alembic migrations copied from container to local repo
+- [ ] `requirements.txt` matches installed packages in container
+- [ ] `package.json` matches installed packages
+- [ ] All configuration files committed to git
+- [ ] `.env` variables documented (but not committed)
+- [ ] Tests pass: `docker-compose exec backend pytest` (backend) and `npm test` (frontend)
+- [ ] Backend starts without errors: `docker logs news_backend --tail 50`
+- [ ] Frontend builds successfully: `npm run build` (if applicable)
+
+### Troubleshooting Parity Issues
+
+**Problem**: Migration exists in container but not locally
+```bash
+# List missing migrations
+docker-compose exec backend ls /app/alembic/versions/ | \
+  grep -v "$(ls backend/alembic/versions/ | sed 's/^/^/' | paste -sd'|')"
+
+# Copy all migrations from container
+docker cp news_backend:/app/alembic/versions/. backend/alembic/versions/
+```
+
+**Problem**: Code changes in container not reflected locally (shouldn't happen with volumes)
+```bash
+# Check volume mounts
+docker inspect news_backend | grep -A 10 "Mounts"
+
+# Verify volume is mounted correctly in docker-compose.yml
+grep -A 5 "volumes:" docker-compose.yml
+```
+
+**Problem**: Database schema doesn't match models
+```bash
+# Check current migration
+docker-compose exec backend alembic current
+
+# Check pending migrations
+docker-compose exec backend alembic history
+
+# Apply all migrations
+docker-compose exec backend alembic upgrade head
+
+# If needed, generate new migration for model changes
+docker-compose exec backend alembic revision --autogenerate -m "sync_schema"
+# Then IMMEDIATELY copy to local: docker cp news_backend:/app/alembic/versions/...
+```
+
+---
+
 ## 🗄️ Database Schema Quick Reference
 
 ### Key Tables
@@ -422,6 +533,8 @@ CLAIMBUSTER_API_KEY=...
 - Stage changes and prepare commits, but let the user decide when to push
 - **Organize commits logically** - Group related changes into well-structured commits with clear messages
 - Commit locally but never push without explicit user approval
+- **ALWAYS maintain local-container parity** - See [Local-Container Parity](#-local-container-parity-critical) section for details
+- **After ANY migration operation** - Immediately sync migration files between container and local filesystem
 
 ### Code Organization
 - **Services**: Pure business logic, no FastAPI dependencies
