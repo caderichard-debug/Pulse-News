@@ -130,7 +130,7 @@ describe('PreferencesPage', () => {
         expect(screen.getByText('Politics')).toBeInTheDocument();
       });
 
-      const sourcesTab = screen.getByRole('button', { name: /sources/i });
+      const sourcesTab = screen.getByRole('button', { name: /sources \(/i });
       await user.click(sourcesTab);
 
       await waitFor(() => {
@@ -147,7 +147,7 @@ describe('PreferencesPage', () => {
         expect(screen.getByText('Politics')).toBeInTheDocument();
       });
 
-      const sourcesTab = screen.getByRole('button', { name: /sources/i });
+      const sourcesTab = screen.getByRole('button', { name: /sources \(/i });
       await user.click(sourcesTab);
 
       await waitFor(() => {
@@ -164,7 +164,7 @@ describe('PreferencesPage', () => {
         expect(screen.getByText('Politics')).toBeInTheDocument();
       });
 
-      const sourcesTab = screen.getByRole('button', { name: /sources/i });
+      const sourcesTab = screen.getByRole('button', { name: /sources \(/i });
       await user.click(sourcesTab);
 
       await waitFor(() => {
@@ -185,7 +185,7 @@ describe('PreferencesPage', () => {
         expect(screen.getByText('Politics')).toBeInTheDocument();
       });
 
-      const sourcesTab = screen.getByRole('button', { name: /sources/i });
+      const sourcesTab = screen.getByRole('button', { name: /sources \(/i });
       await user.click(sourcesTab);
 
       await waitFor(() => {

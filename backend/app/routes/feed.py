@@ -28,12 +28,13 @@ class ArticleFeedItem(BaseModel):
     published_at: datetime
     source_name: str
     source_id: int
+    source_bias: Optional[str]  # Organizational bias of the source
     topic_category: Optional[str]
 
     # Analysis data
     summary: Optional[str]
     sentiment_score: Optional[float]
-    political_lean: Optional[str]
+    political_lean: Optional[str]  # Article-level bias
 
     # Framework positioning (top framework)
     primary_framework: Optional[str]
@@ -43,6 +44,7 @@ class ArticleFeedItem(BaseModel):
     stats_count: int
     stats_verified_count: int
     has_stats: bool
+    read_time_minutes: Optional[int]
 
 
 class FeedResponse(BaseModel):
@@ -166,6 +168,7 @@ async def get_feed_articles(
             published_at=article.published_at,
             source_name=source.name,
             source_id=source.id,
+            source_bias=source.organizational_bias.value if source.organizational_bias else None,
             topic_category=article.topic_category,
             summary=analysis.summary if analysis else None,
             sentiment_score=analysis.sentiment_score if analysis else None,
@@ -174,7 +177,8 @@ async def get_feed_articles(
             framework_position=framework_data[1] if framework_data else None,
             stats_count=stats[0],
             stats_verified_count=stats[1],
-            has_stats=stats[0] > 0
+            has_stats=stats[0] > 0,
+            read_time_minutes=article.word_count // 200 if article.word_count else None
         ))
 
     return FeedResponse(
@@ -228,6 +232,7 @@ async def get_available_sources(
             "id": source.id,
             "name": source.name,
             "url": source.url,
+            "organizational_bias": source.organizational_bias.value if source.organizational_bias else None,
             "article_count": count
         }
         for source, count in sources
