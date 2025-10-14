@@ -20,6 +20,9 @@ interface Article {
   primary_framework: string | null;
   framework_position: number | null;
   read_time_minutes: number | null;
+  stats_count: number;
+  stats_verified_count: number;
+  has_stats: boolean;
 }
 
 interface FeedResponse {
@@ -43,6 +46,7 @@ export default function FeedPage() {
   const [selectedLean, setSelectedLean] = useState<string>('');
   const [sortBy, setSortBy] = useState('newest');
   const [onlyAnalyzed, setOnlyAnalyzed] = useState(false);
+  const [onlyVerifiedStats, setOnlyVerifiedStats] = useState(false);
   const [page, setPage] = useState(1);
 
   const loadFeedData = useCallback(async () => {
@@ -56,6 +60,7 @@ export default function FeedPage() {
         political_lean: selectedLean || undefined,
         sort_by: sortBy,
         only_analyzed: onlyAnalyzed,
+        only_verified_stats: onlyVerifiedStats,
       });
       setFeedData(data);
       setError(null);
@@ -65,12 +70,12 @@ export default function FeedPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed]);
+  }, [page, selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed, onlyVerifiedStats]);
 
   useEffect(() => {
     loadFeedData();
     loadFilters();
-  }, [selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed, page, loadFeedData]);
+  }, [selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed, onlyVerifiedStats, page, loadFeedData]);
 
   async function loadFilters() {
     try {
@@ -135,7 +140,7 @@ export default function FeedPage() {
             <select
               value={selectedTopic}
               onChange={(e) => { setSelectedTopic(e.target.value); setPage(1); }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
             >
               <option value="">All Topics</option>
               {topics.map((topic) => (
@@ -152,7 +157,7 @@ export default function FeedPage() {
             <select
               value={selectedSource || ''}
               onChange={(e) => { setSelectedSource(e.target.value ? Number(e.target.value) : null); setPage(1); }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
             >
               <option value="">All Sources</option>
               {sources.map((source) => (
@@ -169,7 +174,7 @@ export default function FeedPage() {
             <select
               value={selectedLean}
               onChange={(e) => { setSelectedLean(e.target.value); setPage(1); }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
             >
               <option value="">All Leans</option>
               <option value="left">Left</option>
@@ -184,7 +189,7 @@ export default function FeedPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
             >
               <option value="newest">Newest</option>
               <option value="oldest">Oldest</option>
@@ -194,18 +199,33 @@ export default function FeedPage() {
           </div>
             </div>
 
-            {/* Only analyzed checkbox */}
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="only-analyzed"
-                checked={onlyAnalyzed}
-                onChange={(e) => { setOnlyAnalyzed(e.target.checked); setPage(1); }}
-                className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-              />
-              <label htmlFor="only-analyzed" className="ml-2 text-sm font-medium text-gray-700">
-                Show only analyzed articles
-              </label>
+            {/* Filter checkboxes */}
+            <div className="flex flex-wrap items-center gap-6">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="only-analyzed"
+                  checked={onlyAnalyzed}
+                  onChange={(e) => { setOnlyAnalyzed(e.target.checked); setPage(1); }}
+                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                />
+                <label htmlFor="only-analyzed" className="ml-2 text-sm font-medium text-gray-700">
+                  Show only analyzed articles
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="only-verified-stats"
+                  checked={onlyVerifiedStats}
+                  onChange={(e) => { setOnlyVerifiedStats(e.target.checked); setPage(1); }}
+                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                />
+                <label htmlFor="only-verified-stats" className="ml-2 text-sm font-medium text-gray-700">
+                  Show only articles with verified statistics
+                </label>
+              </div>
             </div>
           </div>
 
@@ -290,6 +310,34 @@ export default function FeedPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* Statistics section */}
+                  {article.has_stats && (
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-gray-600 font-medium">📊 Statistics:</span>
+                        <span className="text-gray-700">
+                          {article.stats_count} found
+                        </span>
+                        {article.stats_verified_count > 0 && (
+                          <>
+                            <span className="text-gray-400">•</span>
+                            <span className="text-green-600 font-medium">
+                              {article.stats_verified_count} verified
+                            </span>
+                          </>
+                        )}
+                        {article.stats_verified_count === 0 && (
+                          <>
+                            <span className="text-gray-400">•</span>
+                            <span className="text-gray-500">
+                              none verified
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

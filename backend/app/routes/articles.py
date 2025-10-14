@@ -32,6 +32,8 @@ class VerifiedStatistic(BaseModel):
     source_credibility_score: Optional[float]
     fact_check_status: Optional[str]
     fact_check_source: Optional[str]
+    verification_notes: Optional[str]
+    last_checked: Optional[str]  # ISO datetime string
 
 
 class FrameworkPosition(BaseModel):
@@ -192,7 +194,9 @@ async def get_article_detail(
             source_url=stat.source_url,
             source_credibility_score=stat.source_credibility_score,
             fact_check_status=stat.fact_check_status,
-            fact_check_source=stat.fact_check_source
+            fact_check_source=stat.fact_check_source,
+            verification_notes=stat.verification_notes,
+            last_checked=stat.last_checked.isoformat() if stat.last_checked else None
         )
         for stat in stats
     ]

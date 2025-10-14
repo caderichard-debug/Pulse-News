@@ -132,46 +132,65 @@ class SourceTracer:
             Dict with keys: source_url, source_name, source_excerpt, confidence, method
             Returns None if all tracing methods fail
         """
+        stat_preview = statistic_text[:60]
+        logger.info(f"[TRACE] Starting source trace for: '{stat_preview}'")
+
         try:
             # Method 1: Try to find source within the article (enhanced with smart chunking)
+            logger.info(f"[TRACE] Method 1: Searching within article content...")
             result = self._trace_within_article(statistic_text, article_content, article_url)
 
             if result and result.get("source_name"):
+                logger.info(f"[TRACE] Method 1: Found candidate source '{result.get('source_name')}' (confidence: {result.get('confidence', 0):.2f})")
+
                 # Validate that the source is actually related to this statistic
                 if self._validate_source_relevance(statistic_text, result, article_content):
                     result["method"] = "article_content"
-                    logger.info(f"Found source in article: {result.get('source_name')}")
+                    logger.info(f"[TRACE] ✅ Method 1: Validated source '{result.get('source_name')}' in article")
                     return result
                 else:
-                    logger.warning(f"Source '{result.get('source_name')}' doesn't match statistic, trying web search")
+                    logger.warning(f"[TRACE] ⚠️ Method 1: Source '{result.get('source_name')}' failed relevance check, trying web search")
                     result = None
+            else:
+                logger.info(f"[TRACE] Method 1: No source found in article")
 
             # Method 2: Try improved web search
             if settings.google_fact_check_api_key and hasattr(settings, 'google_search_engine_id'):
+                logger.info(f"[TRACE] Method 2: Searching web (Google Custom Search)...")
                 web_result = self._trace_via_web_search_improved(statistic_text, article_url)
                 if web_result and web_result.get("source_name"):
                     web_result["method"] = "web_search"
-                    logger.info(f"Found source via web search: {web_result.get('source_name')}")
+                    logger.info(f"[TRACE] ✅ Method 2: Found source via web search: '{web_result.get('source_name')}' (score: {web_result.get('relevance_score', 0):.2f})")
                     return web_result
+                else:
+                    logger.info(f"[TRACE] Method 2: No relevant web results found")
+            else:
+                logger.debug(f"[TRACE] Method 2: Skipping (Google API not configured)")
 
             # Method 3: Try cross-article database search
             if session:
+                logger.info(f"[TRACE] Method 3: Searching database for similar statistics...")
                 db_result = self._trace_via_database(statistic_text, session)
                 if db_result and db_result.get("source_name"):
                     db_result["method"] = "database_search"
-                    logger.info(f"Found source in database: {db_result.get('source_name')}")
+                    logger.info(f"[TRACE] ✅ Method 3: Found source in database: '{db_result.get('source_name')}'")
                     return db_result
+                else:
+                    logger.info(f"[TRACE] Method 3: No matching statistics in database")
+            else:
+                logger.debug(f"[TRACE] Method 3: Skipping (no database session)")
 
             # If we have a partial result from article (no source name), return it
             if result:
                 result["method"] = "article_content"
+                logger.info(f"[TRACE] Returning partial result from article (no source name)")
                 return result
 
-            logger.debug(f"No source found for statistic: {statistic_text[:50]}")
+            logger.warning(f"[TRACE] ❌ All methods exhausted: No source found for '{stat_preview}'")
             return None
 
         except Exception as e:
-            logger.error(f"Error tracing source for statistic '{statistic_text[:50]}': {e}")
+            logger.error(f"[TRACE] ❌ ERROR: Failed to trace source for '{stat_preview}': {e}", exc_info=True)
             return None
 
     def _trace_within_article(
@@ -433,6 +452,7 @@ class SourceTracer:
         2. Multiple search strategies
         3. Result relevance scoring
         4. Deduplication logic
+        5. Extract specific keywords for better search
 
         Args:
             statistic_text: The statistic to search for
@@ -449,50 +469,91 @@ class SourceTracer:
             return None
 
         try:
-            # Strategy 1: Search for statistic + "source" + "study"
-            search_queries = [
+            # Extract key elements from the statistic for better search
+            search_keywords = self._extract_search_keywords(statistic_text)
+            logger.debug(f"[TRACE-WEB] Extracted keywords: '{search_keywords}'")
+
+            # Strategy 1: Use extracted keywords + context
+            search_queries = []
+
+            # Add the full statistic in quotes
+            search_queries.append(f'"{statistic_text}"')
+
+            # If we have good keywords, create targeted searches
+            if search_keywords:
+                # For movie/entertainment stats
+                if any(word in statistic_text.lower() for word in ['rotten tomatoes', 'box office', 'views', 'movie', 'film']):
+                    search_queries.append(f'{search_keywords} site:rottentomatoes.com OR site:boxofficemojo.com')
+                    search_queries.append(f'{search_keywords} box office statistics')
+                    logger.debug(f"[TRACE-WEB] Detected entertainment stat, adding movie-specific queries")
+
+                # For ranking/position stats
+                if any(word in statistic_text.lower() for word in ['first', 'top', 'rank', 'number one', '#1']):
+                    search_queries.append(f'{search_keywords} rankings charts')
+                    logger.debug(f"[TRACE-WEB] Detected ranking stat, adding chart queries")
+
+                # Generic search with keywords
+                search_queries.append(f'{search_keywords} source data')
+                search_queries.append(f'{search_keywords} statistics report')
+
+            # Fallback queries
+            search_queries.extend([
                 f'"{statistic_text}" source',
-                f'"{statistic_text}" study report',
-                f'"{statistic_text}" statistics data',
-            ]
+                f'"{statistic_text}" statistics',
+            ])
+
+            logger.info(f"[TRACE-WEB] Trying {len(search_queries)} search queries")
 
             best_result = None
             highest_score = 0.0
 
-            for query in search_queries:
+            for query_idx, query in enumerate(search_queries):
+                logger.debug(f"[TRACE-WEB] Query {query_idx+1}/{len(search_queries)}: '{query[:80]}...'")
                 url = "https://www.googleapis.com/customsearch/v1"
                 params = {
                     "key": settings.google_fact_check_api_key,
                     "cx": settings.google_search_engine_id,
                     "q": query,
-                    "num": 5  # Get top 5 results for better selection
+                    "num": 10  # Get top 10 results for better selection
                 }
 
                 response = requests.get(url, params=params, timeout=10)
 
                 if response.status_code != 200:
-                    logger.warning(f"Google Search API returned status {response.status_code}")
+                    logger.warning(f"[TRACE-WEB] Google Search API returned status {response.status_code}")
                     continue
 
                 data = response.json()
 
                 if not data.get("items"):
+                    logger.debug(f"[TRACE-WEB] No results for query {query_idx+1}")
                     continue
 
+                logger.debug(f"[TRACE-WEB] Got {len(data['items'])} results for query {query_idx+1}")
+
                 # Score each result
-                for item in data["items"]:
+                for result_idx, item in enumerate(data["items"]):
                     result_url = item.get("link", "")
                     title = item.get("title", "")
                     snippet = item.get("snippet", "")
 
                     # Skip if it's the same article we're analyzing
                     if result_url == article_url:
+                        logger.debug(f"[TRACE-WEB] Skipping result {result_idx+1}: same as source article")
+                        continue
+
+                    # Skip if it's just a homepage (no path or very short path)
+                    parsed = urlparse(result_url)
+                    if len(parsed.path) <= 1 and not parsed.query:
+                        logger.debug(f"[TRACE-WEB] Skipping result {result_idx+1}: homepage URL {result_url}")
                         continue
 
                     # Score this result
                     score = self._score_search_result(
                         statistic_text, title, snippet, result_url
                     )
+
+                    logger.debug(f"[TRACE-WEB] Result {result_idx+1} score: {score:.2f} - {title[:60]}... [{parsed.netloc}]")
 
                     if score > highest_score:
                         highest_score = score
@@ -502,9 +563,10 @@ class SourceTracer:
                             "snippet": snippet,
                             "score": score
                         }
+                        logger.info(f"[TRACE-WEB] New best result: score={score:.2f}, domain={parsed.netloc}")
 
-            if not best_result or highest_score < 0.5:
-                logger.debug("No relevant search results found")
+            if not best_result or highest_score < 0.4:
+                logger.warning(f"[TRACE-WEB] No relevant search results found (best score: {highest_score:.2f}, threshold: 0.4)")
                 return None
 
             # Extract source name from best result
@@ -515,6 +577,8 @@ class SourceTracer:
             )
 
             confidence = min(0.9, 0.5 + (highest_score * 0.4))  # Max 0.9 for web search
+
+            logger.info(f"Found web source: {source_name} (score: {highest_score:.2f}, confidence: {confidence:.2f})")
 
             return {
                 "source_url": best_result["url"],
@@ -527,6 +591,55 @@ class SourceTracer:
         except Exception as e:
             logger.error(f"Error in improved web search: {e}")
             return None
+
+    def _extract_search_keywords(self, statistic_text: str) -> str:
+        """
+        Extract key search terms from a statistic for better web search.
+
+        Args:
+            statistic_text: The statistic to extract keywords from
+
+        Returns:
+            String of keywords for search
+        """
+        try:
+            # Remove common words and focus on key terms
+            text_lower = statistic_text.lower()
+
+            # Extract quoted phrases (these are usually important)
+            quoted = re.findall(r'"([^"]*)"', statistic_text)
+            if quoted:
+                return ' '.join(quoted)
+
+            # Extract specific entities (capitalized words, movie names, etc.)
+            # Keep numbers, proper nouns, and key terms
+            important_words = []
+
+            # Split and analyze each word
+            words = statistic_text.split()
+            for word in words:
+                # Keep if it's capitalized (proper noun)
+                if word and word[0].isupper() and len(word) > 2:
+                    important_words.append(word)
+                # Keep if it contains numbers
+                elif re.search(r'\d', word):
+                    important_words.append(word)
+                # Keep key terms
+                elif word.lower() in ['box', 'office', 'rotten', 'tomatoes', 'views', 'million',
+                                      'billion', 'first', 'top', 'ranked', 'chart', 'rating']:
+                    important_words.append(word)
+
+            # If we found enough keywords, return them
+            if important_words and len(important_words) >= 2:
+                return ' '.join(important_words[:6])  # Limit to 6 words
+
+            # Fallback: return first 5 words if they're meaningful
+            words = [w for w in words if len(w) > 3]
+            return ' '.join(words[:5])
+
+        except Exception as e:
+            logger.error(f"Error extracting search keywords: {e}")
+            return statistic_text[:50]  # Fallback to first 50 chars
 
     def _score_search_result(
         self,
@@ -543,6 +656,7 @@ class SourceTracer:
         - Credible domain (.gov, .edu, known orgs)
         - Contains study/report keywords
         - Title relevance
+        - Domain-specific relevance (e.g., rottentomatoes for movie stats)
 
         Returns:
             Score from 0.0 to 1.0
@@ -550,6 +664,7 @@ class SourceTracer:
         score = 0.0
         combined_text = (title + " " + snippet).lower()
         stat_lower = statistic_text.lower()
+        domain = urlparse(url).netloc.lower()
 
         # Extract key numbers from statistic
         numbers = re.findall(r'\d+(?:\.\d+)?', statistic_text)
@@ -560,8 +675,35 @@ class SourceTracer:
         elif any(num in combined_text for num in numbers):
             score += 0.2
 
-        # Check for credible domains
-        domain = urlparse(url).netloc.lower()
+        # Check for key entities/names from the statistic appearing in title/snippet
+        # Extract capitalized words (likely proper nouns)
+        entities = re.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b', statistic_text)
+        if entities:
+            for entity in entities:
+                if entity.lower() in combined_text:
+                    score += 0.15  # Bonus for matching entities
+
+        # Domain-specific scoring
+        # Movie/Entertainment stats
+        if any(word in stat_lower for word in ['rotten tomatoes', 'box office', 'movie', 'film']):
+            if 'rottentomatoes.com' in domain:
+                score += 0.4
+            elif 'boxofficemojo.com' in domain or 'imdb.com' in domain:
+                score += 0.35
+            elif any(word in domain for word in ['entertainment', 'hollywood', 'variety']):
+                score += 0.2
+
+        # View count / streaming stats
+        if any(word in stat_lower for word in ['views', 'million views', 'billion views', 'watched', 'streaming']):
+            if any(word in domain for word in ['youtube', 'netflix', 'streaming', 'video']):
+                score += 0.3
+
+        # Ranking/chart stats
+        if any(word in stat_lower for word in ['first', 'top', '#1', 'number one', 'ranked', 'chart']):
+            if any(word in domain for word in ['billboard', 'chart', 'ranking', 'box']):
+                score += 0.3
+
+        # Check for credible domains (general)
         if any(tld in domain for tld in ['.gov', '.edu']):
             score += 0.3
         elif any(org in domain for org in ['nih', 'cdc', 'who', 'census', 'bls', 'fbi']):
@@ -575,6 +717,11 @@ class SourceTracer:
         # Check for source attribution keywords
         source_keywords = ['according to', 'published by', 'released by', 'from']
         if any(keyword in combined_text for keyword in source_keywords):
+            score += 0.1
+
+        # Bonus if URL has deep path (not just homepage)
+        parsed = urlparse(url)
+        if len(parsed.path) > 10:  # Has substantial path
             score += 0.1
 
         return min(1.0, score)
@@ -611,7 +758,7 @@ class SourceTracer:
         if domain.startswith("www."):
             domain = domain[4:]
 
-        # Known domain mappings
+        # Known domain mappings (expanded)
         domain_map = {
             'cdc.gov': 'CDC',
             'census.gov': 'U.S. Census Bureau',
@@ -619,6 +766,14 @@ class SourceTracer:
             'nih.gov': 'NIH',
             'who.int': 'World Health Organization',
             'pewresearch.org': 'Pew Research Center',
+            'rottentomatoes.com': 'Rotten Tomatoes',
+            'boxofficemojo.com': 'Box Office Mojo',
+            'imdb.com': 'IMDb',
+            'billboard.com': 'Billboard',
+            'variety.com': 'Variety',
+            'hollywoodreporter.com': 'The Hollywood Reporter',
+            'deadline.com': 'Deadline',
+            'thewrap.com': 'TheWrap',
         }
 
         if domain in domain_map:

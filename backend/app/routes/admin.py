@@ -2,6 +2,7 @@
 Admin routes for monitoring and manual job triggers.
 """
 
+import logging
 from fastapi import APIRouter, Depends, BackgroundTasks
 from sqlmodel import Session, select, func
 from ..models import Article, Source, Framework, User, ProcessingStatus
@@ -13,6 +14,8 @@ from ..jobs.tasks import (
 from ..jobs.scheduler import get_job_status
 from datetime import datetime, timedelta
 from typing import Dict, Any
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -190,6 +193,47 @@ def trigger_statistics_verification_job_endpoint(background_tasks: BackgroundTas
         "job": "verify_statistics",
         "message": "Statistics verification job started in background"
     }
+
+
+@router.post("/jobs/reverify-all-statistics")
+def trigger_reverify_all_statistics(
+    background_tasks: BackgroundTasks,
+    limit: int = None,
+    session: Session = Depends(get_session)
+) -> Dict[str, str]:
+    """
+    Re-verify all existing statistics in the database with improved algorithms.
+
+    This endpoint will:
+    1. Find all statistics currently in the database
+    2. Re-run the V2 verification pipeline on each one
+    3. Update verification status and metadata with improved results
+
+    Args:
+        limit: Optional limit on number of statistics to re-verify (useful for testing)
+
+    Returns:
+        Status message indicating the job has been triggered
+    """
+    from ..services.statistics_verifier import reverify_all_statistics
+
+    def reverify_task():
+        from ..database import engine
+        from sqlmodel import Session
+        with Session(engine) as db_session:
+            result = reverify_all_statistics(db_session, limit=limit)
+            logger.info(f"Re-verification task completed: {result}")
+
+    background_tasks.add_task(reverify_task)
+
+    result = {
+        "status": "triggered",
+        "job": "reverify_all_statistics",
+        "message": f"Re-verification job started in background{f' (limit: {limit})' if limit else ' (no limit)'}"
+    }
+    if limit is not None:
+        result["limit"] = str(limit)
+    return result
 
 
 @router.post("/jobs/cluster-articles")
