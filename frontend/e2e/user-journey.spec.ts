@@ -46,16 +46,18 @@ test.describe('Complete User Journey', () => {
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1000); // Allow React to hydrate
 
-    // Verify analytics elements
-    await expect(page.getByText(/articles read/i)).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(/newsletters/i)).toBeVisible();
-    await expect(page.getByText(/topics tracked/i)).toBeVisible();
+    // Verify analytics page elements
+    await expect(page.getByRole('heading', { name: /📊.*data analysis/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/explore sentiment trends and bias distribution/i)).toBeVisible();
 
-    // Check for charts (they might be loading)
-    await expect(page.locator('.recharts-wrapper')).toBeVisible({ timeout: 5000 }).catch(() => {
-      // Charts might not load if there's no data yet
-      console.log('Charts not loaded - possibly no data yet');
-    });
+    // Verify chart sections are present
+    await expect(page.getByRole('heading', { name: /sentiment over time/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /source bias distribution/i })).toBeVisible();
+
+    // Check for time range selector
+    await expect(page.getByRole('button', { name: /7d/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /30d/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /90d/i })).toBeVisible();
 
     // Step 3: Navigate to Feed
     await page.getByRole('button', { name: /📰.*feed/i }).click();
