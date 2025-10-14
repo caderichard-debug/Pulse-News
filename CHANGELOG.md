@@ -4,6 +4,54 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-14 19:25
+
+**Fixed Multiple Head Revisions in Alembic Migrations** 🐞
+
+### What Changed
+
+Resolved CI/CD failure caused by multiple head revisions in the alembic migration chain.
+
+#### Issue:
+GitHub Actions was failing with error:
+```
+Multiple head revisions are present for given argument 'head';
+please specify a specific target revision
+```
+
+#### Root Cause:
+Two migrations both had `c03e17942bf4` as their parent, creating a branching point:
+- [7e947d383738_add_unique_constraint_article_framework.py](backend/alembic/versions/7e947d383738_add_unique_constraint_article_framework.py) - Auto-generated with many changes
+- [7f71518740d3_add_unique_constraint_article_framework_.py](backend/alembic/versions/7f71518740d3_add_unique_constraint_article_framework_.py) - Clean version doing the same thing
+
+Both tried to create the same `uq_article_framework` unique constraint, which would cause conflicts.
+
+#### Resolution:
+1. **Updated chain structure**: Changed [7f71518740d3](backend/alembic/versions/7f71518740d3_add_unique_constraint_article_framework_.py:16) to depend on `7e947d383738` instead of `c03e17942bf4`
+2. **Made migration a no-op**: Since `7e947d383738` already creates the constraint, made `7f71518740d3` a pass-through migration (no operations)
+3. **Synced to container**: Copied updated migration file to container
+
+#### Migration Chain (Fixed):
+```
+base → 20251009_000001 → ae55c7bb7c8f → c03e17942bf4 → 7e947d383738
+  → 7f71518740d3 → 052b74d0175f → e29da670f9de (head)
+```
+
+### Test Results
+- ✅ **Only one head revision** now: `e29da670f9de`
+- ✅ **alembic upgrade head** works without errors
+- ✅ **37 tests passing** in sources and feed routes
+- ✅ **Sync script confirms** all migrations in sync
+
+### CI Impact
+This fix will resolve the GitHub Actions CI failure. The `alembic upgrade head` command will now run successfully without ambiguity.
+
+**Code References:**
+- Fixed migration: [7f71518740d3](backend/alembic/versions/7f71518740d3_add_unique_constraint_article_framework_.py)
+- Conflict with: [7e947d383738](backend/alembic/versions/7e947d383738_add_unique_constraint_article_framework.py)
+
+---
+
 ## 2025-10-14 19:15
 
 **Automated Sync Script for Local-Container Parity** ✅
