@@ -28,10 +28,10 @@ def e2e_session_fixture():
         topic = Topic(name="Technology", description="Tech news")
         source = Source(
             name="TechCrunch",
-            rss_url="https://techcrunch.com/feed/",
-            website_url="https://techcrunch.com",
+            rss_feed_url="https://techcrunch.com/feed/",
+            url="https://techcrunch.com",
             is_active=True,
-            trust_score=8.0
+            trust_score=0.8
         )
         framework = Framework(
             name="Innovation vs. Regulation",
@@ -87,7 +87,7 @@ class TestCompleteUserJourney:
                 "name": "Test User"
             }
         )
-        assert register_response.status_code == 200
+        assert register_response.status_code == 201
         user_data = register_response.json()
         assert user_data["email"] == "newuser@example.com"
         assert user_data["name"] == "Test User"
@@ -178,7 +178,7 @@ class TestCompleteUserJourney:
                 "name": "Article Reader"
             }
         )
-        assert register_response.status_code == 200
+        assert register_response.status_code == 201
 
         login_response = e2e_client.post(
             "/auth/login",
@@ -349,7 +349,7 @@ class TestAuthenticationWorkflow:
                 "name": "Auth User"
             }
         )
-        assert register_response.status_code == 200
+        assert register_response.status_code == 201
 
         # Step 2: Login
         login_response = e2e_client.post(
