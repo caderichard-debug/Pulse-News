@@ -209,10 +209,19 @@ cd frontend && npm test
 cd frontend && npm run test:watch
 ```
 
+### Sync Local & Container
+```bash
+# ALWAYS run after migrations or dependency changes
+./scripts/sync-local-container.sh
+```
+
 ### Database Migrations
 ```bash
 # Create new migration
 docker-compose exec backend alembic revision --autogenerate -m "description"
+
+# IMMEDIATELY sync to local (or use sync script above)
+docker cp news_backend:/app/alembic/versions/[NEW_FILE].py backend/alembic/versions/
 
 # Apply migrations
 docker-compose exec backend alembic upgrade head
@@ -259,6 +268,20 @@ docker-compose down
 ## 🔄 Local-Container Parity (CRITICAL)
 
 **IMPORTANT**: The local filesystem must ALWAYS match the Docker container state for deployment readiness. This ensures zero-overhead deployments to production.
+
+### Quick Sync Script
+
+Use the automated sync script to maintain parity:
+
+```bash
+# Run full sync (checks migrations, requirements, and database state)
+./scripts/sync-local-container.sh
+
+# Show help
+./scripts/sync-local-container.sh --help
+```
+
+See [scripts/README.md](scripts/README.md) for detailed documentation.
 
 ### Critical Rule: Alembic Migrations
 

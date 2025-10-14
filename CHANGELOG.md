@@ -4,6 +4,57 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-14 19:15
+
+**Automated Sync Script for Local-Container Parity** ✅
+
+### What Changed
+
+Created automated bash script to maintain local-container parity with visual reporting and validation.
+
+#### New Script: [sync-local-container.sh](scripts/sync-local-container.sh)
+- **Syncs alembic migrations** between container and local filesystem (bidirectional)
+- **Checks requirements.txt** for consistency
+- **Validates migration status** in database
+- **Generates visual summary** with color-coded status indicators
+- **Provides actionable next steps** after sync
+
+#### Features:
+- ✅ Bidirectional sync (container ↔️ local)
+- ✅ Automatic detection of missing migrations in either location
+- ✅ Color-coded output for easy scanning
+- ✅ Summary table showing sync status
+- ✅ Help option (`--help`)
+- ✅ Dry-run support placeholder (future enhancement)
+
+#### Documentation:
+- Created [scripts/README.md](scripts/README.md) with full usage guide
+- Updated [CLAUDE.md](CLAUDE.md#-local-container-parity-critical) to reference script in multiple locations:
+  - Quick Sync section with direct script usage
+  - Common Development Tasks section
+  - AI Assistant conventions
+
+### Usage
+
+```bash
+# Run full sync
+./scripts/sync-local-container.sh
+
+# View help
+./scripts/sync-local-container.sh --help
+```
+
+### Example Output
+
+All checks pass with visual status table showing migrations synced, requirements matched, and database up-to-date.
+
+**Code References:**
+- Script: [scripts/sync-local-container.sh](scripts/sync-local-container.sh)
+- Documentation: [scripts/README.md](scripts/README.md)
+- Project context: [CLAUDE.md - Sync Section](CLAUDE.md#sync-local--container)
+
+---
+
 ## 2025-10-14 19:10
 
 **Database Migration Sync & Local-Container Parity Documentation** ✅
