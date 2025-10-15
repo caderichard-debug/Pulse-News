@@ -1,7 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-
 const TABLES = [
   { name: 'users', description: 'User accounts and authentication' },
   { name: 'sources', description: 'News sources and RSS feeds' },
@@ -14,7 +12,8 @@ const TABLES = [
 ];
 
 export default function DatabaseBrowserPage() {
-  const [selectedTable, setSelectedTable] = useState<string | null>(null);
+  // Reserved for future table selection functionality
+  // const [selectedTable, setSelectedTable] = useState<string | null>(null);
 
   return (
     <div className="space-y-6">

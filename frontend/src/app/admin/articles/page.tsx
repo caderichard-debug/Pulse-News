@@ -1,31 +1,42 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 
+interface Article {
+  id: number;
+  title: string;
+  url: string;
+  source_id?: number;
+  source_name?: string;
+  published_at?: string;
+  scraped_at?: string;
+  processing_status: string;
+}
+
 export default function ArticlesPage() {
-  const [articles, setArticles] = useState<any[]>([]);
+  const [articles, setArticles] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
-  useEffect(() => {
-    loadArticles();
-  }, [filter]);
-
-  const loadArticles = async () => {
+  const loadArticles = useCallback(async () => {
     try {
-      const params: any = { limit: 50 };
+      const params: { limit: number; processing_status?: string } = { limit: 50 };
       if (filter !== 'all') {
         params.processing_status = filter;
       }
       const data = await api.getAdminArticles(params);
       setArticles(data.articles);
-    } catch (err) {
-      console.error('Failed to load articles:', err);
+    } catch {
+      console.error('Failed to load articles');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    loadArticles();
+  }, [loadArticles]);
 
   const handleDelete = async (articleId: number, title: string) => {
     if (!confirm(`Delete article "${title}"?`)) {
@@ -103,7 +114,7 @@ export default function ArticlesPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(article.scraped_at).toLocaleDateString()}
+                    {article.scraped_at ? new Date(article.scraped_at).toLocaleDateString() : 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right">
                     <button

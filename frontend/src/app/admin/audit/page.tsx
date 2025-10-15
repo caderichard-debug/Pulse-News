@@ -3,8 +3,20 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 
+interface AuditLog {
+  id: number;
+  admin_email: string;
+  action_type: string;
+  resource_type: string;
+  resource_id?: string;
+  old_value?: string;
+  new_value?: string;
+  notes?: string;
+  timestamp: string;
+}
+
 export default function AuditPage() {
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

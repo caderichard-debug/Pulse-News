@@ -1,16 +1,52 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 
+interface DashboardData {
+  system_stats: {
+    users: { total: number; admins: number };
+    articles: { total: number; today: number };
+    sources: { total: number; active: number };
+    frameworks: { total: number };
+  };
+  recent_jobs: Array<{
+    id: number;
+    job_id: string;
+    job_name: string;
+    status: string;
+    started_at: string;
+    completed_at?: string;
+    duration_seconds?: number;
+    items_processed?: number;
+    error_message?: string;
+  }>;
+  active_jobs: Array<{
+    id: number;
+    job_id: string;
+    job_name: string;
+    started_at: string;
+    duration_seconds: number;
+  }>;
+  error_summary: {
+    failed_jobs_24h: number;
+  };
+  recent_admin_actions: Array<{
+    id: number;
+    admin_email: string;
+    action_type: string;
+    resource_type: string;
+    timestamp: string;
+  }>;
+  timestamp: string;
+}
+
 export default function AdminPage() {
-  const router = useRouter();
   const [adminToken, setAdminToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -20,7 +56,7 @@ export default function AdminPage() {
           await api.verifyAdminToken(token);
           setIsAuthenticated(true);
           loadDashboard();
-        } catch (err) {
+        } catch {
           localStorage.removeItem('admin_token');
         }
       }
@@ -32,8 +68,8 @@ export default function AdminPage() {
     try {
       const data = await api.getAdminDashboard();
       setDashboardData(data);
-    } catch (err) {
-      console.error('Failed to load dashboard:', err);
+    } catch {
+      console.error('Failed to load dashboard');
     }
   };
 
@@ -47,7 +83,7 @@ export default function AdminPage() {
       localStorage.setItem('admin_token', adminToken);
       setIsAuthenticated(true);
       await loadDashboard();
-    } catch (err) {
+    } catch {
       setError('Invalid admin token. Please check and try again.');
     } finally {
       setIsLoading(false);
@@ -238,9 +274,9 @@ export default function AdminPage() {
             🔄 Active Jobs
           </h2>
           <div className="space-y-3">
-            {dashboardData.active_jobs.map((job: any) => (
+            {dashboardData.active_jobs.map((job) => (
               <div
-                key={job.id}
+                key={job.job_id}
                 className="flex items-center justify-between p-3 bg-blue-50 rounded-lg"
               >
                 <div>
@@ -273,9 +309,9 @@ export default function AdminPage() {
             </a>
           </div>
           <div className="space-y-3">
-            {dashboardData.recent_jobs.slice(0, 5).map((job: any) => (
+            {dashboardData.recent_jobs.slice(0, 5).map((job) => (
               <div
-                key={job.id}
+                key={job.job_id}
                 className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
               >
                 <div className="flex-1">

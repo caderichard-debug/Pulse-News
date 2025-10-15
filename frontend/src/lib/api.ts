@@ -472,7 +472,13 @@ class ApiClient {
       error_summary: {
         failed_jobs_24h: number;
       };
-      recent_admin_actions: Array<any>;
+      recent_admin_actions: Array<{
+        id: number;
+        admin_email: string;
+        action_type: string;
+        resource_type: string;
+        timestamp: string;
+      }>;
       timestamp: string;
     }>('/admin-panel/dashboard');
   }

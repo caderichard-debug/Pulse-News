@@ -3,8 +3,19 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 
+interface Source {
+  id: number;
+  name: string;
+  url: string;
+  is_active: boolean;
+  trust_score: number;
+  article_count: number;
+  organizational_bias?: string;
+  political_lean?: string;
+}
+
 export default function SourcesPage() {
-  const [sources, setSources] = useState<any[]>([]);
+  const [sources, setSources] = useState<Source[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

@@ -1,10 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 
+interface User {
+  id: number;
+  email: string;
+  name: string;
+  is_admin: boolean;
+  is_active: boolean;
+  email_verified?: boolean;
+  subscription_tier?: string;
+  created_at: string;
+}
+
 export default function UsersPage() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterAdmin, setFilterAdmin] = useState<string>('all');
@@ -12,14 +23,13 @@ export default function UsersPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  useEffect(() => {
-    loadUsers();
-  }, [search, filterAdmin, currentPage]);
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     setIsLoading(true);
     try {
-      const params: any = { page: currentPage, limit: 50 };
+      const params: { page: number; limit: number; search?: string; is_admin?: boolean } = {
+        page: currentPage,
+        limit: 50
+      };
       if (search) params.search = search;
       if (filterAdmin !== 'all') params.is_admin = filterAdmin === 'admins';
 
@@ -27,12 +37,16 @@ export default function UsersPage() {
       setUsers(data.users);
       setTotalPages(data.total_pages);
       setTotalCount(data.total_count);
-    } catch (err) {
-      console.error('Failed to load users:', err);
+    } catch {
+      console.error('Failed to load users');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentPage, search, filterAdmin]);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
 
   const handleToggleAdmin = async (userId: number, currentlyAdmin: boolean) => {
     if (

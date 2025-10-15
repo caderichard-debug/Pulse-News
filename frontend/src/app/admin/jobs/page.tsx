@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 
 const JOB_IDS = [
@@ -14,31 +14,44 @@ const JOB_IDS = [
   { id: 'send_newsletters', name: 'Send Newsletters', description: 'Send daily newsletters' },
 ];
 
+interface JobExecution {
+  id: number;
+  job_id: string;
+  job_name: string;
+  status: string;
+  started_at: string;
+  completed_at?: string;
+  duration_seconds?: number;
+  error_message?: string;
+  items_processed?: number;
+  triggered_by?: string;
+}
+
 export default function JobsPage() {
-  const [jobHistory, setJobHistory] = useState<any[]>([]);
+  const [jobHistory, setJobHistory] = useState<JobExecution[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [triggeringJob, setTriggeringJob] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('all');
   const [limit, setLimit] = useState(20);
 
-  useEffect(() => {
-    loadJobHistory();
-  }, [filter, limit]);
-
-  const loadJobHistory = async () => {
+  const loadJobHistory = useCallback(async () => {
     try {
-      const params: any = { limit };
+      const params: { limit: number; status?: string } = { limit };
       if (filter !== 'all') {
         params.status = filter;
       }
       const data = await api.getJobHistory(params);
       setJobHistory(data.jobs);
-    } catch (err) {
-      console.error('Failed to load job history:', err);
+    } catch {
+      console.error('Failed to load job history');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [limit, filter]);
+
+  useEffect(() => {
+    loadJobHistory();
+  }, [loadJobHistory]);
 
   const handleTriggerJob = async (jobId: string) => {
     if (!confirm(`Trigger ${jobId}? This will run the job immediately.`)) {
