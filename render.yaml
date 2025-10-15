@@ -24,14 +24,22 @@ services:
           property: connectionString
       - key: SECRETS_FILE
         value: /etc/secrets/.env
+      - key: BACKEND_URL
+        fromService:
+          type: web
+          name: pulse-backend
+          envVarKey: RENDER_EXTERNAL_URL
       - key: FRONTEND_URL
-        value: https://pulse-frontend-pfrt.onrender.com
+        fromService:
+          type: web
+          name: pulse-frontend
+          envVarKey: RENDER_EXTERNAL_URL
       - key: CACHE_BUST
         value: "2025-10-10-v2"
       - key: ENVIRONMENT
         value: production
       - key: IS_PULL_REQUEST
-        value: true
+        generateValue: true
       - key: DEBUG
         value: false
       - key: AI_MODEL
@@ -75,4 +83,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_API_URL
-        value: https://pulse-backend-4h7y.onrender.com
+        fromService:
+          type: web
+          name: pulse-backend
+          envVarKey: RENDER_EXTERNAL_URL
