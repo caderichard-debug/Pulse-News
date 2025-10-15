@@ -459,17 +459,24 @@ See [FRONTEND_ARCHITECTURE_PLAN.md](docs/FRONTEND_ARCHITECTURE_PLAN.md) for full
    - Code references using markdown links: `[file.py](path/to/file.py:line)`
    - Test results if applicable
 
-2. **Update this file (claude.md)** if:
+2. **ALWAYS make organized, understandable commits** if:
+   - Feature/bug name prefix
+   - What was changed (bullet points)
+   - why it was changed if applicable
+
+3. **Update this file (claude.md)** if:
    - Project structure changes (new folders, major refactors)
    - New major features are completed (update "Current Implementation Status")
    - Documentation references change
    - New common tasks are established
 
-3. **Update relevant docs/** files if:
+4. **Update relevant docs/** files if:
    - API endpoints change → Update [API.md](docs/API.md)
    - Architecture changes → Update [ARCHITECTURE.md](docs/ARCHITECTURE.md)
    - New setup steps → Update [SETUP.md](docs/SETUP.md)
    - Test patterns change → Update [TESTING.md](docs/TESTING.md)
+
+5. **NEVER** push commits.
 
 ### Changelog Entry Format
 
