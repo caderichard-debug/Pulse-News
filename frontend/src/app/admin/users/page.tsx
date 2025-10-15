@@ -12,6 +12,7 @@ interface User {
   email_verified?: boolean;
   subscription_tier?: string;
   created_at: string;
+  last_login?: string;
 }
 
 export default function UsersPage() {
