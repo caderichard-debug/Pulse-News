@@ -274,6 +274,11 @@ class User(SQLModel, table=True):
     )
     is_active: bool = Field(default=True)
 
+    # Admin fields
+    is_admin: bool = Field(default=False)
+    admin_notes: Optional[str] = Field(default=None, max_length=1000)
+    last_admin_action: Optional[datetime] = Field(default=None)
+
     # Preferences
     source_discovery_mode: str = Field(default="some", max_length=20)  # 'none', 'some', 'open'
     article_order_preference: str = Field(default="mixed", max_length=20)  # 'good_first', 'good_last', 'mixed'
@@ -413,3 +418,55 @@ class SourceCredibilityRating(SQLModel, table=True):
     notes: Optional[str] = Field(default=None, max_length=1000)
     last_updated: datetime = Field(default_factory=datetime.utcnow)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class JobExecutionHistory(SQLModel, table=True):
+    """Track all background job executions for monitoring and debugging."""
+    __tablename__ = "job_execution_history"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    job_id: str = Field(max_length=100, index=True)
+    job_name: str = Field(max_length=200)
+
+    # Execution details
+    started_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    completed_at: Optional[datetime] = Field(default=None)
+    duration_seconds: Optional[float] = Field(default=None)
+
+    # Status
+    status: str = Field(max_length=20)  # success, failed, running
+    result_data: Optional[str] = Field(default=None)  # JSON string
+    error_message: Optional[str] = Field(default=None, max_length=2000)
+
+    # Metrics
+    items_processed: Optional[int] = Field(default=None)
+    api_calls_made: Optional[int] = Field(default=None)
+    tokens_used: Optional[int] = Field(default=None)
+
+    # Trigger info
+    triggered_by: str = Field(default="scheduler")  # scheduler, admin, api
+    triggered_by_user_id: Optional[int] = Field(default=None)
+
+
+class AdminAuditLog(SQLModel, table=True):
+    """Track all admin actions for security and debugging."""
+    __tablename__ = "admin_audit_logs"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: Optional[int] = Field(foreign_key="users.id", index=True)
+    admin_email: str = Field(max_length=255, index=True)
+
+    # Action details
+    action_type: str = Field(max_length=100, index=True)
+    resource_type: str = Field(max_length=100)
+    resource_id: Optional[str] = Field(default=None, max_length=100)
+
+    # Change tracking
+    old_value: Optional[str] = Field(default=None)  # JSON string
+    new_value: Optional[str] = Field(default=None)  # JSON string
+
+    # Metadata
+    ip_address: Optional[str] = Field(default=None, max_length=50)
+    user_agent: Optional[str] = Field(default=None, max_length=500)
+    timestamp: datetime = Field(default_factory=datetime.utcnow, index=True)
+    notes: Optional[str] = Field(default=None, max_length=500)

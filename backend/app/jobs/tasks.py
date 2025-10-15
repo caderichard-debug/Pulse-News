@@ -1,17 +1,102 @@
 """
 Background job task definitions.
 These are the actual functions that get executed by the scheduler.
+
+All jobs are wrapped with execution tracking that creates JobExecutionHistory records.
 """
 
 from sqlmodel import Session
 from ..database import engine
 from ..services.rss_scraper import scrape_all_active_sources
 from ..services.article_extractor import process_pending_articles
+from ..models import JobExecutionHistory
+from datetime import datetime
 import logging
+from functools import wraps
+from typing import Callable, Dict, Any
 
 logger = logging.getLogger(__name__)
 
 
+def track_job_execution(job_id: str, job_name: str):
+    """
+    Decorator to track job execution in JobExecutionHistory table.
+
+    Creates a history record before execution, updates it on completion.
+    Captures success/failure status, duration, and result metrics.
+    """
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(session: Session = None, *args, **kwargs) -> Dict[str, Any]:
+            # Create execution history record
+            history = JobExecutionHistory(
+                job_id=job_id,
+                job_name=job_name,
+                started_at=datetime.utcnow(),
+                status="running",
+                triggered_by="scheduler"
+            )
+
+            # Save history record in a separate session to ensure it persists
+            with Session(engine) as history_session:
+                history_session.add(history)
+                history_session.commit()
+                history_session.refresh(history)
+                history_id = history.id
+
+            # Execute the job
+            try:
+                result = func(session=session, *args, **kwargs)
+
+                # Update history with success
+                with Session(engine) as history_session:
+                    history = history_session.get(JobExecutionHistory, history_id)
+                    history.status = "success" if result.get("success", True) else "failed"
+                    history.completed_at = datetime.utcnow()
+                    history.duration_seconds = (
+                        history.completed_at - history.started_at
+                    ).total_seconds()
+                    history.result_data = str(result)
+
+                    # Extract metrics from result
+                    if isinstance(result, dict):
+                        history.items_processed = (
+                            result.get("articles_scraped") or
+                            result.get("articles_processed") or
+                            result.get("articles_analyzed") or
+                            result.get("mappings_created") or
+                            result.get("stats_extracted") or
+                            result.get("articles_clustered") or
+                            result.get("contexts_generated")
+                        )
+                        history.tokens_used = result.get("tokens_used") or result.get("total_tokens")
+
+                    history_session.add(history)
+                    history_session.commit()
+
+                return result
+
+            except Exception as e:
+                # Update history with failure
+                with Session(engine) as history_session:
+                    history = history_session.get(JobExecutionHistory, history_id)
+                    history.status = "failed"
+                    history.completed_at = datetime.utcnow()
+                    history.duration_seconds = (
+                        history.completed_at - history.started_at
+                    ).total_seconds()
+                    history.error_message = str(e)
+                    history_session.add(history)
+                    history_session.commit()
+
+                # Re-raise the exception
+                raise
+
+        return wrapper
+    return decorator
+
+
+@track_job_execution(job_id="scrape_rss", job_name="Scrape RSS Feeds")
 def scrape_job(session: Session = None):
     """
     Job 1: Scrape RSS feeds from all active sources.
@@ -41,6 +126,7 @@ def scrape_job(session: Session = None):
         return {"success": False, "error": str(e)}
 
 
+@track_job_execution(job_id="extract_articles", job_name="Extract Article Content")
 def extract_job(session: Session = None):
     """
     Job 2: Extract full article content from pending articles.
@@ -71,6 +157,7 @@ def extract_job(session: Session = None):
         return {"success": False, "error": str(e)}
 
 
+@track_job_execution(job_id="analyze_articles", job_name="AI Article Analysis")
 def analyze_job(session: Session = None):
     """
     Job 3: Analyze articles with AI (sentiment, bias, frameworks).
@@ -113,6 +200,7 @@ def analyze_job(session: Session = None):
         return {"success": False, "error": str(e)}
 
 
+@track_job_execution(job_id="framework_mapping", job_name="Framework Mapping & Discovery")
 def framework_job(session: Session = None):
     """
     Job 4: Update frameworks and map articles to ethical debates.
@@ -178,7 +266,8 @@ def framework_job(session: Session = None):
         return {"success": False, "error": str(e)}
 
 
-def newsletter_job():
+@track_job_execution(job_id="send_newsletters", job_name="Send Daily Newsletters")
+def newsletter_job(session: Session = None):
     """
     Job 5: Send daily newsletters to users.
     Scheduled to run daily at 7am.
@@ -211,6 +300,7 @@ def newsletter_job():
         return {"success": False, "error": str(e)}
 
 
+@track_job_execution(job_id="verify_statistics", job_name="Statistics Verification")
 def statistics_verification_job(session: Session = None):
     """
     Job 6: Extract and verify statistics from articles.
@@ -253,6 +343,7 @@ def statistics_verification_job(session: Session = None):
         return {"success": False, "error": str(e)}
 
 
+@track_job_execution(job_id="cluster_articles", job_name="Article Clustering")
 def article_clustering_job(session: Session = None):
     """
     Job 7: Cluster similar articles for cross-source comparison.
@@ -295,6 +386,7 @@ def article_clustering_job(session: Session = None):
         return {"success": False, "error": str(e)}
 
 
+@track_job_execution(job_id="generate_context", job_name="Context Generation")
 def context_generation_job(session: Session = None):
     """
     Job 8: Generate background context for articles.

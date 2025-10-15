@@ -116,6 +116,8 @@
 - **[API.md](docs/API.md)** - Complete API reference with examples
 - **[FRONTEND_ARCHITECTURE_PLAN.md](docs/FRONTEND_ARCHITECTURE_PLAN.md)** - 16-week frontend roadmap (Phases 1-6)
 - **[STATISTICS_VERIFICATION_V2_PLAN.md](docs/STATISTICS_VERIFICATION_V2_PLAN.md)** - V2 verification design
+- **[ADMIN_PANEL_PLAN.md](docs/ADMIN_PANEL_PLAN.md)** - 🆕 Complete admin panel plan (44 pages, copy-paste code)
+- **[ADMIN_PANEL_QUICK_START.md](docs/ADMIN_PANEL_QUICK_START.md)** - 🆕 30-second admin panel summary
 
 ### Guides
 - **[SETUP.md](docs/SETUP.md)** - Installation & configuration
@@ -445,6 +447,16 @@ See [ARCHITECTURE.md](docs/ARCHITECTURE.md#database-schema) for full schema with
 - **Phase 6**: Polish & optimization (React Query, virtualization, dark mode)
 
 See [FRONTEND_ARCHITECTURE_PLAN.md](docs/FRONTEND_ARCHITECTURE_PLAN.md) for full roadmap.
+
+### 📋 In Planning
+- **Admin Panel** - Complete implementation plan ready in [ADMIN_PANEL_PLAN.md](docs/ADMIN_PANEL_PLAN.md)
+  - Database management (view, edit, delete all tables)
+  - Job monitoring and triggering
+  - User management and permissions
+  - Log viewing and system metrics
+  - Audit trail tracking
+  - Full React/Next.js UI with secure authentication
+  - Estimated: 3-4.5 weeks implementation time
 
 ---
 
