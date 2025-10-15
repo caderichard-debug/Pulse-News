@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = True
     frontend_url: str = "http://localhost:3000"
+    backend_url: str = "http://localhost:8000"
 
     # Scraping Configuration
     scrape_interval_hours: int = 3
