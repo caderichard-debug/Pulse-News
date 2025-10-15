@@ -5,6 +5,9 @@ import os
 
 class Settings(BaseSettings):
     """Application configuration settings"""
+    
+    # Admin
+    admin_token: Optional[str] = None
 
     # Database
     database_url: str = "postgresql://postgres:password@db:5432/news_db"
@@ -33,6 +36,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = True
     frontend_url: str = "http://localhost:3000"
+    backend_url: str = "http://localhost:8000"
 
     # Scraping Configuration
     scrape_interval_hours: int = 3

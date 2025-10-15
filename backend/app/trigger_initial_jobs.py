@@ -30,7 +30,7 @@ def trigger_all_jobs():
     import os
 
     # Get the base URL (use localhost in docker, or the service URL)
-    base_url = os.getenv("BASE_URL", "http://localhost:8000")
+    base_url = os.getenv("BACKEND_URL", "http://localhost:8000")
 
     logger.info("=== Triggering Initial Background Jobs ===")
 
