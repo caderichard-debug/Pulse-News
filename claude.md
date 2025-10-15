@@ -476,6 +476,8 @@ See [FRONTEND_ARCHITECTURE_PLAN.md](docs/FRONTEND_ARCHITECTURE_PLAN.md) for full
    - New setup steps → Update [SETUP.md](docs/SETUP.md)
    - Test patterns change → Update [TESTING.md](docs/TESTING.md)
 
+5. **NEVER** push commits.
+
 ### Changelog Entry Format
 
 ```markdown
