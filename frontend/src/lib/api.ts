@@ -396,6 +396,293 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // Admin panel endpoints
+  private async adminRequest<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    // Add X-Admin-Token header from localStorage
+    const adminToken = typeof window !== 'undefined'
+      ? localStorage.getItem('admin_token')
+      : null;
+
+    if (!adminToken) {
+      throw new Error('Admin token not found');
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Admin-Token': adminToken,
+      ...(options.headers as Record<string, string>),
+    };
+
+    // Use existing request method with admin token
+    return this.request(endpoint, { ...options, headers });
+  }
+
+  async verifyAdminToken(adminToken: string) {
+    // Temporarily set admin token for verification
+    const tempHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Admin-Token': adminToken,
+    };
+
+    if (this.token) {
+      tempHeaders['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(`${this.baseUrl}/admin-panel/verify`, {
+      headers: tempHeaders,
+    });
+
+    if (!response.ok) {
+      throw new Error('Invalid admin token');
+    }
+
+    return response.json();
+  }
+
+  async getAdminDashboard() {
+    return this.adminRequest<{
+      system_stats: {
+        users: { total: number; admins: number };
+        articles: { total: number; today: number };
+        sources: { total: number; active: number };
+        frameworks: { total: number };
+      };
+      recent_jobs: Array<{
+        id: number;
+        job_id: string;
+        job_name: string;
+        status: string;
+        started_at: string;
+        completed_at?: string;
+        duration_seconds?: number;
+        items_processed?: number;
+        error_message?: string;
+      }>;
+      active_jobs: Array<{
+        id: number;
+        job_id: string;
+        job_name: string;
+        started_at: string;
+        duration_seconds: number;
+      }>;
+      error_summary: {
+        failed_jobs_24h: number;
+      };
+      recent_admin_actions: Array<any>;
+      timestamp: string;
+    }>('/admin-panel/dashboard');
+  }
+
+  async getJobHistory(params?: {
+    limit?: number;
+    offset?: number;
+    job_id?: string;
+    status?: string;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.offset) queryParams.append('offset', params.offset.toString());
+    if (params?.job_id) queryParams.append('job_id', params.job_id);
+    if (params?.status) queryParams.append('status', params.status);
+
+    return this.adminRequest<{
+      jobs: Array<{
+        id: number;
+        job_id: string;
+        job_name: string;
+        status: string;
+        started_at: string;
+        completed_at?: string;
+        duration_seconds?: number;
+        items_processed?: number;
+        api_calls_made?: number;
+        tokens_used?: number;
+        triggered_by: string;
+        error_message?: string;
+      }>;
+      total_count: number;
+      limit: number;
+      offset: number;
+    }>(`/admin-panel/jobs/history?${queryParams}`);
+  }
+
+  async triggerJob(jobId: string) {
+    return this.adminRequest<{
+      status: string;
+      job_id: string;
+      job_name: string;
+      execution_id: number;
+      result: {
+        status: string;
+        duration_seconds: number;
+        items_processed?: number;
+        error_message?: string;
+      };
+    }>(`/admin-panel/jobs/trigger/${jobId}`, {
+      method: 'POST',
+    });
+  }
+
+  async getAdminUsers(params?: {
+    limit?: number;
+    page?: number;
+    search?: string;
+    is_admin?: boolean;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.is_admin !== undefined) queryParams.append('is_admin', params.is_admin.toString());
+
+    return this.adminRequest<{
+      users: Array<{
+        id: number;
+        email: string;
+        name: string;
+        is_admin: boolean;
+        is_active: boolean;
+        email_verified: boolean;
+        subscription_tier: string;
+        created_at: string;
+        last_login?: string;
+        admin_notes?: string;
+      }>;
+      total_count: number;
+      page: number;
+      page_size: number;
+      total_pages: number;
+    }>(`/admin-panel/users?${queryParams}`);
+  }
+
+  async toggleUserAdmin(userId: number, isAdmin: boolean) {
+    return this.adminRequest(`/admin-panel/users/${userId}/admin`, {
+      method: 'PUT',
+      body: JSON.stringify({ is_admin: isAdmin }),
+    });
+  }
+
+  async deleteUser(userId: number) {
+    return this.adminRequest(`/admin-panel/users/${userId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getAdminSources(params?: {
+    limit?: number;
+    offset?: number;
+    is_active?: boolean;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.offset) queryParams.append('offset', params.offset.toString());
+    if (params?.is_active !== undefined) queryParams.append('is_active', params.is_active.toString());
+
+    return this.adminRequest<{
+      sources: Array<{
+        id: number;
+        name: string;
+        url: string;
+        rss_feed_url: string;
+        is_active: boolean;
+        political_lean?: string;
+        organizational_bias?: string;
+        trust_score: number;
+        article_count: number;
+      }>;
+      total_count: number;
+      limit: number;
+      offset: number;
+    }>(`/admin-panel/sources?${queryParams}`);
+  }
+
+  async updateAdminSource(sourceId: number, data: {
+    name?: string;
+    url?: string;
+    rss_feed_url?: string;
+    is_active?: boolean;
+    trust_score?: number;
+  }) {
+    return this.adminRequest(`/admin-panel/sources/${sourceId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteAdminSource(sourceId: number) {
+    return this.adminRequest(`/admin-panel/sources/${sourceId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getAdminArticles(params?: {
+    limit?: number;
+    offset?: number;
+    source_id?: number;
+    processing_status?: string;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.offset) queryParams.append('offset', params.offset.toString());
+    if (params?.source_id) queryParams.append('source_id', params.source_id.toString());
+    if (params?.processing_status) queryParams.append('processing_status', params.processing_status);
+
+    return this.adminRequest<{
+      articles: Array<{
+        id: number;
+        title: string;
+        source_name: string;
+        url: string;
+        processing_status: string;
+        scraped_at: string;
+        published_at?: string;
+      }>;
+      total_count: number;
+      limit: number;
+      offset: number;
+    }>(`/admin-panel/articles?${queryParams}`);
+  }
+
+  async deleteAdminArticle(articleId: number) {
+    return this.adminRequest(`/admin-panel/articles/${articleId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getAuditLog(params?: {
+    limit?: number;
+    offset?: number;
+    action_type?: string;
+    admin_email?: string;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.offset) queryParams.append('offset', params.offset.toString());
+    if (params?.action_type) queryParams.append('action_type', params.action_type);
+    if (params?.admin_email) queryParams.append('admin_email', params.admin_email);
+
+    return this.adminRequest<{
+      logs: Array<{
+        id: number;
+        admin_email: string;
+        action_type: string;
+        resource_type: string;
+        resource_id?: string;
+        old_value?: string;
+        new_value?: string;
+        ip_address?: string;
+        timestamp: string;
+        notes?: string;
+      }>;
+      total_count: number;
+      limit: number;
+      offset: number;
+    }>(`/admin-panel/audit?${queryParams}`);
+  }
 }
 
 export { ApiClient };

@@ -10,14 +10,16 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const [userName, setUserName] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     let mounted = true;
     api.getCurrentUser()
-      .then((user) => {
+      .then((user: any) => {
         if (mounted && user && typeof user.name === 'string') {
           setUserName(user.name);
+          setIsAdmin(user.is_admin || false);
         }
       })
       .catch(() => {})
@@ -72,7 +74,7 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* User name and Logout Button */}
+          {/* User name, Admin Link, and Logout Button */}
           <div className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900">
             <button
               onClick={() => router.push('/preferences')}
@@ -82,6 +84,14 @@ export default function Navbar() {
               <span>{userName}</span>
             )}
             </button>
+            {!loading && isAdmin && (
+              <button
+                onClick={() => router.push('/admin')}
+                className="px-3 py-1 bg-red-600 text-white rounded-md text-xs font-semibold hover:bg-red-700 transition-colors"
+              >
+                ⚡ Admin
+              </button>
+            )}
             <button
               onClick={handleLogout}
               className="px-4 py-2 rounded-md text-sm font-medium transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
