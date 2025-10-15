@@ -89,6 +89,16 @@ def log_admin_action(
 def _create_audit_log(admin_user, action_type, resource_type, resource_id,
                       old_value, new_value, session, request):
     """Helper to create audit log."""
+    # Extract IP and user agent safely
+    ip_address = None
+    user_agent = None
+    if request:
+        try:
+            ip_address = request.client.host if hasattr(request, 'client') and request.client else None
+            user_agent = request.headers.get("user-agent") if hasattr(request, 'headers') else None
+        except AttributeError:
+            pass
+
     audit = AdminAuditLog(
         user_id=admin_user.id,
         admin_email=admin_user.email,
@@ -97,8 +107,8 @@ def _create_audit_log(admin_user, action_type, resource_type, resource_id,
         resource_id=resource_id,
         old_value=old_value,
         new_value=new_value,
-        ip_address=request.client.host if request else None,
-        user_agent=request.headers.get("user-agent") if request else None
+        ip_address=ip_address,
+        user_agent=user_agent
     )
     session.add(audit)
     session.commit()

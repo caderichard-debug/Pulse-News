@@ -10,6 +10,7 @@ from app.models import User, Article, Source, JobExecutionHistory
 from app.main import app
 from app.database import get_session
 from app.utils.auth import hash_password
+from app import config
 from datetime import datetime
 
 # Test constants
@@ -45,8 +46,10 @@ def admin_token(client: TestClient, admin_user: User):
 
 @pytest.fixture(autouse=True)
 def set_admin_token(monkeypatch):
-    """Set admin token in environment for all tests."""
+    """Set admin token in environment and settings for all tests."""
     monkeypatch.setenv("ADMIN_TOKEN", ADMIN_TOKEN)
+    # Patch the settings object that admin_auth imports
+    monkeypatch.setattr(config.settings, "admin_token", ADMIN_TOKEN)
 
 
 @pytest.fixture
@@ -66,8 +69,9 @@ class TestAdminAuthentication:
         response = client.get("/admin-panel/verify", headers=admin_headers)
         assert response.status_code == 200
         data = response.json()
-        assert data["is_admin"] is True
-        assert data["email"] == "admin@example.com"
+        assert data["valid"] is True
+        assert data["user"]["email"] == "admin@example.com"
+        assert data["user"]["is_admin"] is True
 
     def test_verify_admin_token_missing_admin_token(self, client: TestClient, admin_token: str):
         """Test verification fails without admin token."""
@@ -222,11 +226,10 @@ class TestUserManagement:
         session.commit()
         session.refresh(user)
 
-        # Grant admin
+        # Grant admin (use query parameter, not JSON body)
         response = client.put(
-            f"/admin-panel/users/{user.id}/admin",
-            headers=admin_headers,
-            json={"is_admin": True}
+            f"/admin-panel/users/{user.id}/admin?is_admin=true",
+            headers=admin_headers
         )
         assert response.status_code == 200
 
@@ -236,9 +239,8 @@ class TestUserManagement:
 
         # Revoke admin
         response = client.put(
-            f"/admin-panel/users/{user.id}/admin",
-            headers=admin_headers,
-            json={"is_admin": False}
+            f"/admin-panel/users/{user.id}/admin?is_admin=false",
+            headers=admin_headers
         )
         assert response.status_code == 200
 
@@ -264,9 +266,11 @@ class TestUserManagement:
         )
         assert response.status_code == 200
 
-        # Verify user deleted
+        # Verify user soft deleted (is_active = False, not actually deleted)
+        session.expire(user)  # Expire to force reload
         deleted_user = session.get(User, user_id)
-        assert deleted_user is None
+        assert deleted_user is not None
+        assert deleted_user.is_active is False
 
 
 class TestSourceManagement:
@@ -294,15 +298,15 @@ class TestSourceManagement:
         session.commit()
         session.refresh(source)
 
-        # Update source
+        # Update source (use query parameters, not JSON body)
         response = client.put(
-            f"/admin-panel/sources/{source.id}",
-            headers=admin_headers,
-            json={"is_active": False, "trust_score": 0.8}
+            f"/admin-panel/sources/{source.id}?is_active=false&trust_score=0.8",
+            headers=admin_headers
         )
         assert response.status_code == 200
 
         # Verify update
+        session.expire(source)  # Expire to force reload
         session.refresh(source)
         assert source.is_active is False
         assert source.trust_score == 0.8
@@ -326,9 +330,11 @@ class TestSourceManagement:
         )
         assert response.status_code == 200
 
-        # Verify deletion
+        # Verify soft deletion (is_active = False)
+        session.expire(source)  # Expire to force reload
         deleted_source = session.get(Source, source_id)
-        assert deleted_source is None
+        assert deleted_source is not None
+        assert deleted_source.is_active is False
 
 
 class TestArticleManagement:
@@ -346,12 +352,12 @@ class TestArticleManagement:
     def test_get_articles_with_filters(self, client: TestClient, admin_headers: dict):
         """Test article filtering."""
         response = client.get(
-            "/admin-panel/articles?processing_status=COMPLETED&limit=10",
+            "/admin-panel/articles?processing_status=COMPLETED&page_size=10",
             headers=admin_headers
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["limit"] == 10
+        assert data["page_size"] == 10
 
     def test_delete_article(self, client: TestClient, admin_headers: dict, session: Session):
         """Test deleting an article."""
@@ -368,6 +374,7 @@ class TestArticleManagement:
             title="Test Article",
             url="https://test.com/article",
             source_id=source.id,
+            published_at=datetime.utcnow(),
             scraped_at=datetime.utcnow()
         )
         session.add(article)
@@ -395,15 +402,15 @@ class TestAuditLog:
         assert response.status_code == 200
 
         data = response.json()
-        assert "logs" in data
+        assert "audit_logs" in data
         assert "total_count" in data
 
     def test_get_audit_log_with_filters(self, client: TestClient, admin_headers: dict):
         """Test audit log with filters."""
         response = client.get(
-            "/admin-panel/audit?action_type=delete_user&limit=20",
+            "/admin-panel/audit?action_type=delete_user&page_size=20",
             headers=admin_headers
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["limit"] == 20
+        assert data["page_size"] == 20
