@@ -4,6 +4,313 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-14 19:25
+
+**Fixed Multiple Head Revisions in Alembic Migrations** 🐞
+
+### What Changed
+
+Resolved CI/CD failure caused by multiple head revisions in the alembic migration chain.
+
+#### Issue:
+GitHub Actions was failing with error:
+```
+Multiple head revisions are present for given argument 'head';
+please specify a specific target revision
+```
+
+#### Root Cause:
+Two migrations both had `c03e17942bf4` as their parent, creating a branching point:
+- [7e947d383738_add_unique_constraint_article_framework.py](backend/alembic/versions/7e947d383738_add_unique_constraint_article_framework.py) - Auto-generated with many changes
+- [7f71518740d3_add_unique_constraint_article_framework_.py](backend/alembic/versions/7f71518740d3_add_unique_constraint_article_framework_.py) - Clean version doing the same thing
+
+Both tried to create the same `uq_article_framework` unique constraint, which would cause conflicts.
+
+#### Resolution:
+1. **Updated chain structure**: Changed [7f71518740d3](backend/alembic/versions/7f71518740d3_add_unique_constraint_article_framework_.py:16) to depend on `7e947d383738` instead of `c03e17942bf4`
+2. **Made migration a no-op**: Since `7e947d383738` already creates the constraint, made `7f71518740d3` a pass-through migration (no operations)
+3. **Synced to container**: Copied updated migration file to container
+
+#### Migration Chain (Fixed):
+```
+base → 20251009_000001 → ae55c7bb7c8f → c03e17942bf4 → 7e947d383738
+  → 7f71518740d3 → 052b74d0175f → e29da670f9de (head)
+```
+
+### Test Results
+- ✅ **Only one head revision** now: `e29da670f9de`
+- ✅ **alembic upgrade head** works without errors
+- ✅ **37 tests passing** in sources and feed routes
+- ✅ **Sync script confirms** all migrations in sync
+
+### CI Impact
+This fix will resolve the GitHub Actions CI failure. The `alembic upgrade head` command will now run successfully without ambiguity.
+
+**Code References:**
+- Fixed migration: [7f71518740d3](backend/alembic/versions/7f71518740d3_add_unique_constraint_article_framework_.py)
+- Conflict with: [7e947d383738](backend/alembic/versions/7e947d383738_add_unique_constraint_article_framework.py)
+
+---
+
+## 2025-10-14 19:15
+
+**Automated Sync Script for Local-Container Parity** ✅
+
+### What Changed
+
+Created automated bash script to maintain local-container parity with visual reporting and validation.
+
+#### New Script: [sync-local-container.sh](scripts/sync-local-container.sh)
+- **Syncs alembic migrations** between container and local filesystem (bidirectional)
+- **Checks requirements.txt** for consistency
+- **Validates migration status** in database
+- **Generates visual summary** with color-coded status indicators
+- **Provides actionable next steps** after sync
+
+#### Features:
+- ✅ Bidirectional sync (container ↔️ local)
+- ✅ Automatic detection of missing migrations in either location
+- ✅ Color-coded output for easy scanning
+- ✅ Summary table showing sync status
+- ✅ Help option (`--help`)
+- ✅ Dry-run support placeholder (future enhancement)
+
+#### Documentation:
+- Created [scripts/README.md](scripts/README.md) with full usage guide
+- Updated [CLAUDE.md](CLAUDE.md#-local-container-parity-critical) to reference script in multiple locations:
+  - Quick Sync section with direct script usage
+  - Common Development Tasks section
+  - AI Assistant conventions
+
+### Usage
+
+```bash
+# Run full sync
+./scripts/sync-local-container.sh
+
+# View help
+./scripts/sync-local-container.sh --help
+```
+
+### Example Output
+
+All checks pass with visual status table showing migrations synced, requirements matched, and database up-to-date.
+
+**Code References:**
+- Script: [scripts/sync-local-container.sh](scripts/sync-local-container.sh)
+- Documentation: [scripts/README.md](scripts/README.md)
+- Project context: [CLAUDE.md - Sync Section](CLAUDE.md#sync-local--container)
+
+---
+
+## 2025-10-14 19:10
+
+**Database Migration Sync & Local-Container Parity Documentation** ✅
+
+### What Changed
+
+Fixed missing `organizational_bias` column error and established critical workflow for maintaining local-container parity.
+
+#### Issue Discovered:
+- Backend was failing with `ProgrammingError: column "organizational_bias" of relation "sources" does not exist`
+- Migration [e29da670f9de_add_source_bias_fields.py](backend/alembic/versions/e29da670f9de_add_source_bias_fields.py) existed in container but not in local filesystem
+- This created deployment risk: local repo didn't match production-ready container state
+
+#### Resolution:
+1. **Identified existing migration**: Found [e29da670f9de_add_source_bias_fields.py](backend/alembic/versions/e29da670f9de_add_source_bias_fields.py) in container
+   - Adds `organizational_bias` enum column (left, center-left, center, center-right, right)
+   - Adds `bias_description` varchar(500) column
+2. **Synced migrations to local**: Copied all missing migrations from container to local filesystem
+   - `e29da670f9de_add_source_bias_fields.py` (main fix)
+   - `7e947d383738_add_unique_constraint_article_framework.py` (also missing)
+3. **Verified database state**: Confirmed columns exist and backend starts cleanly
+4. **Added comprehensive documentation**: Created [Local-Container Parity section](CLAUDE.md#-local-container-parity-critical) in CLAUDE.md
+
+#### Documentation Added:
+- **Critical workflow** for syncing alembic migrations between container and local
+- **Pre-deployment checklist** to verify parity before commits/deployments
+- **Troubleshooting guide** for common parity issues
+- **Updated AI Assistant conventions** to always maintain parity
+
+### Test Results
+- ✅ **25/25** source tests passing ([test_sources.py](backend/tests/routes/test_sources.py))
+- ✅ **21/21** feed and article detail tests passing
+- ✅ Backend starts without errors
+- ✅ All 7 migrations now synced between container and local
+
+### Why This Matters
+This ensures **zero-overhead deployments**: the local repo is always deployment-ready and matches the production-ready container state. No surprises when deploying to staging/production.
+
+**Code References:**
+- Migration files: [backend/alembic/versions/](backend/alembic/versions/)
+- Documentation: [CLAUDE.md - Local-Container Parity](CLAUDE.md#-local-container-parity-critical)
+- Source model: [models.py:107-133](backend/app/models.py#L107-L133)
+
+---
+
+## 2025-10-13 (Session Continuation)
+
+**UI Improvements & Test Fixes** ✅
+
+### What Changed
+Fixed E2E and unit tests after navigation layout changes (removed Dashboard, added Sources/Analytics pages).
+
+#### UI Improvements:
+1. **Article Detail Page Styling** ([article/[id]/page.tsx](frontend/src/app/article/[id]/page.tsx:110-120)):
+   - Darkened analysis header: `bg-gray-50` → `bg-gray-100`
+   - Darker border: `border-gray-200` → `border-gray-300`
+   - Added `text-gray-900` to heading for better contrast
+   - Commit: [798f5bd](https://github.com/caderichard-debug/Pulse/commit/798f5bd)
+
+#### E2E Test Fixes:
+2. **Navigation Test Updates** ([e2e/](frontend/e2e/)):
+   - [auth.spec.ts](frontend/e2e/auth.spec.ts:123-124): Changed login redirect test from `/dashboard` to `/feed`
+   - [user-journey.spec.ts](frontend/e2e/user-journey.spec.ts:6): Updated flow comment to reflect actual navigation
+   - All navigation tests now use Analytics (📊) instead of Dashboard
+   - Added Sources (📑) navigation tests
+   - Commit: [221eed2](https://github.com/caderichard-debug/Pulse/commit/221eed2)
+
+#### Unit Test Fixes:
+3. **Frontend Unit Tests** ([__tests__/](frontend/src/)):
+   - [article/[id]/__tests__/page.test.tsx](frontend/src/app/article/[id]/__tests__/page.test.tsx:167-174): Changed "Political Lean" → "Article Bias" in analysis section test
+   - [feed/__tests__/page.test.tsx](frontend/src/app/feed/__tests__/page.test.tsx:128,227,291): Updated test names for article bias (filter label still "Political Lean" per design)
+   - [Navbar.test.tsx](frontend/src/components/__tests__/Navbar.test.tsx:45,104-111,173): Added Sources button and icon tests
+   - [preferences/__tests__/page.test.tsx](frontend/src/app/preferences/__tests__/page.test.tsx:133,150,167,188): Fixed tab selector to use `/sources \(/i` to avoid navbar conflict
+   - Commit: [7969429](https://github.com/caderichard-debug/Pulse/commit/7969429)
+
+### Test Results
+- **Backend**: 363 tests passing (unchanged)
+- **Frontend**: 195 tests passing ✅ (all unit tests fixed)
+- **E2E**: Navigation tests updated for new layout
+
+**Code References:**
+- E2E Tests: [e2e/auth.spec.ts](frontend/e2e/auth.spec.ts), [e2e/user-journey.spec.ts](frontend/e2e/user-journey.spec.ts)
+- Unit Tests: [Navbar.test.tsx](frontend/src/components/__tests__/Navbar.test.tsx), [preferences page tests](frontend/src/app/preferences/__tests__/page.test.tsx)
+- Styling: [article detail page](frontend/src/app/article/[id]/page.tsx)
+
+---
+
+## 2025-10-12 22:19
+
+**Source Bias Rating System & Supported Sources Page** ✅
+
+### What Changed
+Major feature addition: Organizational bias ratings for news sources with complete UI integration.
+
+#### Backend Changes:
+1. **Database Schema** ([models.py](backend/app/models.py:22-27)):
+   - Added `OrganizationalBias` enum: `left`, `center-left`, `center`, `center-right`, `right`
+   - Added `organizational_bias` field to `Source` model
+   - Added `bias_description` field (500 char max) for context
+   - Created Alembic migration: [e29da670f9de](backend/alembic/versions/e29da670f9de_add_source_bias_fields.py)
+   - Populated 8 existing sources with bias ratings (AP/Reuters: center, NPR/NYT: center-left, etc.)
+
+2. **Bias Data Service** ([bias_data_fetcher.py](backend/app/services/bias_data_fetcher.py)):
+   - Created service for fetching organizational bias from external APIs
+   - Manual lookup table with 25+ major news sources
+   - Placeholder for AllSides API / MBFC integration
+   - Automatic bias fetching when adding new sources
+
+3. **API Endpoints** ([sources.py](backend/app/routes/sources.py)):
+   - `GET /sources` - List all sources with filtering (bias, active status) and sorting
+   - `POST /sources` - Add new source with automatic bias fetching
+   - `GET /sources/{id}` - Get source details
+   - `PUT /sources/{id}` - Update source information
+   - `DELETE /sources/{id}` - Soft/hard delete
+   - `POST /sources/{id}/fetch-bias` - Manually trigger bias data fetch
+
+4. **Updated Existing Endpoints**:
+   - [feed.py](backend/app/routes/feed.py:31,171) - Added `source_bias` to article feed responses
+   - [articles.py](backend/app/routes/articles.py:74,283) - Added `source_bias` to article detail
+   - [feed.py](backend/app/routes/feed.py:235) - Added `organizational_bias` to sources list
+
+#### Frontend Changes:
+1. **SourceBiasBadge Component** ([SourceBiasBadge.tsx](frontend/src/components/SourceBiasBadge.tsx)):
+   - Color-coded badges for all 5 bias levels
+   - Three sizes: sm, md, lg
+   - Blue (left), Purple (center), Red (right) color scheme
+
+2. **Feed Page Updates** ([feed/page.tsx](frontend/src/app/feed/page.tsx)):
+   - Source bias badge next to source name in article cards
+   - Changed "Lean:" to "Article Bias:" to distinguish from source bias
+   - Added `source_bias` to Article interface
+
+3. **Article Detail Page Updates** ([article/[id]/page.tsx](frontend/src/app/article/[id]/page.tsx)):
+   - Source bias badge in article header (next to source name)
+   - "Political Lean" renamed to "Article Bias" with clarification text
+   - Clear separation: **Source Bias** (organizational) vs **Article Bias** (content-level)
+
+4. **New Sources Page** ([sources/page.tsx](frontend/src/app/sources/page.tsx)):
+   - Full directory of supported news sources
+   - Filter by bias (5 options) + Sort by name/trust score/article count
+   - Source cards showing: name, bias badge, description, trust score, article count
+   - Links to source website and filtered feed view
+   - Informational box explaining bias ratings
+
+5. **Navbar Update** ([Navbar.tsx](frontend/src/components/Navbar.tsx:37)):
+   - Added "Sources" link with 📑 icon between Feed and Analytics
+
+6. **API Client** ([api.ts](frontend/src/lib/api.ts)):
+   - Added `getAllSources()` method with filter/sort parameters
+   - Added `createSource()` method
+   - Updated feed and article types to include `source_bias`
+
+### Design Decisions
+
+**Bias Scale**: Using detailed 5-point scale (left, center-left, center, center-right, right) rather than simple 3-point for nuanced ratings.
+
+**Separation of Concerns**:
+- **Organizational Bias** = Source-level editorial perspective
+- **Article Bias** = Individual article analysis by AI
+- Both displayed separately to avoid confusion
+
+**Color Scheme**:
+- Left: blue-600
+- Center-Left: blue-400
+- Center: purple-600
+- Center-Right: red-400
+- Right: red-600
+
+**Bias Data Sources**:
+- Manual lookup table for common sources (primary)
+- Placeholders for AllSides API / MBFC integration (future)
+- Automatic fetching when adding new sources
+
+### Known Bias Ratings (8 sources populated):
+- **Center**: Associated Press, Reuters, Politico, Ars Technica
+- **Center-Left**: NPR, BBC News, The New York Times, The Atlantic
+
+### Test Results
+- ✅ Backend builds and runs successfully
+- ✅ Feed endpoint returns `source_bias` field
+- ✅ Frontend builds successfully (107 tests still passing)
+- ✅ TypeScript compilation successful
+
+### Code References:
+**Backend:**
+- Models: [models.py:22-27](backend/app/models.py#L22-L27), [models.py:117-122](backend/app/models.py#L117-L122)
+- Migration: [e29da670f9de_add_source_bias_fields.py](backend/alembic/versions/e29da670f9de_add_source_bias_fields.py)
+- Bias Service: [bias_data_fetcher.py](backend/app/services/bias_data_fetcher.py)
+- Sources Route: [sources.py](backend/app/routes/sources.py)
+- Feed Updates: [feed.py:31](backend/app/routes/feed.py#L31), [feed.py:171](backend/app/routes/feed.py#L171)
+- Article Updates: [articles.py:74](backend/app/routes/articles.py#L74), [articles.py:283](backend/app/routes/articles.py#L283)
+
+**Frontend:**
+- Badge Component: [SourceBiasBadge.tsx](frontend/src/components/SourceBiasBadge.tsx)
+- Feed Page: [feed/page.tsx:17](frontend/src/app/feed/page.tsx#L17), [feed/page.tsx:258-260](frontend/src/app/feed/page.tsx#L258-L260)
+- Article Detail: [article/[id]/page.tsx:17](frontend/src/app/article/[id]/page.tsx#L17), [article/[id]/page.tsx:163-165](frontend/src/app/article/[id]/page.tsx#L163-L165)
+- Sources Page: [sources/page.tsx](frontend/src/app/sources/page.tsx)
+- Navbar: [Navbar.tsx:37](frontend/src/components/Navbar.tsx#L37)
+- API Client: [api.ts:270](frontend/src/lib/api.ts#L270), [api.ts:357-397](frontend/src/lib/api.ts#L357-L397)
+
+### Next Steps
+- Backend tests for `/sources` endpoints
+- Frontend tests for SourceBiasBadge component
+- Frontend tests for sources page
+- Consider integrating AllSides or MBFC API for automatic bias ratings
+
+---
+
 ## 2025-10-11 21:05
 
 **Fixed Production Crash - PoliticalLean Enum Case Mismatch** ✅

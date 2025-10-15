@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from .database import create_db_and_tables
 from .jobs.scheduler import start_scheduler, stop_scheduler
-from .routes import admin, auth, preferences, articles, test_email, analytics, feed
+from .routes import admin, auth, preferences, articles, test_email, analytics, feed, sources
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -75,6 +75,7 @@ app.include_router(articles.router)  # Merged: includes both /analyzed and /{art
 app.include_router(test_email.router)
 app.include_router(analytics.router)
 app.include_router(feed.router)
+app.include_router(sources.router)
 
 
 @app.get("/")

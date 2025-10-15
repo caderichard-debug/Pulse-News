@@ -125,7 +125,7 @@ describe('FeedPage', () => {
     });
   });
 
-  it('should display political lean', async () => {
+  it('should display article bias', async () => {
     render(<FeedPage />);
 
     await waitFor(() => {
@@ -224,7 +224,7 @@ describe('FeedPage', () => {
       });
     });
 
-    it('should render political lean filter', async () => {
+    it('should render article bias filter', async () => {
       render(<FeedPage />);
 
       await waitFor(() => {
@@ -288,7 +288,7 @@ describe('FeedPage', () => {
       });
     });
 
-    it('should filter by political lean', async () => {
+    it('should filter by article bias', async () => {
       const user = userEvent.setup();
       render(<FeedPage />);
 
@@ -296,7 +296,7 @@ describe('FeedPage', () => {
         expect(screen.getByText('Political Lean')).toBeInTheDocument();
       });
 
-      // Get all selects and find the third one (political lean select)
+      // Get all selects and find the third one (article bias select)
       const selects = screen.getAllByRole('combobox');
       await user.selectOptions(selects[2], 'left');
 

@@ -19,6 +19,14 @@ class PoliticalLean(str, Enum):
     RIGHT = "right"
 
 
+class OrganizationalBias(str, Enum):
+    LEFT = "left"
+    CENTER_LEFT = "center-left"
+    CENTER = "center"
+    CENTER_RIGHT = "center-right"
+    RIGHT = "right"
+
+
 class SubscriptionTier(str, Enum):
     FREE = "FREE"
     PREMIUM = "PREMIUM"
@@ -105,6 +113,14 @@ class Source(SQLModel, table=True):
     rss_feed_url: str = Field(max_length=500, unique=True)
     description: Optional[str] = Field(default=None, max_length=1000)
     trust_score: float = Field(default=0.8, ge=0.0, le=1.0)
+
+    # Organizational bias
+    organizational_bias: Optional[OrganizationalBias] = Field(
+        default=None,
+        sa_column=Column(SQLEnum(OrganizationalBias, values_callable=lambda x: [e.value for e in x]), nullable=True)
+    )
+    bias_description: Optional[str] = Field(default=None, max_length=500)
+
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 

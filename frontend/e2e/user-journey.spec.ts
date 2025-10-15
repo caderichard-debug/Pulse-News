@@ -3,7 +3,7 @@ import { gotoAndWait } from './helpers';
 
 /**
  * Complete user journey E2E tests
- * Tests the full workflow: signup → preferences → dashboard → feed → article detail
+ * Tests the full workflow: signup → preferences → feed → sources → analytics → how it works
  */
 
 test.describe('Complete User Journey', () => {
@@ -83,21 +83,35 @@ test.describe('Complete User Journey', () => {
       throw new Error(`Feed page showed error: ${errorText}`);
     }
 
-    // Check if page is still loading
-    const loadingSpinner = page.locator('.animate-spin');
-    const isLoading = await loadingSpinner.isVisible().catch(() => false);
-    if (isLoading) {
-      console.log('Feed page still showing loading spinner, waiting...');
-      await page.waitForSelector('.animate-spin', { state: 'hidden', timeout: 10000 });
-    }
-
     // Verify feed page elements - the heading should now be visible
     await expect(page.getByRole('heading', { name: /📰.*article feed/i })).toBeVisible({ timeout: 10000 });
 
-    // Check for filters
+    // Check for filters on feed page
     await expect(page.getByRole('combobox').first()).toBeVisible({ timeout: 10000 }); // Topic filter
 
-    // Step 4: Go back to Preferences
+    // Step 3: Navigate to Sources
+    await page.getByRole('button', { name: /📑.*sources/i }).click();
+    await expect(page).toHaveURL(/\/sources/, { timeout: 10000 });
+
+    // Wait for page to hydrate and render
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000); // Allow React to hydrate
+
+    // Verify sources page elements
+    await expect(page.getByRole('heading', { name: /📰.*supported news sources/i })).toBeVisible({ timeout: 10000 });
+
+    // Step 4: Navigate to Analytics
+    await page.getByRole('button', { name: /📊.*analytics/i }).click();
+    await expect(page).toHaveURL(/\/analytics/, { timeout: 10000 });
+
+    // Wait for page to hydrate and render
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000); // Allow React to hydrate
+
+    // Verify analytics elements
+    await expect(page.getByText(/analytics/i).first()).toBeVisible({ timeout: 10000 });
+
+    // Step 5: Go back to Preferences
     await page.getByRole('button', { name: /⚙️.*preferences/i }).click();
     await expect(page).toHaveURL(/\/preferences/, { timeout: 10000 });
 
@@ -107,11 +121,11 @@ test.describe('Complete User Journey', () => {
 
     // Verify tabs are present
     await expect(page.getByRole('button', { name: /topics/i })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole('button', { name: /sources/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /sources \(/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /settings/i })).toBeVisible();
 
     // Switch to Sources tab
-    await page.getByRole('button', { name: /sources/i }).click();
+    await page.getByRole('button', { name: /sources \(/i }).click();
 
     // Verify sources are displayed
     await expect(page.getByText(/trust score/i).first()).toBeVisible({ timeout: 5000 }).catch(() => {
@@ -128,7 +142,7 @@ test.describe('Complete User Journey', () => {
     await expect(page.getByText(/source discovery mode/i)).toBeVisible();
     await expect(page.getByText(/article order preference/i)).toBeVisible();
 
-    // Step 5: Navigate to How It Works
+    // Step 6: Navigate to How It Works
     await page.getByRole('button', { name: /💡.*how it works/i }).click();
     await expect(page).toHaveURL(/\/how-it-works/, { timeout: 10000 });
 
@@ -139,7 +153,7 @@ test.describe('Complete User Journey', () => {
     // Verify educational content
     await expect(page.getByRole('heading', { name: /how pulse works/i })).toBeVisible({ timeout: 10000 });
 
-    // Step 6: Logout
+    // Step 7: Logout
     await page.getByRole('button', { name: /logout/i }).click();
 
     // Should redirect to landing page
@@ -244,6 +258,30 @@ test.describe('Navigation Flow', () => {
     // Test Feed button
     await page.getByRole('button', { name: /📰.*feed/i }).click();
     await expect(page).toHaveURL(/\/feed/, { timeout: 10000 });
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
+
+    // Test Sources button
+    await page.getByRole('button', { name: /📑.*sources/i }).click();
+    await expect(page).toHaveURL(/\/sources/, { timeout: 10000 });
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
+
+    // Test Analytics button
+    await page.getByRole('button', { name: /📊.*analytics/i }).click();
+    await expect(page).toHaveURL(/\/analytics/, { timeout: 10000 });
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
+
+    // Test Sources button
+    await page.getByRole('button', { name: /📑.*sources/i }).click();
+    await expect(page).toHaveURL(/\/sources/, { timeout: 10000 });
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
+
+    // Test Analytics button
+    await page.getByRole('button', { name: /📊.*analytics/i }).click();
+    await expect(page).toHaveURL(/\/analytics/, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
     await page.waitForLoadState('networkidle');
 

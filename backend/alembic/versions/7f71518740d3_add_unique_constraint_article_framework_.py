@@ -1,7 +1,7 @@
 """add_unique_constraint_article_framework_clean
 
 Revision ID: 7f71518740d3
-Revises: c03e17942bf4
+Revises: 7e947d383738
 Create Date: 2025-10-12 16:08:57.933328
 
 """
@@ -13,30 +13,18 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = '7f71518740d3'
-down_revision: Union[str, None] = 'c03e17942bf4'
+down_revision: Union[str, None] = '7e947d383738'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Add unique constraint to prevent duplicate article-framework links
-    # First, remove any existing duplicates (keep the one with lowest id)
-    op.execute("""
-        DELETE FROM article_frameworks
-        WHERE id NOT IN (
-            SELECT MIN(id)
-            FROM article_frameworks
-            GROUP BY article_id, framework_id
-        )
-    """)
-
-    # Then add the unique constraint
-    op.create_unique_constraint(
-        'uq_article_framework',
-        'article_frameworks',
-        ['article_id', 'framework_id']
-    )
+    # This migration is a no-op because the unique constraint was already
+    # added in migration 7e947d383738. This migration file is kept for
+    # compatibility with the migration history but performs no operations.
+    pass
 
 
 def downgrade() -> None:
-    op.drop_constraint('uq_article_framework', 'article_frameworks', type_='unique')
+    # No downgrade needed since upgrade is a no-op
+    pass
