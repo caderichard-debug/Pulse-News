@@ -5,7 +5,7 @@ Validates admin token and user permissions.
 from fastapi import HTTPException, status, Depends, Header, Request
 from typing import Optional
 from ..config import settings
-from .auth import get_current_user
+from ..routes.auth import get_current_user
 from ..models import User, AdminAuditLog
 from sqlmodel import Session
 from ..database import get_session

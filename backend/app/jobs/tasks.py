@@ -200,6 +200,7 @@ def analyze_job(session: Session = None):
         return {"success": False, "error": str(e)}
 
 
+@track_job_execution(job_id="framework_mapping", job_name="Framework Mapping & Discovery")
 def framework_job(session: Session = None):
     """
     Job 4: Update frameworks and map articles to ethical debates.
@@ -265,7 +266,8 @@ def framework_job(session: Session = None):
         return {"success": False, "error": str(e)}
 
 
-def newsletter_job():
+@track_job_execution(job_id="send_newsletters", job_name="Send Daily Newsletters")
+def newsletter_job(session: Session = None):
     """
     Job 5: Send daily newsletters to users.
     Scheduled to run daily at 7am.
@@ -298,6 +300,7 @@ def newsletter_job():
         return {"success": False, "error": str(e)}
 
 
+@track_job_execution(job_id="verify_statistics", job_name="Statistics Verification")
 def statistics_verification_job(session: Session = None):
     """
     Job 6: Extract and verify statistics from articles.
@@ -340,6 +343,7 @@ def statistics_verification_job(session: Session = None):
         return {"success": False, "error": str(e)}
 
 
+@track_job_execution(job_id="cluster_articles", job_name="Article Clustering")
 def article_clustering_job(session: Session = None):
     """
     Job 7: Cluster similar articles for cross-source comparison.
@@ -382,6 +386,7 @@ def article_clustering_job(session: Session = None):
         return {"success": False, "error": str(e)}
 
 
+@track_job_execution(job_id="generate_context", job_name="Context Generation")
 def context_generation_job(session: Session = None):
     """
     Job 8: Generate background context for articles.
