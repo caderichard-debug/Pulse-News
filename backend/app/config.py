@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     max_articles_per_newsletter: int = 5
     max_frameworks_per_newsletter: int = 3
 
+    # Admin Panel Configuration
+    admin_token: Optional[str] = None
+    admin_panel_enabled: bool = True
+    max_audit_log_days: int = 90  # Keep audit logs for 90 days
+    max_job_history_days: int = 30  # Keep job history for 30 days
+    admin_token_rotation_days: int = 90  # Rotate admin token every 90 days
+
     class Config:
         # Check for Render secret file first, then fall back to local .env
         env_file = os.getenv("SECRETS_FILE", ".env")

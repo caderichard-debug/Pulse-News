@@ -929,25 +929,28 @@ with Session(engine) as session:
 
 ## 12. Open Questions & Decisions Needed
 
-1. **Admin Token Management**:
-   - Should we support multiple admin tokens for different admins?
-   - How often should the token rotate?
+### ✅ DECISIONS MADE (2025-10-14)
 
-2. **Database Operations**:
-   - Should we allow raw SQL queries or only table-level CRUD?
-   - What tables should be read-only in the UI?
+1. **Admin Token Management**: ✅
+   - Rotate every 90 days or immediately upon perceived risk
+   - Manual rotation with documented process
 
-3. **Job Scheduling**:
-   - Should admins be able to modify job schedules permanently, or just trigger one-off runs?
-   - Should we add job queueing (multiple instances)?
+2. **Database Operations**: ✅
+   - Restrict to table-level CRUD via API endpoints
+   - NO raw SQL query execution allowed
 
-4. **UI/UX**:
-   - Should the admin panel have a different color scheme to distinguish it?
-   - Should we use a third-party admin UI library (like React Admin) or build custom?
+3. **Job Scheduling**: ✅
+   - Allow one-off job triggers only (e.g., "Run scrape_rss now")
+   - NO permanent schedule modifications via admin panel
 
-5. **Audit Retention**:
-   - How long should we keep audit logs?
-   - Should old logs be archived or permanently deleted?
+4. **UI/UX**: ✅
+   - Distinct but subtle theme - slightly darker/neutral gray palette
+   - Visually separate from user-facing app but not harsh
+   - Build custom components (not third-party admin framework)
+
+5. **Audit Retention**: ✅
+   - Keep audit logs for 90 days by default
+   - Automated cleanup of logs older than 90 days
 
 ---
 
