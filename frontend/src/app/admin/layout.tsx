@@ -73,6 +73,7 @@ export default function AdminLayout({
 
   const navItems = [
     { href: '/admin', label: 'Dashboard', icon: '📊' },
+    { href: '/admin/database', label: 'Database', icon: '🗄️' },
     { href: '/admin/jobs', label: 'Jobs', icon: '⚙️' },
     { href: '/admin/users', label: 'Users', icon: '👥' },
     { href: '/admin/sources', label: 'Sources', icon: '📰' },
