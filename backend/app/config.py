@@ -5,6 +5,9 @@ import os
 
 class Settings(BaseSettings):
     """Application configuration settings"""
+    
+    # Admin
+    admin_token: Optional[str] = None
 
     # Database
     database_url: str = "postgresql://postgres:password@db:5432/news_db"
