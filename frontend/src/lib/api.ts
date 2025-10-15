@@ -99,7 +99,14 @@ class ApiClient {
   }
 
   async getCurrentUser() {
-    return this.request<Record<string, unknown>>('/auth/me');
+    return this.request<{
+      id: number;
+      email: string;
+      name: string;
+      is_admin?: boolean;
+      is_active?: boolean;
+      email_verified?: boolean;
+    }>('/auth/me');
   }
 
   async logout() {

@@ -16,7 +16,7 @@ export default function Navbar() {
   useEffect(() => {
     let mounted = true;
     api.getCurrentUser()
-      .then((user: { name: string; is_admin?: boolean }) => {
+      .then((user) => {
         if (mounted && user && typeof user.name === 'string') {
           setUserName(user.name);
           setIsAdmin(user.is_admin || false);
