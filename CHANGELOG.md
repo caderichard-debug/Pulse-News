@@ -4,6 +4,60 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-15 11:24
+
+**Admin Panel Backend Tests - 100% Passing** ✅
+
+### What Changed
+
+Fixed all admin panel backend tests to achieve 100% passing rate (20/20 tests).
+
+#### Backend Fixes:
+
+**[admin_auth.py](backend/app/utils/admin_auth.py:89-119)** - Safe request handling
+- Fixed `_create_audit_log` to gracefully handle `None` request parameter
+- Added safe attribute checks for `request.client.host` and `request.headers`
+- Prevents `AttributeError` when request is not provided to audit logging
+
+#### Test Fixes:
+
+**[test_admin_panel.py](backend/tests/routes/test_admin_panel.py)** - All 20 tests passing
+- Fixed `test_toggle_user_admin`: Changed from JSON body to query parameter (`?is_admin=true`)
+- Fixed `test_delete_user`: Updated to check soft delete (`is_active=False`) instead of hard delete
+- Fixed `test_update_source`: Changed to query parameters and added `session.expire()` for cache invalidation
+- Fixed `test_delete_source`: Updated to check soft delete (`is_active=False`)
+- Fixed `test_get_articles_with_filters`: Changed `limit` to `page_size` to match API response
+- Fixed `test_delete_article`: Added required `published_at` field to test article creation
+- Fixed `test_get_audit_log`: Changed `"logs"` to `"audit_logs"` in assertion
+- Fixed `test_get_audit_log_with_filters`: Changed `limit` to `page_size`
+
+### Test Results
+
+**Admin Panel Tests:** ✅ 20/20 passing (100%)
+- TestAdminAuthentication: 4/4 passing
+- TestAdminDashboard: 1/1 passing
+- TestJobManagement: 3/3 passing
+- TestUserManagement: 3/3 passing
+- TestSourceManagement: 3/3 passing
+- TestArticleManagement: 3/3 passing
+- TestAuditLog: 2/2 passing
+
+**Overall Backend:** 377 tests passing
+
+### Key Learnings
+
+1. **API Parameter Types**: Admin endpoints use query parameters, not JSON body for simple updates
+2. **Soft Deletes**: User and Source deletion is soft (sets `is_active=False`), Article deletion is hard
+3. **Response Structure**: Pagination uses `page_size` not `limit`, audit logs are `audit_logs` not `logs`
+4. **Session Management**: Need `session.expire()` to force SQLAlchemy to reload from database
+5. **Request Handling**: Audit logging must handle `None` request gracefully for test environments
+
+**Code References:**
+- [admin_auth.py](backend/app/utils/admin_auth.py) - Request handling fix
+- [test_admin_panel.py](backend/tests/routes/test_admin_panel.py) - All test fixes
+
+---
+
 ## 2025-10-15 09:09
 
 **Added Admin Panel Testing and Database Browser** ✅
