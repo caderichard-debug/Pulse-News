@@ -30,7 +30,7 @@ export default function AdminLayout({
 
         // Get current user and check if they are an admin
         const user = await api.getCurrentUser();
-        if (user.is_admin) {
+        if (user && user.is_admin) {
           setIsAuthenticated(true);
         } else {
           // User is not an admin, redirect to feed

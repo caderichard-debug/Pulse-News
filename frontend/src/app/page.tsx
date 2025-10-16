@@ -1,4 +1,30 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { api } from '@/lib/api';
+
 export default function Home() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check if user is logged in and redirect to feed
+    api.getCurrentUser()
+      .then(user => {
+        if (user && user.id) {
+          router.push('/feed'); // logged-in → feed
+        }
+      })
+      .catch(err => {
+      if (err.status === 403 || err.message === 'Not authenticated') {
+        // not logged in → stay on landing page (no need to log)
+        // Silently handle - this is expected behavior
+      } else {
+        console.error(err);
+      }
+    });
+  }, [router]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       <div className="max-w-6xl mx-auto px-4 py-16">
