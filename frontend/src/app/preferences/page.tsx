@@ -62,10 +62,14 @@ export default function PreferencesPage() {
       setPreferences(prefsResponse.topics);
       setSources(sourcesResponse);
       setSettings(settingsResponse);
-      setUserInfo({
-        name: userResponse.name || '',
-        email: userResponse.email || '',
-      });
+      if (userResponse) {
+        setUserInfo({
+          name: userResponse.name || '',
+          email: userResponse.email || '',
+        });
+      } else {
+        setUserInfo({ name: '', email: '', })
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '';
       if (errorMessage.includes('401')) {

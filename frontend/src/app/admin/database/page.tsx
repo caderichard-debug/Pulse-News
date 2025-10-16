@@ -139,7 +139,7 @@ export default function DatabaseBrowserPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, selectedTable]);
 
   // Load dashboard stats for table counts
   useEffect(() => {
