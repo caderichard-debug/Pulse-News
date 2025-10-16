@@ -351,9 +351,11 @@ describe('FeedPage', () => {
       render(<FeedPage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/page 1 of 3/i)).toBeInTheDocument();
+        expect(screen.getByText(/of 3/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /first/i })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /previous/i })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /next/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /last/i })).toBeInTheDocument();
       });
     });
 

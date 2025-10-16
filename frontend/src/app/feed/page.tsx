@@ -47,9 +47,10 @@ export default function FeedPage() {
   const [selectedSource, setSelectedSource] = useState<number | null>(null);
   const [selectedLean, setSelectedLean] = useState<string>('');
   const [sortBy, setSortBy] = useState('newest');
-  const [onlyAnalyzed, setOnlyAnalyzed] = useState(false);
+  const [onlyAnalyzed, setOnlyAnalyzed] = useState(true); // Default to true
   const [onlyVerifiedStats, setOnlyVerifiedStats] = useState(false);
   const [page, setPage] = useState(1);
+  const [pageInput, setPageInput] = useState('1');
 
   const loadFeedData = useCallback(async () => {
     try {
@@ -65,6 +66,7 @@ export default function FeedPage() {
         only_verified_stats: onlyVerifiedStats,
       });
       setFeedData(data);
+      setPageInput(page.toString());
       setError(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load feed';
@@ -105,6 +107,23 @@ export default function FeedPage() {
     if (lean === 'left') return 'text-blue-600';
     if (lean === 'center') return 'text-purple-600';
     return 'text-red-600';
+  }
+
+  function handlePageInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setPageInput(e.target.value);
+  }
+
+  function handlePageInputSubmit(e: React.KeyboardEvent<HTMLInputElement> | React.FocusEvent<HTMLInputElement>) {
+    if ('key' in e && e.key !== 'Enter') return;
+
+    const totalPages = feedData ? Math.ceil(feedData.total_count / feedData.page_size) : 1;
+    const newPage = parseInt(pageInput);
+
+    if (!isNaN(newPage) && newPage >= 1 && newPage <= totalPages) {
+      setPage(newPage);
+    } else {
+      setPageInput(page.toString());
+    }
   }
 
   if (error && !feedData) {
@@ -355,7 +374,14 @@ export default function FeedPage() {
 
           {/* Pagination */}
           {feedData && feedData.total_count > feedData.page_size && (
-            <div className="mt-8 flex justify-center items-center gap-2">
+            <div className="mt-8 flex justify-center items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setPage(1)}
+                disabled={page === 1}
+                className="px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-gray-700 transition-colors"
+              >
+                First
+              </button>
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
@@ -363,15 +389,35 @@ export default function FeedPage() {
               >
                 Previous
               </button>
-              <span className="px-4 py-2 text-sm font-medium text-gray-700">
-                Page {page} of {Math.ceil(feedData.total_count / feedData.page_size)}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Page</span>
+                <input
+                  type="number"
+                  min="1"
+                  max={Math.ceil(feedData.total_count / feedData.page_size)}
+                  value={pageInput}
+                  onChange={handlePageInputChange}
+                  onKeyDown={handlePageInputSubmit}
+                  onBlur={handlePageInputSubmit}
+                  className="w-16 px-2 py-1 border border-gray-300 rounded-md text-center text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <span className="text-sm font-medium text-gray-700">
+                  of {Math.ceil(feedData.total_count / feedData.page_size)}
+                </span>
+              </div>
               <button
                 onClick={() => setPage(p => p + 1)}
                 disabled={page >= Math.ceil(feedData.total_count / feedData.page_size)}
                 className="px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-gray-700 transition-colors"
               >
                 Next
+              </button>
+              <button
+                onClick={() => setPage(Math.ceil(feedData.total_count / feedData.page_size))}
+                disabled={page >= Math.ceil(feedData.total_count / feedData.page_size)}
+                className="px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-gray-700 transition-colors"
+              >
+                Last
               </button>
             </div>
           )}
