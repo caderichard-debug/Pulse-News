@@ -104,20 +104,21 @@ export default function DatabaseBrowserPage() {
       let data;
       let records: any[] = [];
       let total = 0;
+      const offset = (page - 1) * pageSize;
 
       // Fetch data based on table type
       if (selectedTable === 'users') {
-        data = await api.getAdminUsers(page, pageSize);
+        data = await api.getAdminUsers({ page, limit: pageSize });
         records = data.users || [];
-        total = data.total || 0;
+        total = data.total_count || 0;
       } else if (selectedTable === 'sources') {
-        data = await api.getAdminSources(page, pageSize);
+        data = await api.getAdminSources({ limit: pageSize, offset });
         records = data.sources || [];
-        total = data.total || 0;
+        total = data.total_count || 0;
       } else if (selectedTable === 'articles') {
-        data = await api.getAdminArticles(page, pageSize);
+        data = await api.getAdminArticles({ limit: pageSize, offset });
         records = data.articles || [];
-        total = data.total || 0;
+        total = data.total_count || 0;
       } else if (selectedTable === 'topics') {
         records = await api.getTopics();
         total = records.length;
@@ -126,9 +127,9 @@ export default function DatabaseBrowserPage() {
         records = data.jobs || [];
         total = records.length;
       } else if (selectedTable === 'admin_audit_log') {
-        data = await api.getAuditLog(page, pageSize);
+        data = await api.getAuditLog({ limit: pageSize, offset });
         records = data.logs || [];
-        total = data.total || 0;
+        total = data.total_count || 0;
       }
 
       setTableData(records);
