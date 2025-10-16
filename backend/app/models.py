@@ -258,6 +258,20 @@ class Framework(SQLModel, table=True):
     )
 
 
+class PasswordResetToken(SQLModel, table=True):
+    __tablename__ = "password_reset_tokens"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    token: str = Field(max_length=255, unique=True, index=True)
+    expires_at: datetime = Field(index=True)
+    used: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Relationship
+    user: Optional["User"] = Relationship(back_populates="password_reset_tokens")
+
+
 class User(SQLModel, table=True):
     __tablename__ = "users"
 
@@ -290,6 +304,7 @@ class User(SQLModel, table=True):
 
     # Relationships
     newsletters: List["Newsletter"] = Relationship(back_populates="user")
+    password_reset_tokens: List["PasswordResetToken"] = Relationship(back_populates="user")
 
 
 class Newsletter(SQLModel, table=True):
