@@ -35,14 +35,16 @@ describe('SignupPage', () => {
 
   it('renders signup form with step 1 (details)', async () => {
     render(<SignupPage />);
-
-    expect(screen.getByText(/Pulse/)).toBeInTheDocument();
-    expect(screen.getByText('Create your account')).toBeInTheDocument();
-    expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^password/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument();
+    
+    await waitFor(() => {
+      expect(screen.getByText(/Pulse/)).toBeInTheDocument();
+      expect(screen.getByText('Create your account')).toBeInTheDocument();
+      expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^password/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument();
+    });
   });
 
   it('shows login link', () => {
@@ -219,8 +221,10 @@ describe('SignupPage', () => {
     const submitButton = screen.getByRole('button', { name: /create account/i });
     fireEvent.click(submitButton);
 
-    expect(screen.getByText(/creating account/i)).toBeInTheDocument();
-    expect(submitButton).toBeDisabled();
+    await waitFor(() => {
+      expect(screen.getByText(/creating account/i)).toBeInTheDocument();
+      expect(submitButton).toBeDisabled();
+    });
   });
 
   it('displays error message on registration failure', async () => {
@@ -284,8 +288,10 @@ describe('SignupPage', () => {
     // Go back
     fireEvent.click(screen.getByRole('button', { name: /back/i }));
 
-    expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument();
+    });
   });
 
   it('loads topics on mount', async () => {
