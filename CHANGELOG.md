@@ -4,6 +4,37 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-16 08:15
+
+**Migration Branch Merge** ✅
+
+### What Changed
+
+Fixed CI/CD pipeline error by merging branched Alembic migration heads.
+
+#### Problem:
+- Two separate migrations (`bb65738374e1` and `d765e2a06a7d`) were created from the same parent revision
+- Caused CI error: "Multiple head revisions are present for given argument 'head'"
+- Alembic couldn't determine which head to upgrade to
+
+#### Solution:
+- Created merge migration: [8bb530da2b0d_merge_admin_panel_and_password_reset.py](backend/alembic/versions/8bb530da2b0d_merge_admin_panel_and_password_reset.py)
+- Merged both branches:
+  - `bb65738374e1` (admin panel tables)
+  - `d765e2a06a7d` (password reset tokens)
+- Manually fixed alembic_version table in development database
+- Synced migration to container
+
+#### Result:
+- Single head revision: `8bb530da2b0d`
+- CI pipeline will now pass `alembic upgrade head` without errors
+- All migrations properly tracked
+
+**Code References:**
+- Merge migration: [8bb530da2b0d_merge_admin_panel_and_password_reset.py](backend/alembic/versions/8bb530da2b0d_merge_admin_panel_and_password_reset.py)
+
+---
+
 ## 2025-10-16 04:30
 
 **Password Reset Feature** ✅
