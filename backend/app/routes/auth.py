@@ -194,7 +194,8 @@ def register(
             "id": user.id,
             "email": user.email,
             "name": user.name,
-            "email_verified": user.email_verified
+            "email_verified": user.email_verified,
+            "is_admin": user.is_admin
         }
     }
 
@@ -251,7 +252,8 @@ def login(
             "id": user.id,
             "email": user.email,
             "name": user.name,
-            "email_verified": user.email_verified
+            "email_verified": user.email_verified,
+            "is_admin": user.is_admin
         }
     }
 
@@ -270,6 +272,7 @@ def get_current_user_info(
         "email": current_user.email,
         "name": current_user.name,
         "email_verified": current_user.email_verified,
+        "is_admin": current_user.is_admin,
         "created_at": current_user.created_at,
         "last_login": current_user.last_login
     }

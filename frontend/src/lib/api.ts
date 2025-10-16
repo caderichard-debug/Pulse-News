@@ -109,6 +109,8 @@ class ApiClient {
         is_admin?: boolean;
         is_active?: boolean;
         email_verified?: boolean;
+        created_at?: string;
+        last_login?: string;
       }>('/auth/me');
     } catch (error) {
       return null;
@@ -415,45 +417,9 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    // Add X-Admin-Token header from localStorage
-    const adminToken = typeof window !== 'undefined'
-      ? localStorage.getItem('admin_token')
-      : null;
-
-    if (!adminToken) {
-      throw new Error('Admin token not found');
-    }
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'X-Admin-Token': adminToken,
-      ...(options.headers as Record<string, string>),
-    };
-
-    // Use existing request method with admin token
-    return this.request(endpoint, { ...options, headers });
-  }
-
-  async verifyAdminToken(adminToken: string) {
-    // Temporarily set admin token for verification
-    const tempHeaders: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'X-Admin-Token': adminToken,
-    };
-
-    if (this.token) {
-      tempHeaders['Authorization'] = `Bearer ${this.token}`;
-    }
-
-    const response = await fetch(`${this.baseUrl}/admin-panel/verify`, {
-      headers: tempHeaders,
-    });
-
-    if (!response.ok) {
-      throw new Error('Invalid admin token');
-    }
-
-    return response.json();
+    // Admin requests now use the regular JWT token
+    // The backend will verify the user has is_admin=true
+    return this.request(endpoint, options);
   }
 
   async getAdminDashboard() {
