@@ -4,6 +4,41 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-15 16:45
+
+**Render Frontend Deployment Fix - Correct Standalone Path** 🐞
+
+### What Changed
+
+Fixed the standalone server path in render.yaml to match Next.js build output structure.
+
+#### Issue:
+- Frontend was returning "currently unable to handle this request" error
+- The standalone build places the server at `.next/standalone/frontend/server.js` (not `.next/standalone/server.js`)
+- This happens because `rootDir: frontend` is specified in render.yaml, so the build output includes the directory name
+
+#### Solution:
+
+**Updated [render.yaml](render.yaml:77):**
+```yaml
+# Before:
+startCommand: node .next/standalone/server.js
+
+# After:
+startCommand: node .next/standalone/frontend/server.js
+```
+
+### Deployment Status:
+✅ Frontend start command corrected for standalone mode
+✅ Path matches Next.js build output structure
+🔄 Ready for redeployment on Render
+
+**Code References:**
+- Configuration: [render.yaml](render.yaml:77)
+- Next.js config: [next.config.ts](frontend/next.config.ts:4)
+
+---
+
 ## 2025-10-15 13:15
 
 **Render Deployment Fix - Standalone Mode** ✅
