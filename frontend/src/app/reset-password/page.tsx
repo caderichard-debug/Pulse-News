@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import api from '@/lib/api';
+import { api } from '@/lib/api';
 
 function ResetPasswordForm() {
   const router = useRouter();
