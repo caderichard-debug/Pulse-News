@@ -73,6 +73,7 @@ export default function AdminLayout({
     { href: '/admin/sources', label: 'Sources', icon: '📰' },
     { href: '/admin/articles', label: 'Articles', icon: '📄' },
     { href: '/admin/audit', label: 'Audit Log', icon: '📋' },
+    { href: '/admin/api', label: 'API', icon: '🔌' },
   ];
 
   return (
