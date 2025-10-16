@@ -4,6 +4,49 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-16 14:30
+
+**Unverified Email Alert** ✅
+
+### What Changed
+
+Added a reusable alert component that displays on all authenticated pages when a user's email is not verified, informing them they won't receive newsletters until verification is complete.
+
+#### Implementation:
+- Created [UnverifiedEmailAlert.tsx](frontend/src/components/UnverifiedEmailAlert.tsx) component
+  - Checks `email_verified` field from user API response
+  - Shows yellow warning banner with clear messaging
+  - Only displays when user is logged in and email is unverified
+  - Gracefully handles API errors (doesn't show alert on failure)
+- Added alert to all main pages:
+  - [Feed page](frontend/src/app/feed/page.tsx:148)
+  - [Analytics page](frontend/src/app/analytics/page.tsx:97)
+  - [Preferences page](frontend/src/app/preferences/page.tsx:185)
+  - [Sources page](frontend/src/app/sources/page.tsx:82)
+  - [Article detail page](frontend/src/app/article/[id]/page.tsx:148)
+  - [How It Works page](frontend/src/app/how-it-works/page.tsx:11)
+- Added comprehensive test suite with 6 tests covering:
+  - Alert displays for unverified users
+  - Alert hidden for verified users
+  - Alert hidden on API errors or null user
+  - Correct styling applied
+  - Proper cleanup on unmount
+
+#### Result:
+- ✅ Alert appears consistently across all pages for unverified users
+- ✅ Clear messaging: "Email not verified. You won't receive newsletters until you verify your email address."
+- ✅ 6 new tests passing in [UnverifiedEmailAlert.test.tsx](frontend/src/components/__tests__/UnverifiedEmailAlert.test.tsx)
+- ✅ All 113 frontend tests still passing (107 existing + 6 new)
+- ✅ No regressions in existing functionality
+
+**Code References:**
+- Component: [UnverifiedEmailAlert.tsx](frontend/src/components/UnverifiedEmailAlert.tsx)
+- Tests: [UnverifiedEmailAlert.test.tsx](frontend/src/components/__tests__/UnverifiedEmailAlert.test.tsx)
+- API client already had `email_verified` field: [api.ts](frontend/src/lib/api.ts:111)
+- User model has `email_verified` field: [models.py](backend/app/models.py:280)
+
+---
+
 ## 2025-10-16 08:25
 
 **E2E Test Fix - Preferences Tab Name** ✅
