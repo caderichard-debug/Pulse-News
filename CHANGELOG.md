@@ -4,6 +4,45 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-15 17:00
+
+**Revert to Standard Next.js Build** 🔄
+
+### What Changed
+
+Reverted from standalone output mode back to standard Next.js build for Render deployment.
+
+#### Changes:
+1. **Removed standalone mode from [next.config.ts](frontend/next.config.ts)**
+   - Removed `output: 'standalone'` configuration
+   - Using standard Next.js production build
+
+2. **Updated [render.yaml](render.yaml:77) start command**
+   ```yaml
+   # Changed from:
+   startCommand: node .next/standalone/frontend/server.js
+
+   # Back to:
+   startCommand: npm start
+   ```
+
+### Why Change Back?
+- Standard build is simpler and more maintainable
+- `npm start` uses Next.js's built-in production server
+- Avoids path complexity with standalone mode
+- Fully supported by Render's Node.js runtime
+
+### Deployment Status:
+✅ Configuration reverted to standard Next.js build
+✅ Using `npm start` for production server
+🔄 Ready for deployment
+
+**Code References:**
+- Next.js config: [next.config.ts](frontend/next.config.ts)
+- Render config: [render.yaml](render.yaml:77)
+
+---
+
 ## 2025-10-15 16:45
 
 **Render Frontend Deployment Fix - Correct Standalone Path** 🐞
