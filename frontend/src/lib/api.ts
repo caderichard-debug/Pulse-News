@@ -116,6 +116,26 @@ class ApiClient {
     return this.request('/auth/logout', { method: 'POST' });
   }
 
+  async requestPasswordReset(data: { email: string }) {
+    return this.request<{ message: string }>('/auth/request-password-reset', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async resetPassword(data: { token: string; new_password: string }) {
+    return this.request<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async verifyResetToken(token: string) {
+    return this.request<{ valid: boolean; expires_at: string; message: string }>(
+      `/auth/verify-reset-token/${token}`
+    );
+  }
+
   // Preferences endpoints
   async getTopics() {
     return this.request<
