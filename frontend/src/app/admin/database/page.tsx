@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 
 interface Table {
@@ -78,16 +78,16 @@ export default function DatabaseBrowserPage() {
   const [totalRecords, setTotalRecords] = useState(0);
   const pageSize = 20;
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       const data = await api.getAdminDashboard();
       setStats(data.system_stats);
     } catch (err) {
       console.error('Failed to load stats:', err);
     }
-  };
+  }, []);
 
-  const loadTableData = async () => {
+  const loadTableData = useCallback(async () => {
     if (!selectedTable) return;
 
     setLoading(true);
@@ -139,7 +139,7 @@ export default function DatabaseBrowserPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Load dashboard stats for table counts
   useEffect(() => {
