@@ -210,7 +210,7 @@ describe('PreferencesPage', () => {
         expect(screen.getByText('Politics')).toBeInTheDocument();
       });
 
-      const settingsTab = screen.getByRole('button', { name: /settings/i });
+      const settingsTab = screen.getByRole('button', { name: /Newsletter/i });
       await user.click(settingsTab);
 
       await waitFor(() => {
@@ -227,7 +227,7 @@ describe('PreferencesPage', () => {
         expect(screen.getByText('Politics')).toBeInTheDocument();
       });
 
-      const settingsTab = screen.getByRole('button', { name: /settings/i });
+      const settingsTab = screen.getByRole('button', { name: /Newsletter/i });
       await user.click(settingsTab);
 
       await waitFor(() => {
@@ -246,7 +246,7 @@ describe('PreferencesPage', () => {
         expect(screen.getByText('Politics')).toBeInTheDocument();
       });
 
-      const settingsTab = screen.getByRole('button', { name: /settings/i });
+      const settingsTab = screen.getByRole('button', { name: /Newsletter/i });
       await user.click(settingsTab);
 
       await waitFor(() => {
