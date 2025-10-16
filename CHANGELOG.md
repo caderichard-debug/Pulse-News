@@ -97,6 +97,109 @@ Implemented a complete secure password reset flow with email notifications, allo
   - Forgot Password: [forgot-password/page.tsx](frontend/src/app/forgot-password/page.tsx)
   - Reset Password: [reset-password/page.tsx](frontend/src/app/reset-password/page.tsx)
   - API Client: [api.ts:117](frontend/src/lib/api.ts:117)
+## 2025-10-15 20:07
+
+**Feed Page UX Improvements** ✅
+
+### What Changed
+
+Enhanced the article feed page with improved filtering defaults and advanced pagination controls.
+
+#### Improvements:
+1. **"Show only analyzed articles" now checked by default**
+   - Changed default state from `false` to `true` in [page.tsx:50](frontend/src/app/feed/page.tsx#L50)
+   - Users see analyzed content immediately without manual filtering
+
+2. **Enhanced Pagination Controls**
+   - Added "First" and "Last" buttons for quick navigation to endpoints
+   - Added direct page number input field
+   - Users can type a page number and press Enter to jump directly
+   - Input validates and rejects invalid page numbers
+   - New pagination layout: `[First] [Previous] Page [input] of N [Next] [Last]`
+
+3. **Topics Filter**
+   - Already pulling from database via `api.getFeedTopics()`
+   - Displays all available topics with article counts
+
+#### Implementation Details:
+- Page input state managed with `pageInput` useState hook
+- Input handlers: `handlePageInputChange()` and `handlePageInputSubmit()`
+- Input responds to both Enter key and blur events
+- Invalid entries automatically revert to current page
+- Updated pagination UI in [page.tsx:375-423](frontend/src/app/feed/page.tsx#L375-L423)
+
+#### Test Updates:
+- Updated pagination test to verify new buttons (First/Last)
+- Modified test assertion from "Page 1 of 3" to "of 3" to match new format
+- All 27 feed page tests passing ✅
+
+**Code References:**
+- Main file: [frontend/src/app/feed/page.tsx](frontend/src/app/feed/page.tsx)
+- Tests: [frontend/src/app/feed/__tests__/page.test.tsx](frontend/src/app/feed/__tests__/page.test.tsx)
+
+---
+
+## 2025-10-15 18:30
+
+**Database Persistence Fix - FORCE_REBUILD Issue** 🐞
+
+### What Changed
+
+Identified and resolved the root cause of database data loss on Render deployments.
+
+#### Problem:
+- User registration data was being wiped on every deployment
+- `FORCE_REBUILD=true` was set in Render environment variables
+- This flag triggers [migrate_init.py](backend/app/migrate_init.py:92-101) to drop all tables on startup
+
+#### Solution:
+
+**Remove FORCE_REBUILD from Render Dashboard:**
+1. Go to Render Dashboard → `pulse-backend` → Environment
+2. Delete `FORCE_REBUILD` variable (or set to `false`)
+3. Redeploy service
+
+#### How It Works:
+
+The [migrate_init.py](backend/app/migrate_init.py) migration script has three modes:
+
+```python
+if FORCE_REBUILD == "true":
+    ❌ DROP ALL TABLES + rebuild from scratch
+elif alembic_version exists:
+    ✅ Run migrations (schema changes only, keeps data)
+else:
+    ✅ Stamp + migrate (for legacy databases)
+```
+
+#### Best Practices:
+
+**When to use FORCE_REBUILD:**
+- ✅ One-time schema reset for major breaking changes
+- ✅ Emergency recovery from corrupted state
+- ❌ NEVER leave enabled permanently
+- ❌ NEVER use if you need to preserve data
+
+**Proper workflow if rebuild is needed:**
+1. Set `FORCE_REBUILD=true` in Render
+2. Deploy once to rebuild
+3. **IMMEDIATELY remove** the flag
+4. Deploy again to lock in persistence
+
+**Local-Production parity:**
+- Local: Docker volumes persist data until `docker-compose down -v`
+- Production: Render PostgreSQL persists permanently
+- Both: Migrations apply schema changes without data loss
+
+### Deployment Status:
+✅ Root cause identified (FORCE_REBUILD=true)
+✅ Solution documented
+🔄 Action required: Remove FORCE_REBUILD from Render Dashboard
+
+**Code References:**
+- Migration script: [migrate_init.py](backend/app/migrate_init.py:92-101)
+- Database setup: [database.py](backend/app/database.py:23-38)
+- Render config: [render.yaml](render.yaml:1-4)
 
 ---
 
