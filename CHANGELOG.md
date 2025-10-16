@@ -4,6 +4,35 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-16 08:25
+
+**E2E Test Fix - Preferences Tab Name** ✅
+
+### What Changed
+
+Fixed E2E test failure by renaming the "Newsletter" tab to "Settings" in the preferences page.
+
+#### Problem:
+- E2E test was looking for a button with name `/settings/i`
+- Preferences page had the tab labeled as "Newsletter"
+- Test failed: `Unable to find element with role button and name /settings/i`
+
+#### Solution:
+- Renamed tab from "Newsletter" to "Settings" in [page.tsx](frontend/src/app/preferences/page.tsx:226)
+- Updated all unit tests to match new tab name in [page.test.tsx](frontend/src/app/preferences/__tests__/page.test.tsx)
+- Tab content still shows "Newsletter Settings" heading (accurate description)
+
+#### Result:
+- ✅ All 14 unit tests passing
+- ✅ E2E test selector now works correctly
+- ✅ Better tab naming consistency (Topics, Sources, Settings, Account)
+
+**Code References:**
+- Preferences page: [page.tsx](frontend/src/app/preferences/page.tsx)
+- Unit tests: [page.test.tsx](frontend/src/app/preferences/__tests__/page.test.tsx)
+
+---
+
 ## 2025-10-16 08:15
 
 **Migration Branch Merge** ✅
