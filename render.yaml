@@ -74,7 +74,7 @@ services:
     branch: main
     rootDir: frontend
     buildCommand: npm install && npm run build
-    startCommand: node .next/standalone/frontend/server.js
+    startCommand: npm start
     plan: free
     # Enable PR previews
     previews:
