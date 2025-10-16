@@ -25,22 +25,22 @@ export default function AdminLayout({
           return;
         }
 
-        // Check if admin token exists
-        const adminToken = localStorage.getItem('admin_token');
-        if (!adminToken && pathname !== '/admin') {
-          setIsLoading(false);
-          return;
-        }
+        // Ensure the API client has the token
+        api.setToken(token);
 
-        if (adminToken) {
-          // Verify admin token is still valid
-          await api.verifyAdminToken(adminToken);
+        // Get current user and check if they are an admin
+        const user = await api.getCurrentUser();
+        if (user.is_admin) {
           setIsAuthenticated(true);
+        } else {
+          // User is not an admin, redirect to feed
+          router.push('/feed');
+          return;
         }
       } catch (error) {
         console.error('Admin auth check failed:', error);
-        localStorage.removeItem('admin_token');
         setIsAuthenticated(false);
+        router.push('/login');
       } finally {
         setIsLoading(false);
       }
@@ -53,21 +53,15 @@ export default function AdminLayout({
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Verifying admin access...</p>
         </div>
       </div>
     );
   }
 
-  // Show auth page if not authenticated (handled in page.tsx)
-  if (!isAuthenticated && pathname === '/admin') {
-    return <>{children}</>;
-  }
-
-  // Redirect if trying to access admin pages without auth
+  // If not authenticated, don't render anything (redirected above)
   if (!isAuthenticated) {
-    router.push('/admin');
     return null;
   }
 
@@ -79,6 +73,7 @@ export default function AdminLayout({
     { href: '/admin/sources', label: 'Sources', icon: '📰' },
     { href: '/admin/articles', label: 'Articles', icon: '📄' },
     { href: '/admin/audit', label: 'Audit Log', icon: '📋' },
+    { href: '/admin/api', label: 'API', icon: '🔌' },
   ];
 
   return (
@@ -95,20 +90,11 @@ export default function AdminLayout({
             </div>
             <div className="flex items-center space-x-4">
               <Link
-                href="/dashboard"
+                href="/feed"
                 className="px-4 py-2 bg-red-700 hover:bg-red-600 rounded-lg text-sm font-medium transition-colors"
               >
-                ← Back to App
+                ← Back to Feed
               </Link>
-              <button
-                onClick={() => {
-                  localStorage.removeItem('admin_token');
-                  router.push('/admin');
-                }}
-                className="px-4 py-2 bg-red-900 hover:bg-red-800 rounded-lg text-sm font-medium transition-colors"
-              >
-                Lock Admin Panel
-              </button>
             </div>
           </div>
         </div>

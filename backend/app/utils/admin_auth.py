@@ -36,12 +36,29 @@ def verify_admin_token(x_admin_token: Optional[str] = Header(None)) -> bool:
 
 
 def get_admin_user(
+    current_user: User = Depends(get_current_user)
+) -> User:
+    """
+    Get current user and verify they have admin privileges.
+    Requires valid JWT token and user must have is_admin=True.
+    """
+    if not current_user.is_admin:
+        logger.warning(f"Non-admin user {current_user.email} attempted admin access")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required"
+        )
+
+    return current_user
+
+
+def get_admin_user_with_token(
     current_user: User = Depends(get_current_user),
     _: bool = Depends(verify_admin_token)
 ) -> User:
     """
     Get current user and verify they have admin privileges.
-    Requires both valid JWT token AND admin token.
+    Requires both valid JWT token AND admin token (for extra sensitive operations).
     """
     if not current_user.is_admin:
         logger.warning(f"Non-admin user {current_user.email} attempted admin access")

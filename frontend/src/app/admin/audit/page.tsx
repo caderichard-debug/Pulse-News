@@ -26,9 +26,10 @@ export default function AuditPage() {
   const loadLogs = async () => {
     try {
       const data = await api.getAuditLog({ limit: 100 });
-      setLogs(data.logs);
+      setLogs(data.logs || []);
     } catch (err) {
       console.error('Failed to load audit logs:', err);
+      setLogs([]);
     } finally {
       setIsLoading(false);
     }
