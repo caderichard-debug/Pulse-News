@@ -78,18 +78,6 @@ export default function DatabaseBrowserPage() {
   const [totalRecords, setTotalRecords] = useState(0);
   const pageSize = 20;
 
-  // Load dashboard stats for table counts
-  useEffect(() => {
-    loadStats();
-  }, []);
-
-  // Load table data when selection changes
-  useEffect(() => {
-    if (selectedTable) {
-      loadTableData();
-    }
-  }, [selectedTable, page]);
-
   const loadStats = async () => {
     try {
       const data = await api.getAdminDashboard();
@@ -151,6 +139,18 @@ export default function DatabaseBrowserPage() {
       setLoading(false);
     }
   };
+
+  // Load dashboard stats for table counts
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
+
+  // Load table data when selection changes
+  useEffect(() => {
+    if (selectedTable) {
+      loadTableData();
+    }
+  }, [selectedTable, page, loadTableData]);
 
   const selectTable = (tableName: string) => {
     setSelectedTable(tableName);
