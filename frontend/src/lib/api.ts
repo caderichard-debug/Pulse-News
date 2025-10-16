@@ -56,7 +56,9 @@ class ApiClient {
       // Handle auth errors by redirecting to login
       if (response.status === 401 || response.status === 403) {
         this.clearToken();
-        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        if (typeof window !== 'undefined'
+          && !window.location.pathname.includes('/login')
+          && window.location.pathname !== '/') {
           window.location.href = '/login';
         }
       }
@@ -99,16 +101,20 @@ class ApiClient {
   }
 
   async getCurrentUser() {
-    return this.request<{
-      id: number;
-      email: string;
-      name: string;
-      is_admin: boolean;
-      is_active?: boolean;
-      email_verified?: boolean;
-      created_at?: string;
-      last_login?: string;
-    }>('/auth/me');
+    try {
+      return this.request<{
+        id: number;
+        email: string;
+        name: string;
+        is_admin?: boolean;
+        is_active?: boolean;
+        email_verified?: boolean;
+        created_at?: string;
+        last_login?: string;
+      }>('/auth/me');
+    } catch (error) {
+      return null;
+    }
   }
 
   async logout() {
