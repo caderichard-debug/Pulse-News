@@ -4,6 +4,159 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-16 08:25
+
+**E2E Test Fix - Preferences Tab Name** ✅
+
+### What Changed
+
+Fixed E2E test failure by renaming the "Newsletter" tab to "Settings" in the preferences page.
+
+#### Problem:
+- E2E test was looking for a button with name `/settings/i`
+- Preferences page had the tab labeled as "Newsletter"
+- Test failed: `Unable to find element with role button and name /settings/i`
+
+#### Solution:
+- Renamed tab from "Newsletter" to "Settings" in [page.tsx](frontend/src/app/preferences/page.tsx:226)
+- Updated all unit tests to match new tab name in [page.test.tsx](frontend/src/app/preferences/__tests__/page.test.tsx)
+- Tab content still shows "Newsletter Settings" heading (accurate description)
+
+#### Result:
+- ✅ All 14 unit tests passing
+- ✅ E2E test selector now works correctly
+- ✅ Better tab naming consistency (Topics, Sources, Settings, Account)
+
+**Code References:**
+- Preferences page: [page.tsx](frontend/src/app/preferences/page.tsx)
+- Unit tests: [page.test.tsx](frontend/src/app/preferences/__tests__/page.test.tsx)
+
+---
+
+## 2025-10-16 08:15
+
+**Migration Branch Merge** ✅
+
+### What Changed
+
+Fixed CI/CD pipeline error by merging branched Alembic migration heads.
+
+#### Problem:
+- Two separate migrations (`bb65738374e1` and `d765e2a06a7d`) were created from the same parent revision
+- Caused CI error: "Multiple head revisions are present for given argument 'head'"
+- Alembic couldn't determine which head to upgrade to
+
+#### Solution:
+- Created merge migration: [8bb530da2b0d_merge_admin_panel_and_password_reset.py](backend/alembic/versions/8bb530da2b0d_merge_admin_panel_and_password_reset.py)
+- Merged both branches:
+  - `bb65738374e1` (admin panel tables)
+  - `d765e2a06a7d` (password reset tokens)
+- Manually fixed alembic_version table in development database
+- Synced migration to container
+
+#### Result:
+- Single head revision: `8bb530da2b0d`
+- CI pipeline will now pass `alembic upgrade head` without errors
+- All migrations properly tracked
+
+**Code References:**
+- Merge migration: [8bb530da2b0d_merge_admin_panel_and_password_reset.py](backend/alembic/versions/8bb530da2b0d_merge_admin_panel_and_password_reset.py)
+
+---
+
+## 2025-10-16 04:30
+
+**Password Reset Feature** ✅
+
+### What Changed
+
+Implemented a complete secure password reset flow with email notifications, allowing users to reset their passwords via email links.
+
+#### Backend Changes:
+
+1. **Database Schema** - Added [PasswordResetToken model](backend/app/models.py:261)
+   - Token storage with expiration (1 hour)
+   - One-time use tokens
+   - User relationship tracking
+   - Migration: [d765e2a06a7d_add_password_reset_tokens_table.py](backend/alembic/versions/d765e2a06a7d_add_password_reset_tokens_table.py)
+
+2. **API Endpoints** - New [password_reset.py](backend/app/routes/password_reset.py) router
+   - `POST /auth/request-password-reset` - Request reset email
+   - `POST /auth/reset-password` - Reset password with token
+   - `GET /auth/verify-reset-token/{token}` - Verify token validity
+   - Registered in [main.py](backend/app/main.py:74)
+
+3. **Email Service** - New [email_service.py](backend/app/services/email_service.py)
+   - `send_password_reset_email()` - Sends reset email with token
+   - `send_verification_email()` - Email verification (future use)
+   - Uses Resend API with [password_reset.html](backend/app/templates/password_reset.html) template
+
+4. **Security Features:**
+   - Cryptographically secure tokens (`secrets.token_urlsafe(32)`)
+   - 1-hour token expiration
+   - One-time use (tokens marked as used after reset)
+   - Previous tokens invalidated when new one requested
+   - No user enumeration (same response for existing/non-existing emails)
+   - Password minimum length validation (8 characters)
+
+5. **Tests** - Comprehensive test suite in [test_password_reset.py](backend/tests/test_password_reset.py)
+   - ✅ 17 tests passing (100% coverage)
+   - Token generation and validation
+   - Request password reset flow
+   - Password reset with various scenarios
+   - Token verification
+   - Complete integration test
+
+#### Frontend Changes:
+
+1. **Forgot Password Page** - [forgot-password/page.tsx](frontend/src/app/forgot-password/page.tsx)
+   - Email input form
+   - Success/error messaging
+   - Link to login and signup
+
+2. **Reset Password Page** - [reset-password/page.tsx](frontend/src/app/reset-password/page.tsx)
+   - Token verification on load
+   - New password form with confirmation
+   - Password strength validation (8+ characters)
+   - Password match validation
+   - Success state with auto-redirect to login
+   - Error handling for invalid/expired tokens
+
+3. **API Client Updates** - [api.ts](frontend/src/lib/api.ts:117)
+   - `requestPasswordReset()` method
+   - `resetPassword()` method
+   - `verifyResetToken()` method
+
+4. **Login Page Enhancement** - [login/page.tsx](frontend/src/app/login/page.tsx:86)
+   - Added "Forgot password?" link
+
+### User Flow:
+
+1. User clicks "Forgot password?" on login page
+2. Enters email address → Receives reset email
+3. Clicks link in email → Redirected to reset page
+4. Token verified automatically
+5. Enters new password (must be 8+ characters)
+6. Password successfully reset → Redirected to login
+7. Can log in with new password
+
+### Test Results:
+- **Backend**: 17 new password reset tests passing ✅
+- **Total Backend Tests**: 422 tests (includes all existing tests)
+- All password reset flows working correctly
+
+### Code References:
+- **Backend**:
+  - Model: [models.py:261](backend/app/models.py:261)
+  - Routes: [password_reset.py](backend/app/routes/password_reset.py)
+  - Email Service: [email_service.py](backend/app/services/email_service.py)
+  - Email Template: [password_reset.html](backend/app/templates/password_reset.html)
+  - Tests: [test_password_reset.py](backend/tests/test_password_reset.py)
+  - Migration: [d765e2a06a7d_add_password_reset_tokens_table.py](backend/alembic/versions/d765e2a06a7d_add_password_reset_tokens_table.py)
+- **Frontend**:
+  - Forgot Password: [forgot-password/page.tsx](frontend/src/app/forgot-password/page.tsx)
+  - Reset Password: [reset-password/page.tsx](frontend/src/app/reset-password/page.tsx)
+  - API Client: [api.ts:117](frontend/src/lib/api.ts:117)
 ## 2025-10-15 20:07
 
 **Feed Page UX Improvements** ✅

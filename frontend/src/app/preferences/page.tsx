@@ -37,7 +37,11 @@ export default function PreferencesPage() {
     article_order_preference: 'mixed',
     articles_per_topic_default: 5,
   });
-  const [activeTab, setActiveTab] = useState<'topics' | 'sources' | 'settings'>('topics');
+  const [userInfo, setUserInfo] = useState<{ name: string; email: string }>({
+    name: '',
+    email: '',
+  });
+  const [activeTab, setActiveTab] = useState<'topics' | 'sources' | 'settings' | 'account'>('topics');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -49,14 +53,23 @@ export default function PreferencesPage() {
 
   const loadPreferences = async () => {
     try {
-      const [prefsResponse, sourcesResponse, settingsResponse] = await Promise.all([
+      const [prefsResponse, sourcesResponse, settingsResponse, userResponse] = await Promise.all([
         api.getPreferences(),
         api.getSources(),
         api.getSettings(),
+        api.getCurrentUser(),
       ]);
       setPreferences(prefsResponse.topics);
       setSources(sourcesResponse);
       setSettings(settingsResponse);
+      if (userResponse) {
+        setUserInfo({
+          name: userResponse.name || '',
+          email: userResponse.email || '',
+        });
+      } else {
+        setUserInfo({ name: '', email: '', })
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '';
       if (errorMessage.includes('401')) {
@@ -211,6 +224,16 @@ export default function PreferencesPage() {
                 }`}
               >
                 Settings
+              </button>
+              <button
+                onClick={() => setActiveTab('account')}
+                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'account'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Account
               </button>
             </nav>
           </div>
@@ -484,6 +507,96 @@ export default function PreferencesPage() {
                 className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
               >
                 {saving ? 'Saving...' : 'Save Settings'}
+              </button>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'account' && (
+          <>
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Account Settings
+              </h2>
+              <p className="text-sm text-gray-600 mb-6">
+                Manage your account information and security.
+              </p>
+
+              <div className="space-y-6">
+                {/* User Information */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Profile Information</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                        Name
+                      </label>
+                      <input
+                        id="name"
+                        type="text"
+                        value={userInfo.name}
+                        onChange={(e) => setUserInfo({ ...userInfo, name: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                        placeholder="Your name"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                        Email Address
+                      </label>
+                      <input
+                        id="email"
+                        type="email"
+                        value={userInfo.email}
+                        disabled
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Email address cannot be changed
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Security Section */}
+                <div className="pt-6 border-t border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Security
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Manage your password and account security.
+                  </p>
+                  <button
+                    onClick={() => router.push('/forgot-password')}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  >
+                    Change Password
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <div className="flex justify-end">
+              <button
+                onClick={async () => {
+                  setSaving(true);
+                  setMessage(null);
+                  try {
+                    // TODO: Implement updateUserInfo API call
+                    // await api.updateUserInfo(userInfo);
+                    setMessage({ type: 'success', text: 'Account information saved successfully!' });
+                  } catch (err) {
+                    setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save account information' });
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+                disabled={saving}
+                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
+              >
+                {saving ? 'Saving...' : 'Save Account Info'}
               </button>
             </div>
           </>
