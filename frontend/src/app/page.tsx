@@ -10,14 +10,19 @@ export default function Home() {
   useEffect(() => {
     // Check if user is logged in and redirect to feed
     api.getCurrentUser()
-      .then((user) => {
-        if (user) {
-          router.push('/feed');
+      .then(user => {
+        if (user && user.id) {
+          router.push('/feed'); // logged-in → feed
         }
       })
-      .catch(() => {
-        // User not logged in, stay on landing page
-      });
+      .catch(err => {
+      if (err.status === 403 || err.message === 'Not authenticated') {
+        // not logged in → stay on landing page (no need to log)
+        // Silently handle - this is expected behavior
+      } else {
+        console.error(err);
+      }
+    });
   }, [router]);
 
   return (
