@@ -433,6 +433,22 @@ export default function PreferencesPage() {
               </p>
 
               <div className="space-y-6">
+                {/* Account Security */}
+                <div className="pb-6 border-b border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Account Security
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Manage your account password and security settings.
+                  </p>
+                  <button
+                    onClick={() => router.push('/forgot-password')}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  >
+                    Change Password
+                  </button>
+                </div>
+
                 {/* Source Discovery Mode */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
