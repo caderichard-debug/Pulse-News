@@ -1,4 +1,25 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { api } from '@/lib/api';
+
 export default function Home() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check if user is logged in and redirect to feed
+    api.getCurrentUser()
+      .then((user) => {
+        if (user) {
+          router.push('/feed');
+        }
+      })
+      .catch(() => {
+        // User not logged in, stay on landing page
+      });
+  }, [router]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       <div className="max-w-6xl mx-auto px-4 py-16">

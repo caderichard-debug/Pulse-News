@@ -221,7 +221,7 @@ export default function FeedPage() {
             </div>
 
             {/* Filter checkboxes */}
-            <div className="flex flex-wrap items-center gap-6">
+            <div className="flex flex-wrap items-center gap-6 mb-4">
               <div className="flex items-center">
                 <input
                   type="checkbox"
@@ -248,6 +248,58 @@ export default function FeedPage() {
                 </label>
               </div>
             </div>
+
+            {/* Pagination in filter card */}
+            {feedData && feedData.total_count > feedData.page_size && (
+              <div className="pt-4 border-t border-gray-200">
+                <div className="flex justify-center items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setPage(1)}
+                    disabled={page === 1}
+                    className="px-3 py-1.5 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-gray-700 transition-colors"
+                  >
+                    First
+                  </button>
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="px-3 py-1.5 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-gray-700 transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-700">Page</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max={Math.ceil(feedData.total_count / feedData.page_size)}
+                      value={pageInput}
+                      onChange={handlePageInputChange}
+                      onKeyDown={handlePageInputSubmit}
+                      onBlur={handlePageInputSubmit}
+                      className="w-16 px-2 py-1 border border-gray-300 rounded-md text-center text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">
+                      of {Math.ceil(feedData.total_count / feedData.page_size)}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setPage(p => p + 1)}
+                    disabled={page >= Math.ceil(feedData.total_count / feedData.page_size)}
+                    className="px-3 py-1.5 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-gray-700 transition-colors"
+                  >
+                    Next
+                  </button>
+                  <button
+                    onClick={() => setPage(Math.ceil(feedData.total_count / feedData.page_size))}
+                    disabled={page >= Math.ceil(feedData.total_count / feedData.page_size)}
+                    className="px-3 py-1.5 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-gray-700 transition-colors"
+                  >
+                    Last
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Results count */}

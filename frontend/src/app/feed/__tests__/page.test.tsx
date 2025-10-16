@@ -351,11 +351,13 @@ describe('FeedPage', () => {
       render(<FeedPage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/of 3/i)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /first/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /previous/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /next/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /last/i })).toBeInTheDocument();
+        // Check for "of 3" text (appears in both pagination sections)
+        expect(screen.getAllByText(/of 3/i).length).toBeGreaterThan(0);
+        // Check for pagination buttons (we have two sets now - in filter card and bottom)
+        expect(screen.getAllByRole('button', { name: /first/i })).toHaveLength(2);
+        expect(screen.getAllByRole('button', { name: /previous/i })).toHaveLength(2);
+        expect(screen.getAllByRole('button', { name: /next/i })).toHaveLength(2);
+        expect(screen.getAllByRole('button', { name: /last/i })).toHaveLength(2);
       });
     });
 
@@ -363,8 +365,11 @@ describe('FeedPage', () => {
       render(<FeedPage />);
 
       await waitFor(() => {
-        const prevButton = screen.getByRole('button', { name: /previous/i });
-        expect(prevButton).toBeDisabled();
+        const prevButtons = screen.getAllByRole('button', { name: /previous/i });
+        // Both previous buttons should be disabled on first page
+        prevButtons.forEach(button => {
+          expect(button).toBeDisabled();
+        });
       });
     });
 
@@ -372,8 +377,11 @@ describe('FeedPage', () => {
       render(<FeedPage />);
 
       await waitFor(() => {
-        const nextButton = screen.getByRole('button', { name: /next/i });
-        expect(nextButton).not.toBeDisabled();
+        const nextButtons = screen.getAllByRole('button', { name: /next/i });
+        // Both next buttons should be enabled when more pages available
+        nextButtons.forEach(button => {
+          expect(button).not.toBeDisabled();
+        });
       });
     });
 
@@ -382,11 +390,12 @@ describe('FeedPage', () => {
       render(<FeedPage />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /next/i })).toBeInTheDocument();
+        expect(screen.getAllByRole('button', { name: /next/i })).toHaveLength(2);
       });
 
-      const nextButton = screen.getByRole('button', { name: /next/i });
-      await user.click(nextButton);
+      // Click the first next button (in the filter card)
+      const nextButtons = screen.getAllByRole('button', { name: /next/i });
+      await user.click(nextButtons[0]);
 
       await waitFor(() => {
         expect(api.getFeedArticles).toHaveBeenCalledWith(
