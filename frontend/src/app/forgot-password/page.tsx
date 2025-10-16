@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 
 export default function ForgotPasswordPage() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -37,7 +36,7 @@ export default function ForgotPasswordPage() {
             Reset Password
           </h1>
           <p className="text-gray-600">
-            Enter your email address and we'll send you a link to reset your password.
+            {"Enter your email address and we'll send you a link to reset your password"}.
           </p>
         </div>
 
@@ -87,7 +86,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         <div className="mt-4 text-center text-sm text-gray-600">
-          Don't have an account?{' '}
+          {"Don't have an account?"}{' '}
           <Link href="/signup" className="text-purple-600 hover:text-purple-700 font-medium">
             Sign up
           </Link>
