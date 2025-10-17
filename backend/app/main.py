@@ -7,6 +7,8 @@ from .database import create_db_and_tables
 from .jobs.scheduler import start_scheduler, stop_scheduler
 from .routes import admin, auth, preferences, articles, test_email, analytics, feed, sources, admin_panel, password_reset
 import logging
+from .config import settings
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -56,7 +58,7 @@ app = FastAPI(
 )
 
 # CORS middleware for frontend
-frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+frontend_url = settings.frontend_url
 
 app.add_middleware(
     CORSMiddleware,

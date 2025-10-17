@@ -61,7 +61,7 @@ services:
       - key: MAX_FRAMEWORKS_PER_NEWSLETTER
         value: 3
       - key: FROM_EMAIL
-        value: onboarding@resend.dev
+        value: newsletter@pulsenews.app
       - key: FROM_NAME
         value: Pulse News
       # Secrets are loaded from /etc/secrets/.env (Secret File in Render dashboard)

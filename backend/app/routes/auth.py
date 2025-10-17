@@ -14,6 +14,7 @@ from ..utils.auth import (
     create_verification_token,
     decode_access_token
 )
+from ..services.email_service import send_verification_email
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from datetime import datetime
@@ -184,8 +185,18 @@ def register(
     # Create access token
     access_token = create_access_token(data={"sub": user.email})
 
-    # TODO: Send verification email
-    logger.info(f"New user registered: {user.email}")
+    # Send verification email
+    verification_token = create_verification_token(user.email)
+    email_sent = send_verification_email(
+        email=user.email,
+        user_name=user.name or user.email,
+        verification_token=verification_token
+    )
+
+    if email_sent:
+        logger.info(f"New user registered and verification email sent: {user.email}")
+    else:
+        logger.warning(f"New user registered but verification email failed: {user.email}")
 
     return {
         "access_token": access_token,
@@ -316,6 +327,50 @@ def verify_email(
     logger.info(f"Email verified for user: {user.email}")
 
     return {"message": "Email verified successfully"}
+
+
+@router.post("/resend-verification-email")
+def resend_verification_email(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Resend email verification link to current user.
+
+    Requires: Authorization header with Bearer token
+    """
+    if current_user.email_verified:
+        return {"message": "Email already verified"}
+
+    # Create and send new verification token
+    verification_token = create_verification_token(current_user.email)
+    email_sent = send_verification_email(
+        email=current_user.email,
+        user_name=current_user.name or current_user.email,
+        verification_token=verification_token
+    )
+
+    if not email_sent:
+        # In development, log the verification link for manual testing
+        from ..config import settings
+        if settings.environment == "development":
+            verification_link = f"{settings.frontend_url}/verify-email?token={verification_token}"
+            logger.warning(
+                f"Email sending failed for {current_user.email}. "
+                f"Development verification link: {verification_link}"
+            )
+            return {
+                "message": "Email sending failed (development mode). Check server logs for verification link.",
+                "dev_link": verification_link if settings.debug else None
+            }
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send verification email. Please try again later."
+        )
+
+    logger.info(f"Verification email resent to: {current_user.email}")
+
+    return {"message": "Verification email sent successfully"}
 
 
 @router.post("/logout")

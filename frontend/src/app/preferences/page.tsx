@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
+import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
 
 interface TopicPreference {
   id: number;
@@ -165,6 +166,7 @@ export default function PreferencesPage() {
   return (
     <>
       <Navbar />
+      <UnverifiedEmailAlert />
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-6xl mx-auto px-4 py-8">
           {/* Header */}
