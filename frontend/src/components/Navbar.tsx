@@ -76,7 +76,7 @@ export default function Navbar() {
                   }`}
                 >
                   <span className="mr-1">{item.icon}</span>
-                  {item.name}
+                  <span className="whitespace-nowrap">{item.name}</span>
                 </button>
               ))}
           </div>
