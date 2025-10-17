@@ -257,13 +257,14 @@ def trigger_job(
         - verify_statistics
         - cluster_articles
         - generate_context
+        - send_newsletters
 
     Note: Does not modify permanent schedule, only triggers one execution.
     """
     from ..jobs.tasks import (
         scrape_job, extract_job, analyze_job, framework_job,
         statistics_verification_job, article_clustering_job,
-        context_generation_job
+        context_generation_job, newsletter_job
     )
 
     # Map job IDs to functions
@@ -274,7 +275,8 @@ def trigger_job(
         "update_frameworks": ("framework_job", framework_job, "Update Frameworks"),
         "verify_statistics": ("statistics_verification_job", statistics_verification_job, "Verify Statistics"),
         "cluster_articles": ("article_clustering_job", article_clustering_job, "Cluster Articles"),
-        "generate_context": ("context_generation_job", context_generation_job, "Generate Context")
+        "generate_context": ("context_generation_job", context_generation_job, "Generate Context"),
+        "send_newsletters": ("newsletter_job", newsletter_job, "Send Daily Newsletters")
     }
 
     if job_id not in job_map:
