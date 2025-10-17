@@ -26,14 +26,20 @@ Updated [SourceBiasBadge.tsx](frontend/src/components/SourceBiasBadge.tsx:30-69)
 - **Right**: bg-red-100, text-red-700, border-red-300
 - **Fallback**: bg-gray-100, text-gray-700, border-gray-300
 
+#### Additional Fix:
+Fixed TypeScript type error in [api.ts](frontend/src/lib/api.ts:206) where `getSources()` was returning `political_lean` instead of `organizational_bias`, causing type mismatch with the `Source` interface in preferences page.
+
 #### Result:
 - ✅ All 14 preferences page tests passing
+- ✅ All 14 API client tests passing
 - ✅ Badges are still color-coded and readable
 - ✅ Softer visual hierarchy - badges don't overpower the page
 - ✅ Better integration with the overall UI design
+- ✅ No TypeScript errors
 
 **Code References:**
 - Component: [SourceBiasBadge.tsx](frontend/src/components/SourceBiasBadge.tsx:30-69)
+- API Type: [api.ts](frontend/src/lib/api.ts:200-209)
 - Usage: [page.tsx](frontend/src/app/preferences/page.tsx:364)
 
 ---
