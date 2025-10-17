@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
@@ -29,8 +29,9 @@ interface Settings {
   articles_per_topic_default: number;
 }
 
-export default function PreferencesPage() {
+function PreferencesContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [preferences, setPreferences] = useState<TopicPreference[]>([]);
   const [sources, setSources] = useState<Source[]>([]);
   const [settings, setSettings] = useState<Settings>({
@@ -42,7 +43,17 @@ export default function PreferencesPage() {
     name: '',
     email: '',
   });
-  const [activeTab, setActiveTab] = useState<'topics' | 'sources' | 'settings' | 'account'>('topics');
+
+  // Initialize activeTab from URL or default to 'topics'
+  const getInitialTab = (): 'topics' | 'sources' | 'settings' | 'account' => {
+    const tab = searchParams.get('tab');
+    if (tab === 'topics' || tab === 'sources' || tab === 'settings' || tab === 'account') {
+      return tab;
+    }
+    return 'topics';
+  };
+
+  const [activeTab, setActiveTab] = useState<'topics' | 'sources' | 'settings' | 'account'>(getInitialTab());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -51,6 +62,20 @@ export default function PreferencesPage() {
     loadPreferences();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Update activeTab when URL changes
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'topics' || tab === 'sources' || tab === 'settings' || tab === 'account') {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  // Helper function to update the tab and URL
+  const handleTabChange = (tab: 'topics' | 'sources' | 'settings' | 'account') => {
+    setActiveTab(tab);
+    router.push(`/preferences?tab=${tab}`, { scroll: false });
+  };
 
   const loadPreferences = async () => {
     try {
@@ -182,7 +207,7 @@ export default function PreferencesPage() {
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex">
               <button
-                onClick={() => setActiveTab('topics')}
+                onClick={() => handleTabChange('topics')}
                 className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === 'topics'
                     ? 'border-indigo-500 text-indigo-600'
@@ -192,7 +217,7 @@ export default function PreferencesPage() {
                 Topics ({activeTopics.length})
               </button>
               <button
-                onClick={() => setActiveTab('sources')}
+                onClick={() => handleTabChange('sources')}
                 className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === 'sources'
                     ? 'border-indigo-500 text-indigo-600'
@@ -202,7 +227,7 @@ export default function PreferencesPage() {
                 Sources ({subscribedSources.length})
               </button>
               <button
-                onClick={() => setActiveTab('settings')}
+                onClick={() => handleTabChange('settings')}
                 className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === 'settings'
                     ? 'border-indigo-500 text-indigo-600'
@@ -212,7 +237,7 @@ export default function PreferencesPage() {
                 Settings
               </button>
               <button
-                onClick={() => setActiveTab('account')}
+                onClick={() => handleTabChange('account')}
                 className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === 'account'
                     ? 'border-indigo-500 text-indigo-600'
@@ -577,5 +602,20 @@ export default function PreferencesPage() {
       </div>
     </div>
     </>
+  );
+}
+
+export default function PreferencesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading preferences...</p>
+        </div>
+      </div>
+    }>
+      <PreferencesContent />
+    </Suspense>
   );
 }
