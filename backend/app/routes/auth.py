@@ -350,6 +350,19 @@ def resend_verification_email(
     )
 
     if not email_sent:
+        # In development, log the verification link for manual testing
+        from ..config import settings
+        if settings.environment == "development":
+            verification_link = f"{settings.frontend_url}/verify-email?token={verification_token}"
+            logger.warning(
+                f"Email sending failed for {current_user.email}. "
+                f"Development verification link: {verification_link}"
+            )
+            return {
+                "message": "Email sending failed (development mode). Check server logs for verification link.",
+                "dev_link": verification_link if settings.debug else None
+            }
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to send verification email. Please try again later."
