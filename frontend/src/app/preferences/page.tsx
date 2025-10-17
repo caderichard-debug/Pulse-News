@@ -9,7 +9,6 @@ interface TopicPreference {
   id: number;
   name: string;
   description: string;
-  priority: number;
   is_active: boolean;
 }
 
@@ -83,14 +82,6 @@ export default function PreferencesPage() {
     }
   };
 
-  const updatePriority = (topicId: number, priority: number) => {
-    setPreferences(
-      preferences.map((pref) =>
-        pref.id === topicId ? { ...pref, priority } : pref
-      )
-    );
-  };
-
   const toggleActive = (topicId: number) => {
     setPreferences(
       preferences.map((pref) =>
@@ -106,7 +97,6 @@ export default function PreferencesPage() {
     try {
       const preferencesData = preferences.map((pref) => ({
         topic_id: pref.id,
-        priority: pref.priority,
         is_active: pref.is_active,
       }));
 
@@ -244,8 +234,7 @@ export default function PreferencesPage() {
           <h2 className="text-xl font-semibold mb-2">Your Newsletter</h2>
           <p className="text-indigo-100">
             You&apos;re subscribed to <strong>{activeTopics.length}</strong> topics.
-            Your daily digest will include articles from these topics based on
-            your priority settings.
+            Your daily digest will include articles from these topics.
           </p>
         </div>
 
@@ -270,8 +259,7 @@ export default function PreferencesPage() {
                 Topic Preferences
               </h2>
               <p className="text-sm text-gray-600 mb-6">
-                Toggle topics on/off and adjust their priority (1-10). Higher priority
-                topics will appear more frequently in your newsletter.
+                Toggle topics on/off to customize your newsletter content.
               </p>
 
               <div className="space-y-4">
@@ -311,28 +299,6 @@ export default function PreferencesPage() {
                             )}
                           </div>
                         </div>
-
-                        {pref.is_active && (
-                          <div className="mt-4 ml-15">
-                            <label className="text-sm font-medium text-gray-700 block mb-2">
-                              Priority: {pref.priority}/10
-                            </label>
-                            <input
-                              type="range"
-                              min="1"
-                              max="10"
-                              value={pref.priority}
-                              onChange={(e) =>
-                                updatePriority(pref.id, parseInt(e.target.value))
-                              }
-                              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                            />
-                            <div className="flex justify-between text-xs text-gray-500 mt-1">
-                              <span>Low</span>
-                              <span>High</span>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>

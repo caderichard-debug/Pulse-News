@@ -73,7 +73,6 @@ def test_user_topic_preference_field_names(session: Session):
     pref = UserTopicPreference(
         user_id=1,
         topic_id=1,
-        priority_level=5,  # Should be priority_level, not priority!
         include_in_newsletter=True  # Should be include_in_newsletter, not is_active!
     )
 
@@ -81,11 +80,9 @@ def test_user_topic_preference_field_names(session: Session):
     session.commit()
 
     # Verify correct field names
-    assert hasattr(pref, "priority_level")
     assert hasattr(pref, "include_in_newsletter")
 
     # Should NOT have these fields:
-    assert not hasattr(pref, "priority")
     assert not hasattr(pref, "is_active")
 
 
@@ -103,7 +100,6 @@ def test_get_preferences_returns_all_topics(client: TestClient, auth_token: str)
     assert len(data["topics"]) == 3  # We seeded 3 topics
     assert all("id" in topic for topic in data["topics"])
     assert all("name" in topic for topic in data["topics"])
-    assert all("priority" in topic for topic in data["topics"])
     assert all("is_active" in topic for topic in data["topics"])
 
 
@@ -124,8 +120,8 @@ def test_update_preferences_creates_topic_preferences(
         headers={"Authorization": f"Bearer {auth_token}"},
         json={
             "preferences": [
-                {"topic_id": 1, "priority": 8, "is_active": True},
-                {"topic_id": 2, "priority": 5, "is_active": True},
+                {"topic_id": 1, "is_active": True},
+                {"topic_id": 2, "is_active": True},
             ]
         }
     )
@@ -139,18 +135,16 @@ def test_update_preferences_creates_topic_preferences(
 
     assert len(prefs) == 2
 
-    # Check that records use priority_level and include_in_newsletter
+    # Check that records use include_in_newsletter
     for pref in prefs:
-        assert hasattr(pref, "priority_level")
         assert hasattr(pref, "include_in_newsletter")
-        assert pref.priority_level in [5, 8]
         assert pref.include_in_newsletter is True
 
 
 def test_subscribe_to_topic(client: TestClient, auth_token: str, session: Session):
     """Test subscribing to a specific topic"""
     response = client.post(
-        "/preferences/topics/1/subscribe?priority=7",  # Fixed: added /preferences prefix
+        "/preferences/topics/1/subscribe",
         headers={"Authorization": f"Bearer {auth_token}"}
     )
 
@@ -165,7 +159,6 @@ def test_subscribe_to_topic(client: TestClient, auth_token: str, session: Sessio
     ).first()
 
     assert pref is not None
-    assert pref.priority_level == 7  # Should use priority_level
     assert pref.include_in_newsletter is True  # Should use include_in_newsletter
 
 
@@ -175,7 +168,6 @@ def test_unsubscribe_from_topic(client: TestClient, auth_token: str, session: Se
     pref = UserTopicPreference(
         user_id=1,
         topic_id=2,
-        priority_level=5,
         include_in_newsletter=True
     )
     session.add(pref)
@@ -183,7 +175,7 @@ def test_unsubscribe_from_topic(client: TestClient, auth_token: str, session: Se
 
     # Then unsubscribe
     response = client.post(
-        "/preferences/topics/2/unsubscribe",  # Fixed: added /preferences prefix
+        "/preferences/topics/2/unsubscribe",
         headers={"Authorization": f"Bearer {auth_token}"}
     )
 
@@ -201,30 +193,6 @@ def test_unsubscribe_from_topic(client: TestClient, auth_token: str, session: Se
     assert pref.include_in_newsletter is False  # Should be set to False
 
 
-def test_priority_validation(client: TestClient, auth_token: str):
-    """Test that priority values are validated (1-10)"""
-    # Test with invalid priority (too high)
-    response = client.post(
-        "/preferences/topics/1/subscribe?priority=15",  # Fixed: added /preferences prefix
-        headers={"Authorization": f"Bearer {auth_token}"}
-    )
-    assert response.status_code == 422  # Validation error
-
-    # Test with invalid priority (too low)
-    response = client.post(
-        "/preferences/topics/1/subscribe?priority=0",  # Fixed: added /preferences prefix
-        headers={"Authorization": f"Bearer {auth_token}"}
-    )
-    assert response.status_code == 422  # Validation error
-
-    # Test with valid priority
-    response = client.post(
-        "/preferences/topics/1/subscribe?priority=5",  # Fixed: added /preferences prefix
-        headers={"Authorization": f"Bearer {auth_token}"}
-    )
-    assert response.status_code == 200
-
-
 def test_subscribe_to_nonexistent_topic(client: TestClient, auth_token: str):
     """Test that subscribing to non-existent topic fails gracefully"""
     response = client.post(
@@ -239,18 +207,16 @@ def test_get_preferences_includes_user_customizations(
     auth_token: str,
     session: Session
 ):
-    """Test that GET /preferences returns user's customized priorities"""
+    """Test that GET /preferences returns user's customized preferences"""
     # Create custom preferences
     pref1 = UserTopicPreference(
         user_id=1,
         topic_id=1,
-        priority_level=9,
         include_in_newsletter=True
     )
     pref2 = UserTopicPreference(
         user_id=1,
         topic_id=2,
-        priority_level=3,
         include_in_newsletter=False
     )
     session.add(pref1)
@@ -269,8 +235,5 @@ def test_get_preferences_includes_user_customizations(
     topic1 = next(t for t in data["topics"] if t["id"] == 1)
     topic2 = next(t for t in data["topics"] if t["id"] == 2)
 
-    assert topic1["priority"] == 9
     assert topic1["is_active"] is True
-
-    assert topic2["priority"] == 3
     assert topic2["is_active"] is False

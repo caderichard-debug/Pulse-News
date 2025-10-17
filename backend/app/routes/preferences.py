@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 # Request/Response Models
 class TopicPreference(BaseModel):
     topic_id: int
-    priority: int = Field(default=5, ge=1, le=10, description="Priority 1-10 (10 is highest)")
     is_active: bool = Field(default=True)
 
 
@@ -30,7 +29,6 @@ class TopicInfo(BaseModel):
     id: int
     name: str
     description: Optional[str]
-    priority: int
     is_active: bool
 
 
@@ -68,7 +66,6 @@ def get_user_preferences(
             "id": topic.id,
             "name": topic.name,
             "description": topic.description,
-            "priority": pref.priority_level if pref else 5,
             "is_active": pref.include_in_newsletter if pref else False
         })
 
@@ -87,8 +84,7 @@ def update_user_preferences(
     """
     Update user's topic preferences.
 
-    - **preferences**: List of topic preferences with priority and active status
-    - Priority: 1-10 (10 is highest priority)
+    - **preferences**: List of topic preferences with active status
     - Active: Whether to include this topic in newsletters
     """
     # Delete existing preferences
@@ -111,7 +107,6 @@ def update_user_preferences(
         new_pref = UserTopicPreference(
             user_id=current_user.id,
             topic_id=pref_data.topic_id,
-            priority_level=pref_data.priority,
             include_in_newsletter=pref_data.is_active
         )
         session.add(new_pref)
@@ -148,7 +143,6 @@ def get_available_topics(
 @router.post("/topics/{topic_id}/subscribe")
 def subscribe_to_topic(
     topic_id: int,
-    priority: int = Query(default=5, ge=1, le=10),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
@@ -156,7 +150,6 @@ def subscribe_to_topic(
     Subscribe to a specific topic.
 
     - **topic_id**: ID of the topic to subscribe to
-    - **priority**: Priority level 1-10 (default: 5)
     """
     # Verify topic exists
     topic = session.get(Topic, topic_id)
@@ -176,14 +169,12 @@ def subscribe_to_topic(
     if existing_pref:
         # Update existing preference
         existing_pref.include_in_newsletter = True
-        existing_pref.priority_level = priority
         session.add(existing_pref)
     else:
         # Create new preference
         new_pref = UserTopicPreference(
             user_id=current_user.id,
             topic_id=topic_id,
-            priority_level=priority,  # Fixed: was priority
             include_in_newsletter=True
         )
         session.add(new_pref)
@@ -194,8 +185,7 @@ def subscribe_to_topic(
 
     return {
         "message": f"Subscribed to {topic.name}",
-        "topic_id": topic_id,
-        "priority": priority
+        "topic_id": topic_id
     }
 
 
