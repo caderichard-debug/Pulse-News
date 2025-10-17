@@ -34,15 +34,15 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
+      <div className="max-w-md w-full bg-card rounded-lg shadow-xl p-8">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-indigo-600">⚡ Pulse</h1>
-          <h2 className="text-gray-600 mt-2 text-xl">Welcome back</h2>
+          <h1 className="text-4xl font-bold text-primary">⚡ Pulse</h1>
+          <h2 className="text-muted-foreground mt-2 text-xl">Welcome back</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="email" className="block text-sm font-medium text-card-foreground mb-1">
               Email
             </label>
             <input
@@ -53,13 +53,13 @@ export default function LoginPage() {
               onChange={(e) =>
                 setFormData({ ...formData, email: e.target.value })
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 placeholder-gray-400"
+              className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-foreground placeholder-gray-400"
               placeholder="john@example.com"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="password" className="block text-sm font-medium text-card-foreground mb-1">
               Password
             </label>
             <input
@@ -70,7 +70,7 @@ export default function LoginPage() {
               onChange={(e) =>
                 setFormData({ ...formData, password: e.target.value })
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 placeholder-gray-400"
+              className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-foreground placeholder-gray-400"
               placeholder="••••••••"
             />
           </div>
@@ -83,7 +83,7 @@ export default function LoginPage() {
 
           <div className="flex items-center justify-between text-sm">
             <div></div>
-            <a href="/forgot-password" className="text-indigo-600 hover:text-indigo-700">
+            <a href="/forgot-password" className="text-primary hover:text-indigo-700">
               Forgot password?
             </a>
           </div>
@@ -91,15 +91,15 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 px-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="w-full py-2 px-4 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             {loading ? 'Logging in...' : 'Log In'}
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-gray-600">
+        <div className="mt-6 text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{' '}
-          <a href="/signup" className="text-indigo-600 hover:text-indigo-700">
+          <a href="/signup" className="text-primary hover:text-indigo-700">
             Sign up
           </a>
         </div>

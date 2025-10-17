@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@/__tests__/test-utils';
 import { useRouter, usePathname } from 'next/navigation';
 import Navbar from '../Navbar';
 import { api } from '@/lib/api';
@@ -70,7 +70,8 @@ describe('Navbar', () => {
     render(<Navbar />);
 
     const feedButton = screen.getByRole('button', { name: /📰 feed/i });
-    expect(feedButton).toHaveClass('bg-indigo-50', 'text-indigo-700');
+    expect(feedButton).toHaveClass('bg-indigo-100');
+    expect(feedButton).toHaveClass('text-indigo-700');
   });
 
   it('does not highlight inactive pages', () => {
@@ -79,8 +80,8 @@ describe('Navbar', () => {
     render(<Navbar />);
 
     const analyticsButton = screen.getByRole('button', { name: /📊 analytics/i });
-    expect(analyticsButton).toHaveClass('text-gray-600');
-    expect(analyticsButton).not.toHaveClass('bg-indigo-50');
+    expect(analyticsButton).toHaveClass('text-muted-foreground');
+    expect(analyticsButton).not.toHaveClass('bg-indigo-100');
   });
 
   it('navigates to Analytics when clicking Analytics button', () => {
@@ -215,17 +216,19 @@ describe('Navbar', () => {
     rerender(<Navbar />);
 
     const analyticsButton = screen.getByRole('button', { name: /📊 analytics/i });
-    expect(analyticsButton).toHaveClass('bg-indigo-50', 'text-indigo-700');
+    expect(analyticsButton).toHaveClass('bg-indigo-100');
+    expect(analyticsButton).toHaveClass('text-indigo-700');
 
     const feedButton = screen.getByRole('button', { name: /📰 feed/i });
-    expect(feedButton).not.toHaveClass('bg-indigo-50');
+    expect(feedButton).not.toHaveClass('bg-indigo-100');
   });
 
   it('applies hover styles to nav links', () => {
     render(<Navbar />);
 
     const analyticsButton = screen.getByRole('button', { name: /📊 analytics/i });
-    expect(analyticsButton).toHaveClass('hover:bg-gray-50', 'hover:text-gray-900');
+    expect(analyticsButton).toHaveClass('hover:bg-accent');
+    expect(analyticsButton).toHaveClass('hover:text-accent-foreground');
   });
 
   it('applies transition classes to nav links', () => {

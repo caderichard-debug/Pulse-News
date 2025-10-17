@@ -82,10 +82,10 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
+      <div className="max-w-md w-full bg-card rounded-lg shadow-xl p-8">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-indigo-600">⚡ Pulse</h1>
-          <h2 className="text-gray-600 mt-2 text-xl">Create your account</h2>
+          <h1 className="text-4xl font-bold text-primary">⚡ Pulse</h1>
+          <h2 className="text-muted-foreground mt-2 text-xl">Create your account</h2>
         </div>
 
         {/* Progress indicator */}
@@ -115,7 +115,7 @@ export default function SignupPage() {
           {step === 'details' ? (
             <div className="space-y-4">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="name" className="block text-sm font-medium text-card-foreground mb-1">
                   Full Name
                 </label>
                 <input
@@ -126,13 +126,13 @@ export default function SignupPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 placeholder-gray-400"
+                  className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-foreground placeholder-gray-400"
                   placeholder="John Doe"
                 />
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="email" className="block text-sm font-medium text-card-foreground mb-1">
                   Email
                 </label>
                 <input
@@ -143,13 +143,13 @@ export default function SignupPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 placeholder-gray-400"
+                  className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-foreground placeholder-gray-400"
                   placeholder="john@example.com"
                 />
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="password" className="block text-sm font-medium text-card-foreground mb-1">
                   Password
                 </label>
                 <input
@@ -160,13 +160,13 @@ export default function SignupPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 placeholder-gray-400"
+                  className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-foreground placeholder-gray-400"
                   placeholder="••••••••"
                 />
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-card-foreground mb-1">
                   Confirm Password
                 </label>
                 <input
@@ -177,7 +177,7 @@ export default function SignupPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, confirmPassword: e.target.value })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 placeholder-gray-400"
+                  className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-foreground placeholder-gray-400"
                   placeholder="••••••••"
                 />
               </div>
@@ -185,10 +185,10 @@ export default function SignupPage() {
           ) : (
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-lg font-semibold text-foreground mb-2">
                   Choose Your Topics
                 </h3>
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm text-muted-foreground mb-4">
                   Select topics you&apos;re interested in. You can change these later.
                 </p>
 
@@ -196,20 +196,20 @@ export default function SignupPage() {
                   {topics.map((topic) => (
                     <label
                       key={topic.id}
-                      className="flex items-start p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                      className="flex items-start p-3 border border-border rounded-lg hover:bg-background cursor-pointer"
                     >
                       <input
                         type="checkbox"
                         checked={selectedTopics.has(topic.id)}
                         onChange={() => toggleTopic(topic.id)}
-                        className="mt-1 mr-3 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        className="mt-1 mr-3 h-4 w-4 text-primary focus:ring-indigo-500 border-border rounded"
                       />
                       <div className="flex-1">
-                        <div className="font-medium text-gray-900">
+                        <div className="font-medium text-foreground">
                           {topic.name}
                         </div>
                         {topic.description && (
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-muted-foreground">
                             {topic.description}
                           </div>
                         )}
@@ -232,7 +232,7 @@ export default function SignupPage() {
               <button
                 type="button"
                 onClick={() => setStep('details')}
-                className="w-full py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                className="w-full py-2 px-4 border border-border rounded-lg text-card-foreground hover:bg-background transition-colors"
               >
                 Back
               </button>
@@ -241,7 +241,7 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2 px-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="w-full py-2 px-4 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {loading
                 ? 'Creating account...'
@@ -252,9 +252,9 @@ export default function SignupPage() {
           </div>
         </form>
 
-        <div className="mt-6 text-center text-sm text-gray-600">
+        <div className="mt-6 text-center text-sm text-muted-foreground">
           Already have an account?{' '}
-          <a href="/login" className="text-indigo-600 hover:text-indigo-700">
+          <a href="/login" className="text-primary hover:text-indigo-700">
             Log in
           </a>
         </div>

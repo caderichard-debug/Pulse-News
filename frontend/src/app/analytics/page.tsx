@@ -81,10 +81,10 @@ export default function AnalyticsPage() {
     return (
       <>
         <Navbar />
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading analytics...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading analytics...</p>
           </div>
         </div>
       </>
@@ -95,19 +95,19 @@ export default function AnalyticsPage() {
     <>
       <Navbar />
       <UnverifiedEmailAlert />
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background">
         <div className="max-w-7xl mx-auto px-4 py-8">
           {/* Header */}
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">📊 Data Analysis</h1>
-              <p className="text-gray-600 mt-1">Explore sentiment trends and bias distribution across the news</p>
+              <h1 className="text-3xl font-bold text-foreground">📊 Data Analysis</h1>
+              <p className="text-muted-foreground mt-1">Explore sentiment trends and bias distribution across the news</p>
             </div>
           </div>
 
         {/* Time Range Selector */}
         <div className="flex justify-end mb-4">
-          <div className="bg-white rounded-lg shadow-sm p-2 flex gap-2">
+          <div className="bg-card rounded-lg shadow-sm p-2 flex gap-2">
             {[7, 30, 90].map((days) => (
               <button
                 key={days}
@@ -125,9 +125,9 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Sentiment Over Time Chart */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Sentiment Over Time</h2>
-          <p className="text-sm text-gray-600 mb-4">
+        <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
+          <h2 className="text-xl font-semibold text-foreground mb-4">Sentiment Over Time</h2>
+          <p className="text-sm text-muted-foreground mb-4">
             Track daily sentiment trends across different political leans. Positive values indicate more optimistic/positive coverage,
             while negative values suggest more critical/negative reporting. Lines show the average sentiment for left-leaning (blue),
             center (purple), and right-leaning (red) news sources.
@@ -153,16 +153,16 @@ export default function AnalyticsPage() {
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-muted-foreground">
               No sentiment data available for this time range
             </div>
           )}
         </div>
 
         {/* Bias Distribution Chart */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Source Bias Distribution</h2>
-          <p className="text-sm text-gray-600 mb-4">
+        <div className="bg-card rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-semibold text-foreground mb-4">Source Bias Distribution</h2>
+          <p className="text-sm text-muted-foreground mb-4">
             This chart shows the political lean of articles from your news sources over the past 4 weeks.
             Each week is represented as a stacked area showing the percentage of articles classified as left-leaning (blue),
             center/neutral (gray), or right-leaning (red). This helps you understand the balance of perspectives in your news consumption.
@@ -202,7 +202,7 @@ export default function AnalyticsPage() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-muted-foreground">
               No bias distribution data available
             </div>
           )}
