@@ -169,7 +169,6 @@ class ApiClient {
         id: number;
         name: string;
         description: string;
-        priority: number;
         is_active: boolean;
       }>;
     }>('/preferences');
@@ -177,7 +176,6 @@ class ApiClient {
 
   async updatePreferences(preferences: Array<{
     topic_id: number;
-    priority: number;
     is_active: boolean;
   }>) {
     return this.request('/preferences', {
@@ -186,10 +184,9 @@ class ApiClient {
     });
   }
 
-  async subscribeToTopic(topicId: number, priority: number = 5) {
+  async subscribeToTopic(topicId: number) {
     return this.request(`/preferences/topics/${topicId}/subscribe`, {
       method: 'POST',
-      body: JSON.stringify({ priority }),
     });
   }
 

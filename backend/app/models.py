@@ -89,7 +89,6 @@ class UserTopicPreference(SQLModel, table=True):
 
     user_id: int = Field(foreign_key="users.id", primary_key=True)
     topic_id: int = Field(foreign_key="topics.id", primary_key=True)
-    priority_level: int = Field(default=1, ge=1, le=5)  # 1-5 scale
     include_in_newsletter: bool = Field(default=True)
     articles_per_topic: int = Field(default=5)
 

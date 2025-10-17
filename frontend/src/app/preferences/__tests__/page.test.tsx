@@ -30,8 +30,8 @@ describe('PreferencesPage', () => {
   const mockPreferences = {
     user_id: 1,
     topics: [
-      { id: 1, name: 'Politics', description: 'Political news', priority: 5, is_active: true },
-      { id: 2, name: 'Technology', description: 'Tech news', priority: 7, is_active: false },
+      { id: 1, name: 'Politics', description: 'Political news', is_active: true },
+      { id: 2, name: 'Technology', description: 'Tech news', is_active: false },
     ],
   };
 
