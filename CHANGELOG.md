@@ -4,6 +4,82 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-17 11:15
+
+**Dark Mode - Auto Theme Detection** ✅
+
+### What Changed
+
+Added a third 'auto' theme option that automatically detects and follows the user's system preference for dark/light mode.
+
+#### Implementation:
+
+**1. Theme Cycling:**
+- Button now cycles through: Dark → Light → Auto
+- Shows appropriate icon for each mode:
+  - 🌙 Moon icon for Dark
+  - ☀️ Sun icon for Light
+  - 💻 Monitor icon for Auto
+
+**2. Auto Mode Behavior:**
+- Automatically detects system preference using `prefers-color-scheme` media query
+- Listens for system theme changes and updates in real-time
+- Default theme is now 'auto' for new users
+
+**3. Theme Resolution:**
+- Introduced `resolvedTheme` in context to distinguish between:
+  - `theme`: User's preference ('light', 'dark', or 'auto')
+  - `resolvedTheme`: Actual theme applied ('light' or 'dark')
+- When theme is 'auto', `resolvedTheme` matches system preference
+
+**4. Backend Support:**
+- Updated validation to accept 'light', 'dark', or 'auto'
+- Changed default from 'light' to 'auto' in User model
+- Updated API documentation to reflect new option
+
+#### Changes Made:
+1. Updated [ThemeContext.tsx](frontend/src/contexts/ThemeContext.tsx):
+   - Added 'auto' to Theme type
+   - Added `resolvedTheme` state
+   - Added system preference detection
+   - Added media query listener for system theme changes
+   - Updated toggle to cycle through all three options
+
+2. Updated [DarkModeToggle.tsx](frontend/src/components/DarkModeToggle.tsx):
+   - Added monitor icon for 'auto' mode
+   - Updated labels and tooltips
+   - Shows current theme mode
+
+3. Updated [preferences.py](backend/app/routes/preferences.py:286,407-410):
+   - Updated validation to accept 'auto'
+   - Updated error messages
+
+4. Updated [models.py](backend/app/models.py:299):
+   - Changed default from 'light' to 'auto'
+   - Updated comment to include 'auto'
+
+#### Result:
+- ✅ Users can manually select dark, light, or auto mode
+- ✅ Auto mode follows system preference in real-time
+- ✅ Theme persists via localStorage and backend
+- ✅ Smooth cycling between all three modes
+- ✅ Appropriate icons for each mode
+- ✅ Default experience respects user's system preference
+
+**Files Modified:**
+- [ThemeContext.tsx](frontend/src/contexts/ThemeContext.tsx)
+- [DarkModeToggle.tsx](frontend/src/components/DarkModeToggle.tsx)
+- [preferences.py](backend/app/routes/preferences.py)
+- [models.py](backend/app/models.py)
+
+**Test Results:**
+- Frontend builds successfully
+- Theme cycling works: dark → light → auto → dark
+- Auto mode correctly detects system preference
+- Real-time system preference changes work in auto mode
+
+---
+
 ## 2025-10-17 10:45
 
 **Dark Mode - Critical Tailwind v4 Configuration Fix** ✅

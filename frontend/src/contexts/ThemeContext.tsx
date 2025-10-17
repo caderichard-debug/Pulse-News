@@ -3,10 +3,12 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 
-type Theme = 'light' | 'dark';
+type Theme = 'light' | 'dark' | 'auto';
+type ResolvedTheme = 'light' | 'dark';
 
 interface ThemeContextType {
   theme: Theme;
+  resolvedTheme: ResolvedTheme;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
 }
@@ -14,28 +16,46 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('light');
+  const [theme, setThemeState] = useState<Theme>('auto');
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>('light');
   const [mounted, setMounted] = useState(false);
 
-  // Initialize theme from localStorage or system preference
+  // Get the system theme preference
+  const getSystemTheme = (): ResolvedTheme => {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  };
+
+  // Resolve 'auto' to actual theme
+  const resolveTheme = (themeValue: Theme): ResolvedTheme => {
+    return themeValue === 'auto' ? getSystemTheme() : themeValue;
+  };
+
+  // Initialize theme from localStorage or default to 'auto'
   useEffect(() => {
     setMounted(true);
-    const savedTheme = localStorage.getItem('theme') as Theme | null;
+    const savedTheme = (localStorage.getItem('theme') as Theme) || 'auto';
 
-    if (savedTheme) {
-      setThemeState(savedTheme);
-      applyTheme(savedTheme);
-    } else {
-      // Check system preference
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const initialTheme = prefersDark ? 'dark' : 'light';
-      setThemeState(initialTheme);
-      applyTheme(initialTheme);
-    }
+    setThemeState(savedTheme);
+    const resolved = resolveTheme(savedTheme);
+    setResolvedTheme(resolved);
+    applyTheme(resolved);
+
+    // Listen for system theme changes when in auto mode
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleSystemThemeChange = (e: MediaQueryListEvent) => {
+      if (savedTheme === 'auto') {
+        const newResolved = e.matches ? 'dark' : 'light';
+        setResolvedTheme(newResolved);
+        applyTheme(newResolved);
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleSystemThemeChange);
+    return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
   }, []);
 
   // Apply theme to document root
-  const applyTheme = (newTheme: Theme) => {
+  const applyTheme = (newTheme: ResolvedTheme) => {
     const root = document.documentElement;
 
     if (newTheme === 'dark') {
@@ -50,7 +70,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const setTheme = async (newTheme: Theme) => {
     setThemeState(newTheme);
     localStorage.setItem('theme', newTheme);
-    applyTheme(newTheme);
+
+    const resolved = resolveTheme(newTheme);
+    setResolvedTheme(resolved);
+    applyTheme(resolved);
 
     // Sync with backend (best effort, don't block on failure)
     try {
@@ -61,7 +84,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
+    // Cycle through: dark → light → auto
+    let newTheme: Theme;
+    if (theme === 'dark') {
+      newTheme = 'light';
+    } else if (theme === 'light') {
+      newTheme = 'auto';
+    } else {
+      newTheme = 'dark';
+    }
     setTheme(newTheme);
   };
 
@@ -71,7 +102,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, resolvedTheme, toggleTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );
