@@ -36,8 +36,8 @@ describe('PreferencesPage', () => {
   };
 
   const mockSources = [
-    { source_id: 1, name: 'Reuters', url: 'https://reuters.com', trust_score: 0.95, political_lean: null, subscribed: true },
-    { source_id: 2, name: 'BBC', url: 'https://bbc.com', trust_score: 0.92, political_lean: 'center', subscribed: false },
+    { source_id: 1, name: 'Reuters', url: 'https://reuters.com', trust_score: 0.95, organizational_bias: null, subscribed: true },
+    { source_id: 2, name: 'BBC', url: 'https://bbc.com', trust_score: 0.92, organizational_bias: 'center', subscribed: false },
   ];
 
   const mockSettings = {

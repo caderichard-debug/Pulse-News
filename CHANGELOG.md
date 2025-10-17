@@ -4,6 +4,55 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-16 21:26
+
+**Source Bias Badge Consistency Fix** ✅
+
+### What Changed
+
+Unified bias badge display across preferences/sources and sources pages to use the same `SourceBiasBadge` component and `organizational_bias` field from the source model.
+
+#### Problem:
+- Preferences/sources page was displaying `political_lean` (aggregated from articles) with custom badge styling
+- Sources page was displaying `organizational_bias` (from source model) using `SourceBiasBadge` component
+- Inconsistent color schemes and labels between the two pages
+- Backend was calculating aggregated political lean unnecessarily
+
+#### Solution:
+**Backend Changes:**
+- Updated [preferences.py](backend/app/routes/preferences.py:279-333) `SourcePreferenceInfo` model to return `organizational_bias` instead of `political_lean`
+- Simplified `/preferences/sources` endpoint to return source's organizational bias directly (no aggregation needed)
+- Updated test [test_source_preferences.py](backend/tests/routes/test_source_preferences.py:117-128) to check for `organizational_bias` field
+
+**Frontend Changes:**
+- Updated [page.tsx](frontend/src/app/preferences/page.tsx) to import and use `SourceBiasBadge` component
+- Changed `Source` interface to use `organizational_bias` instead of `political_lean`
+- Removed custom `getPoliticalLeanColor()` and `getPoliticalLeanLabel()` helper functions
+- Updated badge display to use `<SourceBiasBadge bias={source.organizational_bias} size="sm" />` at [page.tsx](frontend/src/app/preferences/page.tsx:397-399)
+- Updated test mock data in [page.test.tsx](frontend/src/app/preferences/__tests__/page.test.tsx:38-41) to use `organizational_bias`
+
+#### Result:
+- ✅ All 17 backend source preference tests passing
+- ✅ All 14 frontend preferences tests passing
+- ✅ Consistent bias badge appearance across both pages:
+  - Left: Blue (#2563EB)
+  - Center-Left: Light Blue (#60A5FA)
+  - Center: Purple (#9333EA)
+  - Center-Right: Light Red (#F87171)
+  - Right: Red (#DC2626)
+- ✅ Consistent labels: "Left", "Center-Left", "Center", "Center-Right", "Right"
+- ✅ Simplified backend logic (no unnecessary aggregation)
+
+**Code References:**
+- Backend model: [preferences.py](backend/app/routes/preferences.py:279-285)
+- Backend endpoint: [preferences.py](backend/app/routes/preferences.py:298-333)
+- Backend test: [test_source_preferences.py](backend/tests/routes/test_source_preferences.py:117-128)
+- Frontend component: [SourceBiasBadge.tsx](frontend/src/components/SourceBiasBadge.tsx)
+- Frontend page: [page.tsx](frontend/src/app/preferences/page.tsx)
+- Frontend test: [page.test.tsx](frontend/src/app/preferences/__tests__/page.test.tsx)
+
+---
+
 ## 2025-10-16 08:25
 
 **E2E Test Fix - Preferences Tab Name** ✅

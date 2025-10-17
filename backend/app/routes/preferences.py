@@ -271,7 +271,7 @@ class SourcePreferenceInfo(BaseModel):
     name: str
     url: str
     trust_score: float
-    political_lean: Optional[str]
+    organizational_bias: Optional[str]
     subscribed: bool
 
 
@@ -291,11 +291,11 @@ def get_source_preferences(
     session: Session = Depends(get_session)
 ):
     """
-    Get all sources with user's subscription status and aggregated political lean.
+    Get all sources with user's subscription status and organizational bias.
 
     Returns:
     - source_id, name, url, trust_score
-    - political_lean: aggregated from article_analysis
+    - organizational_bias: source's organizational bias rating
     - subscribed: whether user is subscribed
     """
     # Get user's subscriptions
@@ -311,27 +311,12 @@ def get_source_preferences(
 
     result = []
     for source in sources:
-        # Calculate aggregated political lean (most common lean from articles)
-        from sqlalchemy import func
-        lean_query = session.exec(
-            select(ArticleAnalysis.political_lean, func.count())
-            .join(Article)
-            .where(Article.source_id == source.id)
-            .group_by(ArticleAnalysis.political_lean)
-            .order_by(func.count().desc())
-        )
-
-        most_common_lean = None
-        for lean, count in lean_query:
-            most_common_lean = lean.value if lean else None
-            break
-
         result.append(SourcePreferenceInfo(
             source_id=source.id,
             name=source.name,
             url=source.url,
             trust_score=source.trust_score,
-            political_lean=most_common_lean,
+            organizational_bias=source.organizational_bias.value if source.organizational_bias else None,
             subscribed=subs_map.get(source.id, False)
         ))
 
