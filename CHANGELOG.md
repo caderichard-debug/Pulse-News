@@ -4,6 +4,62 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-17 10:45
+
+**Dark Mode - Critical Tailwind v4 Configuration Fix** ✅
+
+### What Changed
+
+Fixed the root cause of dark mode toggle not working - Tailwind CSS v4 was using media query-based dark mode instead of class-based dark mode.
+
+#### The Problem:
+- Dark mode toggle appeared to work (JavaScript was correct, HTML classes were changing)
+- BUT the CSS wasn't responding to the `.dark` class changes
+- Tailwind was compiling dark mode styles inside `@media (prefers-color-scheme: dark)` blocks
+- This meant dark styles only activated based on system preference, not our toggle
+
+#### The Solution:
+Added `@variant dark (.dark &);` directive to [globals.css](frontend/src/app/globals.css:4) to configure class-based dark mode in Tailwind v4.
+
+**Before:**
+```css
+@media (prefers-color-scheme: dark) {
+  .dark\:bg-slate-800 {
+    background-color: var(--color-slate-800);
+  }
+}
+```
+
+**After:**
+```css
+.dark .dark\:bg-slate-800 {
+  background-color: var(--color-slate-800);
+}
+```
+
+#### Changes Made:
+1. Added `@variant dark (.dark &);` to [globals.css](frontend/src/app/globals.css:4)
+2. Removed debug console logs from [ThemeContext.tsx](frontend/src/contexts/ThemeContext.tsx:21-65)
+3. Verified compiled CSS now uses `.dark` parent selector instead of media queries
+
+#### Result:
+- ✅ Dark mode toggle now works perfectly in both directions (light ↔ dark)
+- ✅ All components respond correctly to theme changes
+- ✅ Newsletter delivery card, sources bias ratings, gradients all working
+- ✅ Theme persistence via localStorage + backend sync maintained
+- ✅ Clean code without debug logs
+
+**Files Modified:**
+- [globals.css](frontend/src/app/globals.css:4) - Added `@variant` directive
+- [ThemeContext.tsx](frontend/src/contexts/ThemeContext.tsx:21-65) - Removed debug logs
+
+**Test Results:**
+- Compiled CSS verified: `.dark .dark\:bg-slate-800` (correct)
+- Theme toggle tested: light → dark → light (working)
+- All previously stuck elements now respond correctly
+
+---
+
 ## 2025-10-17 06:30
 
 **Dark Mode - Final Polish** ✅
