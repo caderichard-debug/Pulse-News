@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     claimbuster_api_key: Optional[str] = None
 
     # Email Configuration
-    from_email: str = "newsletter@pulse.news"
+    from_email: str = "newsletter@pulsenews.app"
     from_name: str = "Pulse News"
 
     # AI Configuration

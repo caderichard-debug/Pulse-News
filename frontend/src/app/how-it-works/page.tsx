@@ -2,11 +2,13 @@
 'use client';
 
 import Navbar from '@/components/Navbar';
+import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
 
 export default function HowItWorksPage() {
   return (
     <>
       <Navbar />
+      <UnverifiedEmailAlert />
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
         <div className="max-w-5xl mx-auto px-4 py-12">
           {/* Header */}

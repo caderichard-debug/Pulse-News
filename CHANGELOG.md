@@ -4,6 +4,106 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-16 18:48
+
+**Email Verification System** ✅
+
+### What Changed
+
+Completed full email verification implementation with automated emails on registration, verification flow, and resend functionality.
+
+#### Backend Implementation:
+- Integrated email sending in [auth.py](backend/app/routes/auth.py:188-199)
+  - Registration now automatically sends verification email via Resend API
+  - Uses `create_verification_token()` from [auth.py](backend/app/utils/auth.py:82-87) (24-hour expiration)
+  - Verification email template in [email_service.py](backend/app/services/email_service.py:70-133)
+- Added `/auth/resend-verification-email` endpoint in [auth.py](backend/app/routes/auth.py:332-360)
+  - Requires authentication (Bearer token)
+  - Returns 500 error if email sending fails
+  - Returns success message if already verified
+- Existing `/auth/verify-email` endpoint validates tokens and updates `email_verified` field
+
+#### Frontend Implementation:
+- Added `verifyEmail()` and `resendVerificationEmail()` methods to [api.ts](frontend/src/lib/api.ts:145-156)
+- Updated [verify-email page](frontend/src/app/verify-email/page.tsx) to use API client
+  - Uses centralized API client instead of raw fetch
+  - Redirects to dashboard after successful verification
+  - Better error handling with typed responses
+- Enhanced [UnverifiedEmailAlert.tsx](frontend/src/components/UnverifiedEmailAlert.tsx) with "Resend Email" button
+  - Shows success/failure message inline after resend attempt
+  - Button disabled during resend operation
+  - Improved layout with flex spacing for button
+
+#### Email Flow:
+1. User registers → Automatic verification email sent
+2. User clicks link in email → Token validated → Email marked verified
+3. If email not received → User clicks "Resend Email" button → New email sent
+4. Alert disappears once email is verified
+
+#### Result:
+- ✅ Verification emails sent automatically on registration
+- ✅ Email verification link works (tested with manual token)
+- ✅ Resend verification button functional in alert component
+- ✅ Database correctly updates `email_verified` field
+- ✅ All 113 frontend tests still passing
+- ⚠️  Email sending requires verified domain in Resend (works in staging/production)
+
+**Code References:**
+- Backend:
+  - Email integration: [auth.py](backend/app/routes/auth.py:188-199)
+  - Resend endpoint: [auth.py](backend/app/routes/auth.py:332-360)
+  - Email service: [email_service.py](backend/app/services/email_service.py:70-133)
+  - Token generation: [auth.py](backend/app/utils/auth.py:82-87)
+- Frontend:
+  - API methods: [api.ts](frontend/src/lib/api.ts:145-156)
+  - Verify page: [verify-email/page.tsx](frontend/src/app/verify-email/page.tsx)
+  - Alert with resend: [UnverifiedEmailAlert.tsx](frontend/src/components/UnverifiedEmailAlert.tsx)
+
+---
+
+## 2025-10-16 14:30
+
+**Unverified Email Alert** ✅
+
+### What Changed
+
+Added a reusable alert component that displays on all authenticated pages when a user's email is not verified, informing them they won't receive newsletters until verification is complete.
+
+#### Implementation:
+- Created [UnverifiedEmailAlert.tsx](frontend/src/components/UnverifiedEmailAlert.tsx) component
+  - Checks `email_verified` field from user API response
+  - Shows yellow warning banner with clear messaging
+  - Only displays when user is logged in and email is unverified
+  - Gracefully handles API errors (doesn't show alert on failure)
+- Added alert to all main pages:
+  - [Feed page](frontend/src/app/feed/page.tsx:148)
+  - [Analytics page](frontend/src/app/analytics/page.tsx:97)
+  - [Preferences page](frontend/src/app/preferences/page.tsx:185)
+  - [Sources page](frontend/src/app/sources/page.tsx:82)
+  - [Article detail page](frontend/src/app/article/[id]/page.tsx:148)
+  - [How It Works page](frontend/src/app/how-it-works/page.tsx:11)
+- Added comprehensive test suite with 6 tests covering:
+  - Alert displays for unverified users
+  - Alert hidden for verified users
+  - Alert hidden on API errors or null user
+  - Correct styling applied
+  - Proper cleanup on unmount
+
+#### Result:
+- ✅ Alert appears consistently across all pages for unverified users
+- ✅ Clear messaging: "Email not verified. You won't receive newsletters until you verify your email address."
+- ✅ 6 new tests passing in [UnverifiedEmailAlert.test.tsx](frontend/src/components/__tests__/UnverifiedEmailAlert.test.tsx)
+- ✅ All 113 frontend tests still passing (107 existing + 6 new)
+- ✅ No regressions in existing functionality
+
+**Code References:**
+- Component: [UnverifiedEmailAlert.tsx](frontend/src/components/UnverifiedEmailAlert.tsx)
+- Tests: [UnverifiedEmailAlert.test.tsx](frontend/src/components/__tests__/UnverifiedEmailAlert.test.tsx)
+- API client already had `email_verified` field: [api.ts](frontend/src/lib/api.ts:111)
+- User model has `email_verified` field: [models.py](backend/app/models.py:280)
+
+---
+
 ## 2025-10-16 08:25
 
 **E2E Test Fix - Preferences Tab Name** ✅
