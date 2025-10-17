@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@/__tests__/test-utils';
 import UnverifiedEmailAlert from '../UnverifiedEmailAlert';
 import { api } from '@/lib/api';
 
