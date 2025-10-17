@@ -4,6 +4,40 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-16 22:15
+
+**UI Polish: Muted Bias Badges** ✅
+
+### What Changed
+
+Made bias badges on the preferences/sources page more subtle and less visually overwhelming.
+
+#### Problem:
+- Bias badges were using bright, saturated colors (blue-600, red-600, purple-600)
+- White text on dark backgrounds made them stand out too much
+- They were visually competing with the main content
+
+#### Solution:
+Updated [SourceBiasBadge.tsx](frontend/src/components/SourceBiasBadge.tsx:30-69) to use muted color palette:
+- **Left**: bg-blue-100, text-blue-700, border-blue-300
+- **Center-Left**: bg-blue-50, text-blue-600, border-blue-200
+- **Center**: bg-purple-100, text-purple-700, border-purple-300
+- **Center-Right**: bg-red-50, text-red-600, border-red-200
+- **Right**: bg-red-100, text-red-700, border-red-300
+- **Fallback**: bg-gray-100, text-gray-700, border-gray-300
+
+#### Result:
+- ✅ All 14 preferences page tests passing
+- ✅ Badges are still color-coded and readable
+- ✅ Softer visual hierarchy - badges don't overpower the page
+- ✅ Better integration with the overall UI design
+
+**Code References:**
+- Component: [SourceBiasBadge.tsx](frontend/src/components/SourceBiasBadge.tsx:30-69)
+- Usage: [page.tsx](frontend/src/app/preferences/page.tsx:364)
+
+---
+
 ## 2025-10-16 21:26
 
 **Source Bias Badge Consistency Fix** ✅
