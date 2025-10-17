@@ -214,16 +214,16 @@ export default function SourcesPage() {
           )}
 
           {/* Info box */}
-          <div className="mt-8 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-6 transition-colors">
-            <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-300 mb-2">
+          <div className="mt-8 bg-blue-50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-lg p-6 transition-colors">
+            <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-200 mb-2">
               About Source Bias Ratings
             </h3>
-            <p className="text-blue-800 dark:text-blue-300 text-sm leading-relaxed mb-3">
+            <p className="text-blue-800 dark:text-blue-200 text-sm leading-relaxed mb-3">
               Organizational bias ratings reflect the general editorial perspective of each news
               source. These are separate from our article-level bias analysis, which examines
               individual articles regardless of their source.
             </p>
-            <p className="text-blue-800 dark:text-blue-300 text-sm leading-relaxed">
+            <p className="text-blue-800 dark:text-blue-200 text-sm leading-relaxed">
               <strong>Note:</strong> A source&apos;s organizational bias doesn&apos;t mean individual articles
               are biased. Many sources with clear editorial stances still produce objective news reporting.
             </p>

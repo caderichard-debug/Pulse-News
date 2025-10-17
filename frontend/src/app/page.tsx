@@ -26,7 +26,7 @@ export default function Home() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors">
+    <div className="min-h-screen transition-colors bg-gradient-to-br from-blue-50 dark:from-gray-900 via-indigo-50 dark:via-gray-800 to-purple-50 dark:to-gray-900">
       <div className="max-w-6xl mx-auto px-4 py-16">
         {/* Hero Section */}
         <div className="text-center mb-16">

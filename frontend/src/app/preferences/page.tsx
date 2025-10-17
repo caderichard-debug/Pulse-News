@@ -592,11 +592,11 @@ function PreferencesContent() {
         )}
 
         {/* Info Card */}
-        <div className="mt-6 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 transition-colors">
-          <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">
+        <div className="mt-6 bg-blue-50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-lg p-4 transition-colors">
+          <h3 className="font-semibold text-blue-900 dark:text-blue-200 mb-2">
             📬 Newsletter Delivery
           </h3>
-          <p className="text-sm text-blue-800 dark:text-blue-300">
+          <p className="text-sm text-blue-800 dark:text-blue-200">
             Your personalized newsletter arrives daily at 7 AM with articles from
             your selected topics. Each newsletter also includes our unique
             &quot;ethical framework&quot; analysis, helping you understand the underlying
