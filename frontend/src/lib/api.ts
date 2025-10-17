@@ -142,6 +142,19 @@ class ApiClient {
     );
   }
 
+  async verifyEmail(token: string) {
+    return this.request<{ message: string }>('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  }
+
+  async resendVerificationEmail() {
+    return this.request<{ message: string }>('/auth/resend-verification-email', {
+      method: 'POST',
+    });
+  }
+
   // Preferences endpoints
   async getTopics() {
     return this.request<
