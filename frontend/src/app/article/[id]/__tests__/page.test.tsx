@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@/__tests__/test-utils';
 import userEvent from '@testing-library/user-event';
 import ArticleDetailPage from '../page';
 import { api } from '@/lib/api';
