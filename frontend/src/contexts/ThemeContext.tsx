@@ -19,16 +19,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Initialize theme from localStorage or system preference
   useEffect(() => {
+    console.log('🚀 ThemeProvider initializing...');
     setMounted(true);
     const savedTheme = localStorage.getItem('theme') as Theme | null;
+    console.log('💾 Theme from localStorage:', savedTheme);
 
     if (savedTheme) {
+      console.log('✅ Using saved theme:', savedTheme);
       setThemeState(savedTheme);
       applyTheme(savedTheme);
     } else {
       // Check system preference
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       const initialTheme = prefersDark ? 'dark' : 'light';
+      console.log('🖥️ System preference:', prefersDark ? 'dark' : 'light');
+      console.log('✅ Using system theme:', initialTheme);
       setThemeState(initialTheme);
       applyTheme(initialTheme);
     }
@@ -37,6 +42,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Apply theme to document root
   const applyTheme = (newTheme: Theme) => {
     const root = document.documentElement;
+    console.log('🎨 Applying theme:', newTheme);
+    console.log('📋 Before - classList:', Array.from(root.classList));
+
     if (newTheme === 'dark') {
       root.classList.add('dark');
       root.classList.remove('light');
@@ -44,16 +52,25 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.classList.add('light');
       root.classList.remove('dark');
     }
+
+    console.log('📋 After - classList:', Array.from(root.classList));
+    console.log('✅ Theme applied successfully');
   };
 
   const setTheme = async (newTheme: Theme) => {
+    console.log('🔄 setTheme called with:', newTheme);
+    console.log('💾 Current theme in state:', theme);
+
     setThemeState(newTheme);
     localStorage.setItem('theme', newTheme);
+    console.log('💾 Saved to localStorage:', newTheme);
+
     applyTheme(newTheme);
 
     // Sync with backend (best effort, don't block on failure)
     try {
       await api.updateSettings({ theme_preference: newTheme });
+      console.log('☁️ Synced with backend successfully');
     } catch (error) {
       console.warn('Failed to sync theme preference with backend:', error);
     }
@@ -61,6 +78,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
+    console.log('🔀 Toggle theme - current:', theme, '→ new:', newTheme);
     setTheme(newTheme);
   };
 
