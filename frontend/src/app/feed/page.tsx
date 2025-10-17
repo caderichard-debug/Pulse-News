@@ -131,7 +131,7 @@ export default function FeedPage() {
     return (
       <>
         <Navbar />
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-background">
           <div className="max-w-7xl mx-auto px-4 py-8">
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
               {error}
@@ -146,24 +146,24 @@ export default function FeedPage() {
     <>
       <Navbar />
       <UnverifiedEmailAlert />
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background">
         <div className="max-w-7xl mx-auto px-4 py-8">
           {/* Header */}
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">📰 Article Feed</h1>
-            <p className="text-gray-600 mt-1">Explore news with AI-powered analysis</p>
+          <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
+            <h1 className="text-3xl font-bold text-foreground">📰 Article Feed</h1>
+            <p className="text-muted-foreground mt-1">Explore news with AI-powered analysis</p>
           </div>
 
           {/* Filters */}
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           {/* Topic filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Topic</label>
+            <label className="block text-sm font-medium text-card-foreground mb-1">Topic</label>
             <select
               value={selectedTopic}
               onChange={(e) => { setSelectedTopic(e.target.value); setPage(1); }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
+              className="w-full px-3 py-2 border border-border rounded-md text-foreground"
             >
               <option value="">All Topics</option>
               {topics.map((topic) => (
@@ -176,11 +176,11 @@ export default function FeedPage() {
 
           {/* Source filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Source</label>
+            <label className="block text-sm font-medium text-card-foreground mb-1">Source</label>
             <select
               value={selectedSource || ''}
               onChange={(e) => { setSelectedSource(e.target.value ? Number(e.target.value) : null); setPage(1); }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
+              className="w-full px-3 py-2 border border-border rounded-md text-foreground"
             >
               <option value="">All Sources</option>
               {sources.map((source) => (
@@ -193,11 +193,11 @@ export default function FeedPage() {
 
           {/* Political lean filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Political Lean</label>
+            <label className="block text-sm font-medium text-card-foreground mb-1">Political Lean</label>
             <select
               value={selectedLean}
               onChange={(e) => { setSelectedLean(e.target.value); setPage(1); }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
+              className="w-full px-3 py-2 border border-border rounded-md text-foreground"
             >
               <option value="">All Leans</option>
               <option value="left">Left</option>
@@ -208,11 +208,11 @@ export default function FeedPage() {
 
           {/* Sort */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+            <label className="block text-sm font-medium text-card-foreground mb-1">Sort By</label>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
+              className="w-full px-3 py-2 border border-border rounded-md text-foreground"
             >
               <option value="newest">Newest</option>
               <option value="oldest">Oldest</option>
@@ -230,9 +230,9 @@ export default function FeedPage() {
                   id="only-analyzed"
                   checked={onlyAnalyzed}
                   onChange={(e) => { setOnlyAnalyzed(e.target.checked); setPage(1); }}
-                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  className="w-4 h-4 text-primary border-border rounded focus:ring-indigo-500"
                 />
-                <label htmlFor="only-analyzed" className="ml-2 text-sm font-medium text-gray-700">
+                <label htmlFor="only-analyzed" className="ml-2 text-sm font-medium text-card-foreground">
                   Show only analyzed articles
                 </label>
               </div>
@@ -243,9 +243,9 @@ export default function FeedPage() {
                   id="only-verified-stats"
                   checked={onlyVerifiedStats}
                   onChange={(e) => { setOnlyVerifiedStats(e.target.checked); setPage(1); }}
-                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  className="w-4 h-4 text-primary border-border rounded focus:ring-indigo-500"
                 />
-                <label htmlFor="only-verified-stats" className="ml-2 text-sm font-medium text-gray-700">
+                <label htmlFor="only-verified-stats" className="ml-2 text-sm font-medium text-card-foreground">
                   Show only articles with verified statistics
                 </label>
               </div>
@@ -253,24 +253,24 @@ export default function FeedPage() {
 
             {/* Pagination in filter card */}
             {feedData && feedData.total_count > feedData.page_size && (
-              <div className="pt-4 border-t border-gray-200">
+              <div className="pt-4 border-t border-border">
                 <div className="flex justify-center items-center gap-2 flex-wrap">
                   <button
                     onClick={() => setPage(1)}
                     disabled={page === 1}
-                    className="px-3 py-1.5 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-gray-700 transition-colors"
+                    className="px-3 py-1.5 bg-card border border-border rounded-md hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-card-foreground transition-colors"
                   >
                     First
                   </button>
                   <button
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="px-3 py-1.5 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-gray-700 transition-colors"
+                    className="px-3 py-1.5 bg-card border border-border rounded-md hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-card-foreground transition-colors"
                   >
                     Previous
                   </button>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-700">Page</span>
+                    <span className="text-sm font-medium text-card-foreground">Page</span>
                     <input
                       type="number"
                       min="1"
@@ -279,23 +279,23 @@ export default function FeedPage() {
                       onChange={handlePageInputChange}
                       onKeyDown={handlePageInputSubmit}
                       onBlur={handlePageInputSubmit}
-                      className="w-16 px-2 py-1 border border-gray-300 rounded-md text-center text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-16 px-2 py-1 border border-border rounded-md text-center text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
-                    <span className="text-sm font-medium text-gray-700">
+                    <span className="text-sm font-medium text-card-foreground">
                       of {Math.ceil(feedData.total_count / feedData.page_size)}
                     </span>
                   </div>
                   <button
                     onClick={() => setPage(p => p + 1)}
                     disabled={page >= Math.ceil(feedData.total_count / feedData.page_size)}
-                    className="px-3 py-1.5 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-gray-700 transition-colors"
+                    className="px-3 py-1.5 bg-card border border-border rounded-md hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-card-foreground transition-colors"
                   >
                     Next
                   </button>
                   <button
                     onClick={() => setPage(Math.ceil(feedData.total_count / feedData.page_size))}
                     disabled={page >= Math.ceil(feedData.total_count / feedData.page_size)}
-                    className="px-3 py-1.5 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-gray-700 transition-colors"
+                    className="px-3 py-1.5 bg-card border border-border rounded-md hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-card-foreground transition-colors"
                   >
                     Last
                   </button>
@@ -306,7 +306,7 @@ export default function FeedPage() {
 
           {/* Results count */}
           {feedData && (
-            <div className="mb-4 text-sm font-medium text-gray-600">
+            <div className="mb-4 text-sm font-medium text-muted-foreground">
               Showing {((feedData.page - 1) * feedData.page_size) + 1} - {Math.min(feedData.page * feedData.page_size, feedData.total_count)} of {feedData.total_count} articles
             </div>
           )}
@@ -314,20 +314,20 @@ export default function FeedPage() {
           {/* Article list */}
           {loading ? (
             <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-              <p className="mt-4 text-gray-600">Loading articles...</p>
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              <p className="mt-4 text-muted-foreground">Loading articles...</p>
             </div>
           ) : feedData && feedData.articles.length > 0 ? (
             <div className="space-y-4">
               {feedData.articles.map((article) => (
                 <div
                   key={article.id}
-                  className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer border-l-4 border-indigo-500"
+                  className="bg-card rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer border-l-4 border-indigo-500"
                   onClick={() => router.push(`/article/${article.id}`)}
                 >
                   {/* Header */}
-                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-2 flex-wrap">
-                    <span className="font-medium text-indigo-600">{article.source_name}</span>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2 flex-wrap">
+                    <span className="font-medium text-primary">{article.source_name}</span>
                     {article.source_bias && (
                       <SourceBiasBadge bias={article.source_bias} size="sm" />
                     )}
@@ -348,22 +348,22 @@ export default function FeedPage() {
                   </div>
 
                   {/* Title */}
-                  <h2 className="text-xl font-semibold mb-3 text-gray-900 hover:text-indigo-600 transition-colors">
+                  <h2 className="text-xl font-semibold mb-3 text-foreground hover:text-primary transition-colors">
                     {article.title}
                   </h2>
 
                   {/* Summary */}
                   {article.summary ? (
-                    <p className="text-gray-700 mb-4 line-clamp-2">{article.summary}</p>
+                    <p className="text-card-foreground mb-4 line-clamp-2">{article.summary}</p>
                   ) : (
-                    <p className="text-gray-500 italic mb-4 text-sm">Analysis pending...</p>
+                    <p className="text-muted-foreground italic mb-4 text-sm">Analysis pending...</p>
                   )}
 
                   {/* Metadata */}
                   <div className="flex flex-wrap items-center gap-4 text-sm">
                     {article.sentiment_score !== null && (
                       <div className="flex items-center gap-1">
-                        <span className="text-gray-600">Sentiment:</span>
+                        <span className="text-muted-foreground">Sentiment:</span>
                         <span className={`font-semibold ${getSentimentColor(article.sentiment_score)}`}>
                           {article.sentiment_score > 0 ? '+' : ''}{article.sentiment_score.toFixed(1)}
                         </span>
@@ -372,7 +372,7 @@ export default function FeedPage() {
 
                     {article.political_lean && (
                       <div className="flex items-center gap-1">
-                        <span className="text-gray-600">Article Bias:</span>
+                        <span className="text-muted-foreground">Article Bias:</span>
                         <span className={`font-semibold ${getLeanColor(article.political_lean)}`}>
                           {article.political_lean.charAt(0).toUpperCase() + article.political_lean.slice(1)}
                         </span>
@@ -381,7 +381,7 @@ export default function FeedPage() {
 
                     {article.primary_framework && article.framework_position !== null && (
                       <div className="flex items-center gap-1">
-                        <span className="text-gray-600">Framework:</span>
+                        <span className="text-muted-foreground">Framework:</span>
                         <span className="font-semibold text-purple-600">
                           {article.primary_framework} ({article.framework_position > 0 ? '+' : ''}{article.framework_position})
                         </span>
@@ -391,10 +391,10 @@ export default function FeedPage() {
 
                   {/* Statistics section */}
                   {article.has_stats && (
-                    <div className="mt-3 pt-3 border-t border-gray-200">
+                    <div className="mt-3 pt-3 border-t border-border">
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="text-gray-600 font-medium">📊 Statistics:</span>
-                        <span className="text-gray-700">
+                        <span className="text-muted-foreground font-medium">📊 Statistics:</span>
+                        <span className="text-card-foreground">
                           {article.stats_count} found
                         </span>
                         {article.stats_verified_count > 0 && (
@@ -408,7 +408,7 @@ export default function FeedPage() {
                         {article.stats_verified_count === 0 && (
                           <>
                             <span className="text-gray-400">•</span>
-                            <span className="text-gray-500">
+                            <span className="text-muted-foreground">
                               none verified
                             </span>
                           </>
@@ -420,9 +420,9 @@ export default function FeedPage() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-              <p className="text-gray-600 text-lg">No articles found with these filters</p>
-              <p className="text-gray-500 text-sm mt-2">Try adjusting your filters or check back later for new content</p>
+            <div className="text-center py-12 bg-card rounded-lg shadow-sm">
+              <p className="text-muted-foreground text-lg">No articles found with these filters</p>
+              <p className="text-muted-foreground text-sm mt-2">Try adjusting your filters or check back later for new content</p>
             </div>
           )}
 
@@ -432,19 +432,19 @@ export default function FeedPage() {
               <button
                 onClick={() => setPage(1)}
                 disabled={page === 1}
-                className="px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-gray-700 transition-colors"
+                className="px-4 py-2 bg-card border border-border rounded-md hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed font-medium text-card-foreground transition-colors"
               >
                 First
               </button>
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-gray-700 transition-colors"
+                className="px-4 py-2 bg-card border border-border rounded-md hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed font-medium text-card-foreground transition-colors"
               >
                 Previous
               </button>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">Page</span>
+                <span className="text-sm font-medium text-card-foreground">Page</span>
                 <input
                   type="number"
                   min="1"
@@ -453,23 +453,23 @@ export default function FeedPage() {
                   onChange={handlePageInputChange}
                   onKeyDown={handlePageInputSubmit}
                   onBlur={handlePageInputSubmit}
-                  className="w-16 px-2 py-1 border border-gray-300 rounded-md text-center text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-16 px-2 py-1 border border-border rounded-md text-center text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
-                <span className="text-sm font-medium text-gray-700">
+                <span className="text-sm font-medium text-card-foreground">
                   of {Math.ceil(feedData.total_count / feedData.page_size)}
                 </span>
               </div>
               <button
                 onClick={() => setPage(p => p + 1)}
                 disabled={page >= Math.ceil(feedData.total_count / feedData.page_size)}
-                className="px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-gray-700 transition-colors"
+                className="px-4 py-2 bg-card border border-border rounded-md hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed font-medium text-card-foreground transition-colors"
               >
                 Next
               </button>
               <button
                 onClick={() => setPage(Math.ceil(feedData.total_count / feedData.page_size))}
                 disabled={page >= Math.ceil(feedData.total_count / feedData.page_size)}
-                className="px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-gray-700 transition-colors"
+                className="px-4 py-2 bg-card border border-border rounded-md hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed font-medium text-card-foreground transition-colors"
               >
                 Last
               </button>

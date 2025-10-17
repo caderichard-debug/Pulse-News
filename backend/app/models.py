@@ -296,6 +296,7 @@ class User(SQLModel, table=True):
     source_discovery_mode: str = Field(default="some", max_length=20)  # 'none', 'some', 'open'
     article_order_preference: str = Field(default="mixed", max_length=20)  # 'good_first', 'good_last', 'mixed'
     articles_per_topic_default: int = Field(default=5)
+    theme_preference: str = Field(default="light", max_length=10)  # 'light' or 'dark'
 
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)

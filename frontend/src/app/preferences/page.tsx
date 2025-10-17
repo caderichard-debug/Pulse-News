@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
+import DarkModeToggle from '@/components/DarkModeToggle';
 
 interface TopicPreference {
   id: number;
@@ -176,10 +177,10 @@ function PreferencesContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading preferences...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading preferences...</p>
         </div>
       </div>
     );
@@ -192,19 +193,22 @@ function PreferencesContent() {
     <>
       <Navbar />
       <UnverifiedEmailAlert />
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background transition-colors">
         <div className="max-w-6xl mx-auto px-4 py-8">
           {/* Header */}
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">⚙️ Preferences</h1>
-              <p className="text-gray-600 mt-1">Customize your news experience</p>
+          <div className="bg-card rounded-lg shadow-sm p-6 mb-6 border border-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">⚙️ Preferences</h1>
+                <p className="text-muted-foreground mt-1">Customize your news experience</p>
+              </div>
+              <DarkModeToggle />
             </div>
           </div>
 
         {/* Tabs */}
-        <div className="bg-white rounded-lg shadow-sm mb-6">
-          <div className="border-b border-gray-200">
+        <div className="bg-card rounded-lg shadow-sm mb-6 border border-border">
+          <div className="border-b border-border">
             <nav className="-mb-px flex">
               <button
                 onClick={() => handleTabChange('topics')}
@@ -275,11 +279,11 @@ function PreferencesContent() {
         {/* Tab Content */}
         {activeTab === 'topics' && (
           <>
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
+              <h2 className="text-xl font-semibold text-foreground mb-4">
                 Topic Preferences
               </h2>
-              <p className="text-sm text-gray-600 mb-6">
+              <p className="text-sm text-muted-foreground mb-6">
                 Toggle topics on/off to customize your newsletter content.
               </p>
 
@@ -289,8 +293,8 @@ function PreferencesContent() {
                     key={pref.id}
                     className={`border rounded-lg p-4 transition-all ${
                       pref.is_active
-                        ? 'border-indigo-200 bg-indigo-50'
-                        : 'border-gray-200 bg-gray-50'
+                        ? 'border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20'
+                        : 'border-border bg-secondary dark:bg-muted'
                     }`}
                   >
                     <div className="flex items-start justify-between">
@@ -299,22 +303,22 @@ function PreferencesContent() {
                           <button
                             onClick={() => toggleActive(pref.id)}
                             className={`mr-3 w-12 h-6 rounded-full transition-colors relative ${
-                              pref.is_active ? 'bg-indigo-600' : 'bg-gray-300'
+                              pref.is_active ? 'bg-primary' : 'bg-muted dark:bg-gray-600'
                             }`}
                           >
                             <span
-                              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white dark:bg-gray-100 rounded-full transition-transform ${
                                 pref.is_active ? 'translate-x-6' : 'translate-x-0'
                               }`}
                             />
                           </button>
 
                           <div>
-                            <h3 className="font-semibold text-gray-900">
+                            <h3 className="font-semibold text-foreground">
                               {pref.name}
                             </h3>
                             {pref.description && (
-                              <p className="text-sm text-gray-600 mt-1">
+                              <p className="text-sm text-muted-foreground mt-1">
                                 {pref.description}
                               </p>
                             )}
@@ -332,7 +336,7 @@ function PreferencesContent() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
+                className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
               >
                 {saving ? 'Saving...' : 'Save Preferences'}
               </button>
@@ -342,11 +346,11 @@ function PreferencesContent() {
 
         {activeTab === 'sources' && (
           <>
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
+              <h2 className="text-xl font-semibold text-foreground mb-4">
                 Source Preferences
               </h2>
-              <p className="text-sm text-gray-600 mb-6">
+              <p className="text-sm text-muted-foreground mb-6">
                 Select which news sources you want to receive articles from. Only articles from selected sources will appear in your newsletter.
               </p>
 
@@ -356,8 +360,8 @@ function PreferencesContent() {
                     key={source.source_id}
                     className={`border rounded-lg p-4 cursor-pointer transition-all ${
                       source.subscribed
-                        ? 'border-indigo-200 bg-indigo-50'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
+                        ? 'border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20'
+                        : 'border-border bg-card hover:border-primary/50 dark:hover:border-primary/50'
                     }`}
                     onClick={() => toggleSource(source.source_id)}
                   >
@@ -368,15 +372,15 @@ function PreferencesContent() {
                             type="checkbox"
                             checked={source.subscribed}
                             onChange={() => toggleSource(source.source_id)}
-                            className="mr-3 w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
+                            className="mr-3 w-5 h-5 text-primary rounded focus:ring-primary accent-primary"
                           />
                           <div>
-                            <h3 className="font-semibold text-gray-900">{source.name}</h3>
+                            <h3 className="font-semibold text-foreground">{source.name}</h3>
                             <a
                               href={source.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-sm text-blue-600 hover:underline"
+                              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                               onClick={(e) => e.stopPropagation()}
                             >
                               {source.url}
@@ -384,7 +388,7 @@ function PreferencesContent() {
                           </div>
                         </div>
                         <div className="mt-2 flex items-center gap-2 ml-8">
-                          <span className="text-sm text-gray-600">
+                          <span className="text-sm text-muted-foreground">
                             Trust Score: {source.trust_score?.toFixed(1) || 'N/A'}
                           </span>
                           {source.organizational_bias && (
@@ -403,7 +407,7 @@ function PreferencesContent() {
               <button
                 onClick={handleSaveSources}
                 disabled={saving}
-                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
+                className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
               >
                 {saving ? 'Saving...' : 'Save Sources'}
               </button>
@@ -413,27 +417,27 @@ function PreferencesContent() {
 
         {activeTab === 'settings' && (
           <>
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
+              <h2 className="text-xl font-semibold text-foreground mb-4">
                 Newsletter Settings
               </h2>
-              <p className="text-sm text-gray-600 mb-6">
+              <p className="text-sm text-muted-foreground mb-6">
                 Customize how your newsletter is generated and delivered.
               </p>
 
               <div className="space-y-6">
                 {/* Source Discovery Mode */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-card-foreground mb-2">
                     Source Discovery Mode
                   </label>
-                  <p className="text-sm text-gray-600 mb-3">
+                  <p className="text-sm text-muted-foreground mb-3">
                     Control whether to only use your selected sources or allow discovery of new sources.
                   </p>
                   <select
                     value={settings.source_discovery_mode}
                     onChange={(e) => setSettings({ ...settings, source_discovery_mode: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                    className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-foreground"
                   >
                     <option value="none">None - Only use my selected sources</option>
                     <option value="some">Some - Occasionally include new sources</option>
@@ -443,16 +447,16 @@ function PreferencesContent() {
 
                 {/* Article Order Preference */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-card-foreground mb-2">
                     Article Order Preference
                   </label>
-                  <p className="text-sm text-gray-600 mb-3">
+                  <p className="text-sm text-muted-foreground mb-3">
                     Choose how articles are ordered in your newsletter.
                   </p>
                   <select
                     value={settings.article_order_preference}
                     onChange={(e) => setSettings({ ...settings, article_order_preference: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                    className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-foreground"
                   >
                     <option value="good_first">Good News First - Positive sentiment first</option>
                     <option value="good_last">Good News Last - Negative sentiment first</option>
@@ -462,10 +466,10 @@ function PreferencesContent() {
 
                 {/* Articles Per Topic */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-card-foreground mb-2">
                     Default Articles Per Topic: {settings.articles_per_topic_default}
                   </label>
-                  <p className="text-sm text-gray-600 mb-3">
+                  <p className="text-sm text-muted-foreground mb-3">
                     How many articles to include per topic in each newsletter (1-10).
                   </p>
                   <input
@@ -474,9 +478,9 @@ function PreferencesContent() {
                     max="10"
                     value={settings.articles_per_topic_default}
                     onChange={(e) => setSettings({ ...settings, articles_per_topic_default: parseInt(e.target.value) })}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                    className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-primary"
                   />
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
                     <span>1 article</span>
                     <span>10 articles</span>
                   </div>
@@ -489,7 +493,7 @@ function PreferencesContent() {
               <button
                 onClick={handleSaveSettings}
                 disabled={saving}
-                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
+                className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
               >
                 {saving ? 'Saving...' : 'Save Settings'}
               </button>
@@ -499,21 +503,21 @@ function PreferencesContent() {
 
         {activeTab === 'account' && (
           <>
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
+              <h2 className="text-xl font-semibold text-foreground mb-4">
                 Account Settings
               </h2>
-              <p className="text-sm text-gray-600 mb-6">
+              <p className="text-sm text-muted-foreground mb-6">
                 Manage your account information and security.
               </p>
 
               <div className="space-y-6">
                 {/* User Information */}
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Profile Information</h3>
+                  <h3 className="text-lg font-medium text-foreground mb-4">Profile Information</h3>
                   <div className="space-y-4">
                     <div>
-                      <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                      <label htmlFor="name" className="block text-sm font-medium text-card-foreground mb-2">
                         Name
                       </label>
                       <input
@@ -521,13 +525,13 @@ function PreferencesContent() {
                         type="text"
                         value={userInfo.name}
                         onChange={(e) => setUserInfo({ ...userInfo, name: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                        className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-foreground"
                         placeholder="Your name"
                       />
                     </div>
 
                     <div>
-                      <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                      <label htmlFor="email" className="block text-sm font-medium text-card-foreground mb-2">
                         Email Address
                       </label>
                       <input
@@ -535,9 +539,9 @@ function PreferencesContent() {
                         type="email"
                         value={userInfo.email}
                         disabled
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+                        className="w-full px-4 py-2 border border-border rounded-lg bg-background text-muted-foreground cursor-not-allowed"
                       />
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         Email address cannot be changed
                       </p>
                     </div>
@@ -545,16 +549,16 @@ function PreferencesContent() {
                 </div>
 
                 {/* Security Section */}
-                <div className="pt-6 border-t border-gray-200">
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <div className="pt-6 border-t border-border">
+                  <h3 className="text-lg font-medium text-foreground mb-2">
                     Security
                   </h3>
-                  <p className="text-sm text-gray-600 mb-4">
+                  <p className="text-sm text-muted-foreground mb-4">
                     Manage your password and account security.
                   </p>
                   <button
                     onClick={() => router.push('/forgot-password')}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                    className="px-4 py-2 border border-border text-card-foreground rounded-lg hover:bg-background transition-colors font-medium"
                   >
                     Change Password
                   </button>
@@ -579,7 +583,7 @@ function PreferencesContent() {
                   }
                 }}
                 disabled={saving}
-                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
+                className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
               >
                 {saving ? 'Saving...' : 'Save Account Info'}
               </button>
@@ -588,11 +592,11 @@ function PreferencesContent() {
         )}
 
         {/* Info Card */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="font-semibold text-blue-900 mb-2">
+        <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 transition-colors">
+          <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">
             📬 Newsletter Delivery
           </h3>
-          <p className="text-sm text-blue-800">
+          <p className="text-sm text-blue-800 dark:text-blue-300">
             Your personalized newsletter arrives daily at 7 AM with articles from
             your selected topics. Each newsletter also includes our unique
             &quot;ethical framework&quot; analysis, helping you understand the underlying
@@ -608,10 +612,10 @@ function PreferencesContent() {
 export default function PreferencesPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading preferences...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading preferences...</p>
         </div>
       </div>
     }>

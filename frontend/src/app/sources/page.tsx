@@ -65,7 +65,7 @@ export default function SourcesPage() {
     return (
       <>
         <Navbar />
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-background">
           <div className="max-w-7xl mx-auto px-4 py-8">
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
               {error}
@@ -80,28 +80,28 @@ export default function SourcesPage() {
     <>
       <Navbar />
       <UnverifiedEmailAlert />
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background">
         <div className="max-w-7xl mx-auto px-4 py-8">
           {/* Header */}
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">📰 Supported News Sources</h1>
-            <p className="text-gray-600 mt-1">
+          <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
+            <h1 className="text-3xl font-bold text-foreground">📰 Supported News Sources</h1>
+            <p className="text-muted-foreground mt-1">
               Explore the news sources we monitor and their organizational bias ratings
             </p>
           </div>
 
           {/* Filters */}
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Bias filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-card-foreground mb-1">
                   Filter by Bias
                 </label>
                 <select
                   value={selectedBias}
                   onChange={(e) => setSelectedBias(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
+                  className="w-full px-3 py-2 border border-border rounded-md text-foreground"
                 >
                   <option value="">All Biases</option>
                   <option value="left">Left</option>
@@ -114,13 +114,13 @@ export default function SourcesPage() {
 
               {/* Sort */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-card-foreground mb-1">
                   Sort By
                 </label>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
+                  className="w-full px-3 py-2 border border-border rounded-md text-foreground"
                 >
                   <option value="name">Name (A-Z)</option>
                   <option value="trust_score">Trust Score</option>
@@ -131,27 +131,27 @@ export default function SourcesPage() {
           </div>
 
           {/* Results count */}
-          <div className="mb-4 text-sm font-medium text-gray-600">
+          <div className="mb-4 text-sm font-medium text-muted-foreground">
             {sources.length} {sources.length === 1 ? 'source' : 'sources'}
           </div>
 
           {/* Sources grid */}
           {loading ? (
             <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-              <p className="mt-4 text-gray-600">Loading sources...</p>
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              <p className="mt-4 text-muted-foreground">Loading sources...</p>
             </div>
           ) : sources.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {sources.map((source) => (
                 <div
                   key={source.id}
-                  className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow border border-gray-200"
+                  className="bg-card rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow border border-border"
                 >
                   {/* Source header */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                      <h3 className="text-lg font-semibold text-foreground mb-1">
                         {source.name}
                       </h3>
                       {source.organizational_bias && (
@@ -162,7 +162,7 @@ export default function SourcesPage() {
 
                   {/* Description */}
                   {source.bias_description && (
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                    <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
                       {source.bias_description}
                     </p>
                   )}
@@ -170,21 +170,21 @@ export default function SourcesPage() {
                   {/* Details */}
                   <div className="space-y-2 text-sm mb-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Trust Score:</span>
+                      <span className="text-muted-foreground">Trust Score:</span>
                       <span className={`font-semibold ${getTrustScoreColor(source.trust_score)}`}>
                         {(source.trust_score * 100).toFixed(0)}%
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Articles:</span>
-                      <span className="font-semibold text-gray-900">
+                      <span className="text-muted-foreground">Articles:</span>
+                      <span className="font-semibold text-foreground">
                         {source.article_count}
                       </span>
                     </div>
                   </div>
 
                   {/* Links */}
-                  <div className="pt-4 border-t border-gray-200 space-y-2">
+                  <div className="pt-4 border-t border-border space-y-2">
                     <a
                       href={source.url}
                       target="_blank"
@@ -196,7 +196,7 @@ export default function SourcesPage() {
                     </a>
                     <button
                       onClick={() => router.push(`/feed?source_id=${source.id}`)}
-                      className="block text-sm text-indigo-600 hover:underline"
+                      className="block text-sm text-primary hover:underline"
                     >
                       View articles from this source →
                     </button>
@@ -205,25 +205,25 @@ export default function SourcesPage() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-              <p className="text-gray-600 text-lg">No sources found with these filters</p>
-              <p className="text-gray-500 text-sm mt-2">
+            <div className="text-center py-12 bg-card rounded-lg shadow-sm">
+              <p className="text-muted-foreground text-lg">No sources found with these filters</p>
+              <p className="text-muted-foreground text-sm mt-2">
                 Try adjusting your filters to see more sources
               </p>
             </div>
           )}
 
           {/* Info box */}
-          <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-blue-900 mb-2">
+          <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 transition-colors">
+            <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-300 mb-2">
               About Source Bias Ratings
             </h3>
-            <p className="text-blue-800 text-sm leading-relaxed mb-3">
+            <p className="text-blue-800 dark:text-blue-300 text-sm leading-relaxed mb-3">
               Organizational bias ratings reflect the general editorial perspective of each news
               source. These are separate from our article-level bias analysis, which examines
               individual articles regardless of their source.
             </p>
-            <p className="text-blue-800 text-sm leading-relaxed">
+            <p className="text-blue-800 dark:text-blue-300 text-sm leading-relaxed">
               <strong>Note:</strong> A source&apos;s organizational bias doesn&apos;t mean individual articles
               are biased. Many sources with clear editorial stances still produce objective news reporting.
             </p>

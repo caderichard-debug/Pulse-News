@@ -49,11 +49,11 @@ export default function UnverifiedEmailAlert() {
   }
 
   return (
-    <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+    <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 dark:border-yellow-600 p-4 transition-colors">
       <div className="max-w-7xl mx-auto flex justify-center">
         <div className="flex items-center space-x-3 text-center">
           <svg
-            className="h-5 w-5 text-yellow-400 flex-shrink-0"
+            className="h-5 w-5 text-yellow-400 dark:text-yellow-500 flex-shrink-0"
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
             fill="currentColor"
@@ -66,17 +66,17 @@ export default function UnverifiedEmailAlert() {
             />
           </svg>
           <div className="flex-1">
-            <p className="text-sm text-yellow-700">
+            <p className="text-sm text-yellow-700 dark:text-yellow-300">
               <span className="font-medium">Email not verified.</span> You won&apos;t receive newsletters until you verify your email address. Please check your inbox for a verification link.
             </p>
             {resendMessage && (
-              <p className="text-xs text-yellow-600 mt-1">{resendMessage}</p>
+              <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">{resendMessage}</p>
             )}
           </div>
           <button
             onClick={handleResendEmail}
             disabled={resending}
-            className="px-3 py-1.5 text-xs font-medium text-yellow-800 bg-yellow-100 hover:bg-yellow-200 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+            className="px-3 py-1.5 text-xs font-medium text-yellow-800 dark:text-yellow-200 bg-yellow-100 dark:bg-yellow-800/50 hover:bg-yellow-200 dark:hover:bg-yellow-800/70 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
           >
             {resending ? 'Sending...' : 'Resend Email'}
           </button>
