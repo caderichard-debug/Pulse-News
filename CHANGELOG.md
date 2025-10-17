@@ -4,6 +4,54 @@ This file tracks significant changes, decisions, and progress throughout develop
 
 ---
 
+## 2025-10-17 11:45
+
+**Dark Mode - Test Fixes** ✅
+
+### What Changed
+
+Fixed all frontend tests after adding ThemeProvider for dark mode support.
+
+#### The Problem:
+- After adding ThemeContext, all component tests failed with "useTheme must be used within a ThemeProvider"
+- Navbar tests were failing due to updated class names for dark mode
+- Tests needed `window.matchMedia` mock for theme detection
+
+#### The Solution:
+Created a test utilities file that wraps all components with ThemeProvider and mocks browser APIs.
+
+#### Changes Made:
+1. **Created [test-utils.tsx](frontend/src/__tests__/test-utils.tsx)**:
+   - Custom render function with ThemeProvider wrapper
+   - Mocked `window.matchMedia` for testing environment
+   - Re-exports all testing-library utilities
+
+2. **Updated 9 test files**:
+   - Changed imports from `@testing-library/react` to `@/__tests__/test-utils`
+   - Updated [Navbar.test.tsx](frontend/src/components/__tests__/Navbar.test.tsx):
+     - Active class: `bg-indigo-100` (was `bg-indigo-50`)
+     - Inactive class: `text-muted-foreground` (was `text-gray-600`)
+     - Hover classes: `hover:bg-accent hover:text-accent-foreground`
+
+#### Result:
+- ✅ **206 tests passing** (11 test suites, 100% pass rate)
+- ✅ All ThemeProvider errors resolved
+- ✅ Navbar class assertions match implementation
+- ✅ No test failures, only benign async warnings
+
+**Files Modified:**
+- [test-utils.tsx](frontend/src/__tests__/test-utils.tsx) - NEW
+- All page test files (9 files) - Updated imports
+- [Navbar.test.tsx](frontend/src/components/__tests__/Navbar.test.tsx) - Updated class assertions
+
+**Test Results:**
+```
+Test Suites: 11 passed, 11 total
+Tests:       206 passed, 206 total
+```
+
+---
+
 ## 2025-10-17 11:15
 
 **Dark Mode - Auto Theme Detection** ✅
