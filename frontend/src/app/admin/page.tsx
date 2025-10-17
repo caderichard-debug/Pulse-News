@@ -116,7 +116,7 @@ export default function AdminPage() {
           <div className="space-y-3">
             {dashboardData.active_jobs.map((job) => (
               <div
-                key={job.job_id}
+                key={job.id}
                 className="flex items-center justify-between p-3 bg-blue-50 rounded-lg"
               >
                 <div>
@@ -151,7 +151,7 @@ export default function AdminPage() {
           <div className="space-y-3">
             {dashboardData.recent_jobs.slice(0, 5).map((job) => (
               <div
-                key={job.job_id}
+                key={job.id}
                 className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
               >
                 <div className="flex-1">
