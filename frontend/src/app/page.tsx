@@ -110,8 +110,7 @@ export default function Home() {
                   Choose Your Topics
                 </h3>
                 <p className="text-muted-foreground">
-                  Select from Politics, Technology, Business, Science, and more.
-                  Adjust priorities to customize your digest.
+                  Select from Politics, Economics, Technology, Culture, and more.
                 </p>
               </div>
             </div>
