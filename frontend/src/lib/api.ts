@@ -112,7 +112,7 @@ class ApiClient {
         created_at?: string;
         last_login?: string;
       }>('/auth/me');
-    } catch (error) {
+    } catch {
       return null;
     }
   }
