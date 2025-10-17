@@ -203,7 +203,7 @@ class ApiClient {
       name: string;
       url: string;
       trust_score: number;
-      political_lean: string | null;
+      organizational_bias: string | null;
       subscribed: boolean;
     }>>('/preferences/sources');
   }

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
+import SourceBiasBadge from '@/components/SourceBiasBadge';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
 
 interface TopicPreference {
@@ -18,7 +19,7 @@ interface Source {
   name: string;
   url: string;
   trust_score: number;
-  political_lean: string | null;
+  organizational_bias: string | null;
   subscribed: boolean;
 }
 
@@ -161,13 +162,6 @@ export default function PreferencesPage() {
 
   const activeTopics = preferences.filter((p) => p.is_active);
   const subscribedSources = sources.filter((s) => s.subscribed);
-
-  const getPoliticalLeanColor = (lean: string | null) => {
-    if (!lean) return 'bg-gray-100 text-gray-700';
-    if (lean === 'left') return 'bg-blue-100 text-blue-700';
-    if (lean === 'right') return 'bg-red-100 text-red-700';
-    return 'bg-gray-100 text-gray-700';
-  };
 
   return (
     <>
@@ -368,10 +362,8 @@ export default function PreferencesPage() {
                           <span className="text-sm text-gray-600">
                             Trust Score: {source.trust_score?.toFixed(1) || 'N/A'}
                           </span>
-                          {source.political_lean && (
-                            <span className={`text-xs px-2 py-1 rounded ${getPoliticalLeanColor(source.political_lean)}`}>
-                              {source.political_lean}
-                            </span>
+                          {source.organizational_bias && (
+                            <SourceBiasBadge bias={source.organizational_bias} size="sm" />
                           )}
                         </div>
                       </div>

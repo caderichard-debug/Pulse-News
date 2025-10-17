@@ -114,8 +114,8 @@ class TestSourcePreferences:
         # All should be unsubscribed initially
         assert all(source["subscribed"] is False for source in data)
 
-    def test_get_sources_includes_political_lean(self, client: TestClient, auth_token: str):
-        """Test that sources include aggregated political lean from articles"""
+    def test_get_sources_includes_organizational_bias(self, client: TestClient, auth_token: str):
+        """Test that sources include organizational bias from source model"""
         response = client.get(
             "/preferences/sources",
             headers={"Authorization": f"Bearer {auth_token}"}
@@ -124,9 +124,8 @@ class TestSourcePreferences:
         assert response.status_code == 200
         data = response.json()
 
-        # NPR should have "center" lean from the test article
-        npr = next(s for s in data if s["name"] == "NPR")
-        assert npr["political_lean"] == "center"
+        # All sources should have organizational_bias field (can be null)
+        assert all("organizational_bias" in source for source in data)
 
     def test_get_sources_requires_auth(self, client: TestClient):
         """Test that sources endpoint requires authentication"""
