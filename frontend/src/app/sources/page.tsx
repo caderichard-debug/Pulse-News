@@ -214,7 +214,7 @@ export default function SourcesPage() {
           )}
 
           {/* Info box */}
-          <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 transition-colors">
+          <div className="mt-8 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-6 transition-colors">
             <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-300 mb-2">
               About Source Bias Ratings
             </h3>
