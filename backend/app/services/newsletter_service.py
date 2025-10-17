@@ -233,6 +233,7 @@ def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict
     )[:settings.max_frameworks_per_newsletter]
 
     # Prepare template data
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
     template_data = {
         "user_name": user.name or "there",
         "date": datetime.utcnow().strftime("%B %d, %Y"),
@@ -249,9 +250,9 @@ def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict
             for fw in top_frameworks
         ],
         "articles": [],
-        "preferences_url": f"https://pulse.news/preferences?token={user.email}",  # TODO: Add real token
-        "website_url": "https://pulse.news",
-        "unsubscribe_url": f"https://pulse.news/unsubscribe?token={user.email}"  # TODO: Add real token
+        "preferences_url": f"{frontend_url}/preferences?token={user.email}",  # TODO: Add real token
+        "website_url": frontend_url,
+        "unsubscribe_url": f"{frontend_url}/unsubscribe?token={user.email}"  # TODO: Add real token
     }
 
     # Add article data with enhancements

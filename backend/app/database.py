@@ -6,15 +6,13 @@ from typing import Generator
 import os
 import logging
 from dotenv import load_dotenv
+from .config import settings
 
 load_dotenv()
 logger = logging.getLogger(__name__)
 
 # Get DATABASE_URL from environment variable, fallback to default
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:password@db:5432/news_db"
-)
+DATABASE_URL = settings.database_url
 
 # Create engine with SQLModel
 engine = create_engine(DATABASE_URL, echo=True)  # echo=True for development

@@ -11,6 +11,7 @@ import time
 import sys
 from sqlalchemy import text
 from .database import engine
+from .config import settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ def trigger_all_jobs():
     import os
 
     # Get the base URL (use localhost in docker, or the service URL)
-    base_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+    base_url = settings.backend_url
 
     logger.info("=== Triggering Initial Background Jobs ===")
 

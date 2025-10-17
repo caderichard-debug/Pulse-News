@@ -7,6 +7,8 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
+from ..app.config import settings
+
 
 # Add parent directory to path to import app modules
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -39,7 +41,7 @@ from app.models import (
 config = context.config
 
 # Override sqlalchemy.url with environment variable if available
-database_url = os.getenv("DATABASE_URL")
+database_url = settings.database_url
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
 

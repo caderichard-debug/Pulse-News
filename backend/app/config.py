@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
 import os
+from .config import settings
 
 
 class Settings(BaseSettings):
@@ -23,7 +24,7 @@ class Settings(BaseSettings):
     claimbuster_api_key: Optional[str] = None
 
     # Email Configuration
-    from_email: str = "newsletter@pulse.news"
+    from_email: str = "onboarding@resend.dev"
     from_name: str = "Pulse News"
 
     # AI Configuration
