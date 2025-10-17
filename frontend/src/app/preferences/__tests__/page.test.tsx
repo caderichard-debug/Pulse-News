@@ -19,11 +19,13 @@ jest.mock('@/lib/api', () => ({
 
 // Mock next/navigation
 const mockPush = jest.fn();
+const mockSearchParams = new URLSearchParams();
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
   usePathname: () => '/preferences',
+  useSearchParams: () => mockSearchParams,
 }));
 
 describe('PreferencesPage', () => {
@@ -285,5 +287,77 @@ describe('PreferencesPage', () => {
 
     expect(api.clearToken).toHaveBeenCalled();
     expect(mockPush).toHaveBeenCalledWith('/');
+  });
+
+  describe('Tab Persistence', () => {
+    it('should initialize with topics tab when no URL param is present', async () => {
+      mockSearchParams.delete('tab');
+      render(<PreferencesPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Politics')).toBeInTheDocument();
+      });
+    });
+
+    it('should initialize with the tab specified in URL param', async () => {
+      mockSearchParams.set('tab', 'sources');
+      render(<PreferencesPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Reuters')).toBeInTheDocument();
+        expect(screen.getByText('BBC')).toBeInTheDocument();
+      });
+    });
+
+    it('should update URL when switching tabs', async () => {
+      mockSearchParams.delete('tab');
+      const user = userEvent.setup();
+      render(<PreferencesPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Politics')).toBeInTheDocument();
+      });
+
+      const sourcesTab = screen.getByRole('button', { name: /sources \(/i });
+      await user.click(sourcesTab);
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalledWith('/preferences?tab=sources', { scroll: false });
+      });
+    });
+
+    it('should update URL when switching to settings tab', async () => {
+      mockSearchParams.delete('tab');
+      const user = userEvent.setup();
+      render(<PreferencesPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Politics')).toBeInTheDocument();
+      });
+
+      const settingsTab = screen.getByRole('button', { name: /Settings/i });
+      await user.click(settingsTab);
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalledWith('/preferences?tab=settings', { scroll: false });
+      });
+    });
+
+    it('should update URL when switching to account tab', async () => {
+      mockSearchParams.delete('tab');
+      const user = userEvent.setup();
+      render(<PreferencesPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Politics')).toBeInTheDocument();
+      });
+
+      const accountTab = screen.getByRole('button', { name: /Account/i });
+      await user.click(accountTab);
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalledWith('/preferences?tab=account', { scroll: false });
+      });
+    });
   });
 });
