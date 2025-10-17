@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
@@ -28,7 +28,7 @@ interface Settings {
   articles_per_topic_default: number;
 }
 
-export default function PreferencesPage() {
+function PreferencesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [preferences, setPreferences] = useState<TopicPreference[]>([]);
@@ -610,5 +610,20 @@ export default function PreferencesPage() {
       </div>
     </div>
     </>
+  );
+}
+
+export default function PreferencesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading preferences...</p>
+        </div>
+      </div>
+    }>
+      <PreferencesContent />
+    </Suspense>
   );
 }
