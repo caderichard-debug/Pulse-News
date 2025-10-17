@@ -111,10 +111,10 @@ export default function ArticleDetailPage() {
     return (
       <>
         <Navbar />
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-background">
           <div className="max-w-4xl mx-auto px-4 py-8 text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-            <p className="mt-4 text-gray-600">Loading article...</p>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <p className="mt-4 text-muted-foreground">Loading article...</p>
           </div>
         </div>
       </>
@@ -125,14 +125,14 @@ export default function ArticleDetailPage() {
     return (
       <>
         <Navbar />
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-background">
           <div className="max-w-4xl mx-auto px-4 py-8">
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
               {error || 'Article not found'}
             </div>
             <button
               onClick={() => router.push('/feed')}
-              className="mt-4 text-indigo-600 hover:underline"
+              className="mt-4 text-primary hover:underline"
             >
               ← Back to feed
             </button>
@@ -146,19 +146,19 @@ export default function ArticleDetailPage() {
     <>
       <Navbar />
       <UnverifiedEmailAlert />
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background">
         <div className="max-w-4xl mx-auto px-4 py-8">
           {/* Back button */}
           <button
             onClick={() => router.push('/feed')}
-            className="mb-6 text-indigo-600 hover:underline flex items-center gap-1 transition-colors"
+            className="mb-6 text-primary hover:underline flex items-center gap-1 transition-colors"
           >
             ← Back to feed
           </button>
 
       {/* Article header */}
       <div className="mb-8">
-        <div className="flex items-center gap-2 text-sm text-gray-600 mb-3 flex-wrap">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3 flex-wrap">
           <a href={article.source_url} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">
             {article.source_name}
           </a>
@@ -181,7 +181,7 @@ export default function ArticleDetailPage() {
           )}
         </div>
 
-        <h1 className="text-4xl font-bold mb-4 text-gray-900">{article.title}</h1>
+        <h1 className="text-4xl font-bold mb-4 text-foreground">{article.title}</h1>
 
         <a
           href={article.url}
@@ -194,13 +194,13 @@ export default function ArticleDetailPage() {
       </div>
 
       {/* Sentiment & Bias */}
-      <div className="bg-gray-100 border border-gray-300 rounded-lg p-6 mb-8">
-        <h2 className="text-lg font-semibold mb-4 text-gray-900">Analysis</h2>
+      <div className="bg-secondary border border-border rounded-lg p-6 mb-8">
+        <h2 className="text-lg font-semibold mb-4 text-foreground">Analysis</h2>
         {article.sentiment_score !== null || article.political_lean ? (
           <div className="grid grid-cols-2 gap-4">
             {article.sentiment_score !== null && (
               <div>
-                <p className="text-sm text-gray-600 mb-1">Sentiment Score</p>
+                <p className="text-sm text-muted-foreground mb-1">Sentiment Score</p>
                 <p className={`text-2xl font-bold ${getSentimentColor(article.sentiment_score)}`}>
                   {article.sentiment_score > 0 ? '+' : ''}{article.sentiment_score.toFixed(1)}
                 </p>
@@ -208,35 +208,35 @@ export default function ArticleDetailPage() {
             )}
             {article.political_lean && (
               <div>
-                <p className="text-sm text-gray-600 mb-1">Article Bias</p>
+                <p className="text-sm text-muted-foreground mb-1">Article Bias</p>
                 <p className={`text-2xl font-bold ${getLeanColor(article.political_lean)}`}>
                   {article.political_lean.charAt(0).toUpperCase() + article.political_lean.slice(1)}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">Article-level analysis</p>
+                <p className="text-xs text-muted-foreground mt-1">Article-level analysis</p>
               </div>
             )}
           </div>
         ) : (
-          <p className="text-gray-500 italic text-sm">AI analysis pending... Check back soon for sentiment and bias analysis.</p>
+          <p className="text-muted-foreground italic text-sm">AI analysis pending... Check back soon for sentiment and bias analysis.</p>
         )}
       </div>
 
       {/* Summary */}
       {article.summary && (
         <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-3 text-gray-900">Summary</h2>
-          <p className="text-gray-700 leading-relaxed">{article.summary}</p>
+          <h2 className="text-2xl font-semibold mb-3 text-foreground">Summary</h2>
+          <p className="text-card-foreground leading-relaxed">{article.summary}</p>
         </div>
       )}
 
       {/* Ethical Framework Analysis */}
       {article.frameworks.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2 text-gray-900">
+          <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2 text-foreground">
             <span>⚖️</span>
             <span>Ethical Framework Analysis</span>
           </h2>
-          <p className="text-gray-600 mb-4">
+          <p className="text-muted-foreground mb-4">
             This article relates to underlying ethical debates. Understanding these frameworks helps you think critically about the issues.
           </p>
           <div className="space-y-4">
@@ -244,7 +244,7 @@ export default function ArticleDetailPage() {
               <div key={fw.framework_id} className="bg-gradient-to-br from-purple-600 to-indigo-700 text-white rounded-lg p-6 shadow-lg">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-xl font-semibold">{fw.framework_name}</h3>
-                  <span className="text-xs bg-white/20 px-3 py-1 rounded-full">
+                  <span className="text-xs bg-card/20 px-3 py-1 rounded-full">
                     {(fw.relevance_score * 100).toFixed(0)}% relevant
                   </span>
                 </div>
@@ -255,12 +255,12 @@ export default function ArticleDetailPage() {
 
                 <div className="flex items-center gap-3 text-sm mb-3">
                   <span className="font-medium">{fw.left_position}</span>
-                  <div className="flex-1 h-2 bg-white/30 rounded-full relative overflow-hidden">
+                  <div className="flex-1 h-2 bg-card/30 rounded-full relative overflow-hidden">
                     <div
                       className="absolute inset-0 bg-gradient-to-r from-red-400 via-white to-blue-400 opacity-60"
                     ></div>
                     <div
-                      className="absolute top-0 h-4 w-4 -mt-1 bg-white rounded-full shadow-lg transform -translate-x-1/2 border-2 border-purple-300"
+                      className="absolute top-0 h-4 w-4 -mt-1 bg-card rounded-full shadow-lg transform -translate-x-1/2 border-2 border-purple-300"
                       style={{ left: `${((fw.position_on_axis + 10) / 20) * 100}%` }}
                     ></div>
                   </div>
@@ -268,7 +268,7 @@ export default function ArticleDetailPage() {
                 </div>
 
                 <div className="text-center">
-                  <span className="inline-block bg-white/20 px-4 py-2 rounded-lg text-lg font-bold">
+                  <span className="inline-block bg-card/20 px-4 py-2 rounded-lg text-lg font-bold">
                     Position: {fw.position_on_axis > 0 ? '+' : ''}{fw.position_on_axis}
                   </span>
                   <p className="text-xs text-purple-200 mt-2">
@@ -302,7 +302,7 @@ export default function ArticleDetailPage() {
                     <span>📖</span>
                     <span>Background</span>
                   </h3>
-                  <p className="text-gray-700 leading-relaxed">{article.context.background}</p>
+                  <p className="text-card-foreground leading-relaxed">{article.context.background}</p>
                 </div>
               )}
               {article.context.key_players && (
@@ -316,7 +316,7 @@ export default function ArticleDetailPage() {
                       const players = JSON.parse(article.context.key_players);
                       if (Array.isArray(players)) {
                         return (
-                          <ul className="list-disc list-inside text-gray-700 leading-relaxed space-y-1">
+                          <ul className="list-disc list-inside text-card-foreground leading-relaxed space-y-1">
                             {players.map((player: string, idx: number) => (
                               <li key={idx}>{player}</li>
                             ))}
@@ -326,7 +326,7 @@ export default function ArticleDetailPage() {
                     } catch {
                       // Fall back to plain text if not JSON
                     }
-                    return <p className="text-gray-700 leading-relaxed">{article.context.key_players}</p>;
+                    return <p className="text-card-foreground leading-relaxed">{article.context.key_players}</p>;
                   })()}
                 </div>
               )}
@@ -344,7 +344,7 @@ export default function ArticleDetailPage() {
                           return timelineData.reverse().map((item: { date: string; event: string }, idx: number) => (
                             <div key={idx} className="relative">
                               <div className="absolute -left-[1.6rem] top-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-blue-50"></div>
-                              <p className="text-gray-700 text-sm leading-relaxed">
+                              <p className="text-card-foreground text-sm leading-relaxed">
                                 <strong className="text-blue-800">{item.date}:</strong> {item.event}
                               </p>
                             </div>
@@ -355,7 +355,7 @@ export default function ArticleDetailPage() {
                         return article.context.timeline.split('\n').filter(line => line.trim()).reverse().map((event, idx) => (
                           <div key={idx} className="relative">
                             <div className="absolute -left-[1.6rem] top-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-blue-50"></div>
-                            <p className="text-gray-700 text-sm leading-relaxed">{event}</p>
+                            <p className="text-card-foreground text-sm leading-relaxed">{event}</p>
                           </div>
                         ));
                       }
@@ -369,7 +369,7 @@ export default function ArticleDetailPage() {
                     <span>💡</span>
                     <span>Why This Matters</span>
                   </h3>
-                  <p className="text-gray-700 leading-relaxed">{article.context.significance}</p>
+                  <p className="text-card-foreground leading-relaxed">{article.context.significance}</p>
                 </div>
               )}
             </div>
@@ -381,24 +381,24 @@ export default function ArticleDetailPage() {
       {article.related_articles.length > 0 && (
         <div className="mb-8">
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
-            <h2 className="text-2xl font-semibold mb-2 flex items-center gap-2 text-gray-900">
+            <h2 className="text-2xl font-semibold mb-2 flex items-center gap-2 text-foreground">
               <span>🔗</span>
               <span>Cross-Source Coverage</span>
             </h2>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               This story is being covered by {article.related_articles.length + 1} sources. Compare how different outlets frame the same story.
             </p>
             <div className="space-y-3">
               {article.related_articles.map((related) => (
                 <div
                   key={related.id}
-                  className="bg-white border border-purple-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                  className="bg-card border border-purple-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
                   onClick={() => router.push(`/article/${related.id}`)}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900 mb-1">{related.title}</p>
-                      <p className="text-sm text-gray-600">
+                      <p className="font-medium text-foreground mb-1">{related.title}</p>
+                      <p className="text-sm text-muted-foreground">
                         {related.source_name} • {formatDate(related.published_at)}
                       </p>
                     </div>
@@ -440,15 +440,15 @@ export default function ArticleDetailPage() {
 
                 return noSourceFound ? (
                   // Compact card for unverified stats with no source
-                  <div key={idx} className="bg-gray-50/50 rounded-lg p-3 border border-gray-200">
-                    <div className="text-sm text-gray-800 mb-2 font-medium">
+                  <div key={idx} className="bg-background/50 rounded-lg p-3 border border-border">
+                    <div className="text-sm text-foreground mb-2 font-medium">
                       {stat.statistic}
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border bg-gray-100 text-gray-800 border-gray-300">
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border bg-secondary text-foreground border-border">
                         Unverified
                       </span>
-                      <span className="text-xs text-gray-600 italic">
+                      <span className="text-xs text-muted-foreground italic">
                         {stat.verification_notes}
                       </span>
                     </div>
@@ -457,10 +457,10 @@ export default function ArticleDetailPage() {
                   // Full card for all other stats
                   <div key={idx} className="bg-yellow-50/50 rounded-lg p-4 border border-yellow-200">
                     {/* Statistic text with context inline */}
-                    <div className="text-sm text-gray-800 mb-3 font-medium">
+                    <div className="text-sm text-foreground mb-3 font-medium">
                       {stat.statistic}
                       {stat.context && (
-                        <span className="text-xs text-gray-600 italic font-normal ml-2">
+                        <span className="text-xs text-muted-foreground italic font-normal ml-2">
                           ({stat.context})
                         </span>
                       )}
@@ -500,20 +500,20 @@ export default function ArticleDetailPage() {
                             <span className="text-blue-700">{stat.source_name}</span>
                           )
                         ) : (
-                          <span className="text-gray-500 italic">Source not traced</span>
+                          <span className="text-muted-foreground italic">Source not traced</span>
                         )}
                       </span>
 
                       {/* Credibility rating (numerical) */}
                       {stat.source_credibility_score !== null && (
-                        <span className="text-gray-800">
+                        <span className="text-foreground">
                           Credibility: <strong>{(stat.source_credibility_score * 5).toFixed(1)}/5</strong>
                         </span>
                       )}
 
                       {/* Confidence percentage with label */}
                       {stat.confidence !== null && (
-                        <span className="text-gray-800 font-semibold ml-auto">
+                        <span className="text-foreground font-semibold ml-auto">
                           Confidence: {(stat.confidence * 100).toFixed(0)}%
                         </span>
                       )}
@@ -539,7 +539,7 @@ export default function ArticleDetailPage() {
 
                     {/* Verification notes (failure reason) */}
                     {stat.verification_notes && stat.verification_status === 'unverified' && (
-                      <div className="mt-2 text-xs text-gray-600 italic">
+                      <div className="mt-2 text-xs text-muted-foreground italic">
                         <strong>Note:</strong> {stat.verification_notes}
                       </div>
                     )}

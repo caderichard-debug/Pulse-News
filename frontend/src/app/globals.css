@@ -1,21 +1,62 @@
 @import "tailwindcss";
 
+/* Configure class-based dark mode variant */
+@variant dark (.dark &);
+
+/* Light mode (default) */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #111827;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --secondary: #f3f4f6;
+  --border: #e5e7eb;
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --muted: #f9fafb;
+  --muted-foreground: #6b7280;
+  --accent: #f3f4f6;
+  --accent-foreground: #111827;
+}
+
+/* Dark mode */
+:root.dark {
+  --background: #111827;
+  --foreground: #f3f4f6;
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --secondary: #1f2937;
+  --border: #374151;
+  --card: #1f2937;
+  --card-foreground: #f3f4f6;
+  --muted: #374151;
+  --muted-foreground: #9ca3af;
+  --accent: #374151;
+  --accent-foreground: #f3f4f6;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-border: var(--border);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
+/* System preference detection (fallback) */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not(.light) {
+    --background: #111827;
+    --foreground: #f3f4f6;
   }
 }
 
@@ -23,4 +64,63 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Utility classes for common patterns */
+@layer utilities {
+  .text-foreground {
+    color: var(--foreground);
+  }
+  .text-muted-foreground {
+    color: var(--muted-foreground);
+  }
+  .bg-card {
+    background-color: var(--card);
+  }
+  .bg-background {
+    background-color: var(--background);
+  }
+  .bg-secondary {
+    background-color: var(--secondary);
+  }
+  .bg-accent {
+    background-color: var(--accent);
+  }
+  .bg-muted {
+    background-color: var(--muted);
+  }
+  .border-border {
+    border-color: var(--border);
+  }
+  .text-primary {
+    color: var(--primary);
+  }
+  .text-primary-hover:hover {
+    color: var(--primary-hover);
+  }
+  .text-card-foreground {
+    color: var(--card-foreground);
+  }
+  .text-accent-foreground {
+    color: var(--accent-foreground);
+  }
+  .bg-primary {
+    background-color: var(--primary);
+  }
+  .hover\:bg-primary:hover {
+    background-color: var(--primary);
+  }
+  .hover\:bg-primary-hover:hover {
+    background-color: var(--primary-hover);
+  }
+  .hover\:bg-accent:hover {
+    background-color: var(--accent);
+  }
+  .hover\:text-accent-foreground:hover {
+    color: var(--accent-foreground);
+  }
+  .hover\:text-foreground:hover {
+    color: var(--foreground);
+  }
 }

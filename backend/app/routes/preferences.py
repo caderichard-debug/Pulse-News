@@ -283,6 +283,7 @@ class UpdateUserSettingsRequest(BaseModel):
     source_discovery_mode: Optional[str] = Field(None, description="'none', 'some', or 'open'")
     article_order_preference: Optional[str] = Field(None, description="'good_first', 'good_last', or 'mixed'")
     articles_per_topic_default: Optional[int] = Field(None, ge=1, le=10)
+    theme_preference: Optional[str] = Field(None, description="'light', 'dark', or 'auto'")
 
 
 @router.get("/sources", response_model=List[SourcePreferenceInfo])
@@ -402,6 +403,15 @@ def update_user_settings(
         current_user.articles_per_topic_default = request.articles_per_topic_default
         updated_fields.append("articles_per_topic_default")
 
+    if request.theme_preference is not None:
+        if request.theme_preference not in ['light', 'dark', 'auto']:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="theme_preference must be 'light', 'dark', or 'auto'"
+            )
+        current_user.theme_preference = request.theme_preference
+        updated_fields.append("theme_preference")
+
     session.add(current_user)
     session.commit()
     session.refresh(current_user)
@@ -414,7 +424,8 @@ def update_user_settings(
         "settings": {
             "source_discovery_mode": current_user.source_discovery_mode,
             "article_order_preference": current_user.article_order_preference,
-            "articles_per_topic_default": current_user.articles_per_topic_default
+            "articles_per_topic_default": current_user.articles_per_topic_default,
+            "theme_preference": current_user.theme_preference
         }
     }
 
@@ -429,5 +440,6 @@ def get_user_settings(
     return {
         "source_discovery_mode": current_user.source_discovery_mode,
         "article_order_preference": current_user.article_order_preference,
-        "articles_per_topic_default": current_user.articles_per_topic_default
+        "articles_per_topic_default": current_user.articles_per_topic_default,
+        "theme_preference": current_user.theme_preference
     }
