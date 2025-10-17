@@ -112,7 +112,7 @@ class ApiClient {
         created_at?: string;
         last_login?: string;
       }>('/auth/me');
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -140,6 +140,19 @@ class ApiClient {
     return this.request<{ valid: boolean; expires_at: string; message: string }>(
       `/auth/verify-reset-token/${token}`
     );
+  }
+
+  async verifyEmail(token: string) {
+    return this.request<{ message: string }>('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  }
+
+  async resendVerificationEmail() {
+    return this.request<{ message: string }>('/auth/resend-verification-email', {
+      method: 'POST',
+    });
   }
 
   // Preferences endpoints

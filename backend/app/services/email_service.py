@@ -39,7 +39,7 @@ def send_password_reset_email(email: str, user_name: str, reset_token: str) -> b
 
     try:
         # Get frontend URL from environment or default
-        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+        frontend_url = settings.frontend_url
         reset_link = f"{frontend_url}/reset-password?token={reset_token}"
 
         # Load and render template
@@ -85,7 +85,7 @@ def send_verification_email(email: str, user_name: str, verification_token: str)
 
     try:
         # Get frontend URL from environment or default
-        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+        frontend_url = settings.frontend_url
         verification_link = f"{frontend_url}/verify-email?token={verification_token}"
 
         # For now, send a simple HTML email (can create template later)

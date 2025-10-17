@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
+import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
 import {
   LineChart,
   Line,
@@ -93,6 +94,7 @@ export default function AnalyticsPage() {
   return (
     <>
       <Navbar />
+      <UnverifiedEmailAlert />
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 py-8">
           {/* Header */}
