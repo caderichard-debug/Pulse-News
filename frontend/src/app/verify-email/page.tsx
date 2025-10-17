@@ -25,7 +25,7 @@ function VerifyEmailContent() {
         setStatus("success");
         setMessage(data.message || "Email verified successfully!");
         // Redirect after delay
-        setTimeout(() => router.push("/dashboard"), 3000);
+        setTimeout(() => router.push("/feed"), 3000);
       } catch (err) {
         console.error(err);
         setStatus("error");
