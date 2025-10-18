@@ -182,6 +182,10 @@ class Article(SQLModel, table=True):
     )
     processed_at: Optional[datetime] = Field(default=None)
 
+    # User submission tracking
+    is_user_submitted: bool = Field(default=False, index=True)
+    submitted_by_user_id: Optional[int] = Field(default=None, foreign_key="users.id")
+
     # Relationships
     source: Optional["Source"] = Relationship(back_populates="articles")
     analysis: Optional["ArticleAnalysis"] = Relationship(back_populates="article")
