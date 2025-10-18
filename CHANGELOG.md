@@ -1,3 +1,65 @@
+## 2025-10-17 14:30
+
+**Welcome Email for New Users** ✅
+
+### What Changed
+
+Implemented an automated welcome email system that sends personalized emails to new users upon registration.
+
+#### Features:
+- **Professional HTML Email Template**: Created comprehensive welcome email template ([welcome.html](backend/app/templates/welcome.html)) with:
+  - Responsive design that works across all email clients
+  - Personalized greeting with user's name
+  - Overview of key Pulse features (sentiment/bias analysis, statistics verification, ethical frameworks, newsletters)
+  - Quick start guide with actionable steps
+  - Direct links to dashboard, preferences, and how-it-works pages
+  - Pro tip section to highlight unique features
+  - Clean footer with additional resources
+
+- **Email Service Integration**: Added `send_welcome_email()` function to [email_service.py](backend/app/services/email_service.py:136) that:
+  - Uses Jinja2 templating for personalized content
+  - Includes links to dashboard, preferences, and educational pages
+  - Gracefully handles API key missing scenarios
+  - Logs success/failure for monitoring
+
+- **Signup Flow Enhancement**: Updated [auth.py](backend/app/routes/auth.py) registration endpoint to:
+  - Send both verification and welcome emails
+  - Continue registration even if emails fail
+  - Provide detailed logging for email delivery status
+  - Track which emails succeeded/failed independently
+
+- **Comprehensive Test Coverage**: Created [test_welcome_email.py](backend/tests/test_welcome_email.py) with 9 tests covering:
+  - Welcome email sent on registration
+  - Personalization with user name
+  - Fallback to email when name not provided
+  - Registration succeeds even if email fails
+  - Key features highlighted in content
+  - Graceful handling without API key
+  - Direct service function tests
+  - Exception handling
+
+### Test Results
+- 9 new tests added, all passing ✅
+- Total backend tests: 430 (up from 427)
+- All existing tests continue to pass
+
+### User Experience Impact
+New users now receive:
+1. **Verification Email** - To confirm their email address
+2. **Welcome Email** - Comprehensive introduction to Pulse with:
+   - What to expect from the platform
+   - How to get started
+   - Links to key features
+   - Tips for best experience
+
+**Code References:**
+- Template: [welcome.html](backend/app/templates/welcome.html)
+- Service: [email_service.py](backend/app/services/email_service.py:136-180)
+- Integration: [auth.py](backend/app/routes/auth.py:196-209)
+- Tests: [test_welcome_email.py](backend/tests/test_welcome_email.py)
+
+---
+
 ## 2025-10-17 12:15
 
 **Documentation - Frontend Customization Guide** ✅

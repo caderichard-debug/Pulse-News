@@ -131,3 +131,50 @@ def send_verification_email(email: str, user_name: str, verification_token: str)
     except Exception as e:
         logger.error(f"Failed to send verification email to {email}: {str(e)}")
         return False
+
+
+def send_welcome_email(email: str, user_name: str) -> bool:
+    """
+    Send welcome email to newly registered user.
+
+    Args:
+        email: User's email address
+        user_name: User's name (or email if name not set)
+
+    Returns:
+        True if email sent successfully, False otherwise
+    """
+    if not settings.resend_api_key:
+        logger.error("Resend API key not configured - cannot send email")
+        return False
+
+    try:
+        # Get frontend URL from environment or default
+        frontend_url = settings.frontend_url
+
+        # Load and render template
+        template = template_env.get_template("welcome.html")
+        html_content = template.render(
+            user_name=user_name,
+            preferences_url=f"{frontend_url}/preferences",
+            dashboard_url=f"{frontend_url}/dashboard",
+            website_url=frontend_url,
+            how_it_works_url=f"{frontend_url}/how-it-works"
+        )
+
+        # Send email via Resend
+        params = {
+            "from": f"{settings.from_name} <{settings.from_email}>",
+            "to": [email],
+            "subject": "Welcome to Pulse - Your AI-Powered News Companion",
+            "html": html_content
+        }
+
+        response = resend.Emails.send(params)
+
+        logger.info(f"Welcome email sent to {email}")
+        return True
+
+    except Exception as e:
+        logger.error(f"Failed to send welcome email to {email}: {str(e)}")
+        return False
