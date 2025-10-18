@@ -70,6 +70,7 @@ export default function Navbar() {
 
   const navItems = [
     { name: 'Feed', path: '/feed', icon: '📰', adminOnly: false },
+    { name: 'Favorites', path: '/favorites', icon: '⭐', adminOnly: false },
     { name: 'Analyze', path: '/analyze', icon: '🔍', adminOnly: false },
     { name: 'Sources', path: '/sources', icon: '📑', adminOnly: false },
     { name: 'Analytics', path: '/analytics', icon: '📊', adminOnly: false },

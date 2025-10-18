@@ -8,7 +8,8 @@ from ..database import get_session
 from ..models import (
     User, Article, ArticleAnalysis, ArticleFrameworkLink,
     Framework, Source, Topic, UserTopicPreference,
-    UserSourceSubscription, PoliticalLean, ProcessingStatus, StatisticVerification
+    UserSourceSubscription, PoliticalLean, ProcessingStatus, StatisticVerification,
+    ArticleFavorite
 )
 from ..routes.auth import get_optional_user
 from pydantic import BaseModel
@@ -45,6 +46,9 @@ class ArticleFeedItem(BaseModel):
     stats_verified_count: int
     has_stats: bool
     read_time_minutes: Optional[int]
+
+    # Favorites
+    is_favorited: bool = False
 
 
 class FeedResponse(BaseModel):
@@ -155,6 +159,17 @@ async def get_feed_articles(
     for article_id, total, verified in stats_data:
         article_stats[article_id] = (total, verified or 0)
 
+    # Get favorites for current user (if logged in)
+    article_favorites: set = set()
+    if current_user:
+        favorites = session.exec(
+            select(ArticleFavorite.article_id).where(
+                ArticleFavorite.user_id == current_user.id,
+                ArticleFavorite.article_id.in_(article_ids)
+            )
+        ).all()
+        article_favorites = set(favorites)
+
     # Build response
     articles = []
     for article, analysis, source in results:
@@ -178,7 +193,8 @@ async def get_feed_articles(
             stats_count=stats[0],
             stats_verified_count=stats[1],
             has_stats=stats[0] > 0,
-            read_time_minutes=article.word_count // 200 if article.word_count else None
+            read_time_minutes=article.word_count // 200 if article.word_count else None,
+            is_favorited=article.id in article_favorites
         ))
 
     return FeedResponse(

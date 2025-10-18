@@ -324,6 +324,7 @@ class ApiClient {
         stats_count: number;
         stats_verified_count: number;
         has_stats: boolean;
+        is_favorited: boolean;
       }>;
       total_count: number;
       page: number;
@@ -397,6 +398,7 @@ class ApiClient {
         timeline: string | null;
         significance: string | null;
       } | null;
+      is_favorited: boolean;
     }>(`/articles/${articleId}`);
   }
 
@@ -754,6 +756,52 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ url }),
     });
+  }
+
+  // Favorites endpoints
+  async addFavorite(articleId: number) {
+    return this.request<{
+      message: string;
+      favorited_at: string;
+    }>(`/favorites/articles/${articleId}`, {
+      method: 'POST',
+    });
+  }
+
+  async removeFavorite(articleId: number) {
+    return this.request<{
+      message: string;
+    }>(`/favorites/articles/${articleId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getFavorites(params?: { limit?: number; offset?: number }) {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.offset) queryParams.append('offset', params.offset.toString());
+
+    return this.request<{
+      favorites: Array<{
+        id: number;
+        title: string;
+        url: string;
+        source_name: string;
+        published_at: string;
+        favorited_at: string;
+        summary: string | null;
+        sentiment_score: number | null;
+        political_lean: string | null;
+      }>;
+      total_count: number;
+    }>(`/favorites?${queryParams}`);
+  }
+
+  async checkFavorite(articleId: number) {
+    return this.request<{
+      is_favorited: boolean;
+      favorited_at: string | null;
+    }>(`/favorites/check/${articleId}`);
   }
 }
 

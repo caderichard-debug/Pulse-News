@@ -7,6 +7,7 @@ import { formatTimeAgo } from '@/lib/dateUtils';
 import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
+import FavoriteButton from '@/components/FavoriteButton';
 
 interface Article {
   id: number;
@@ -26,6 +27,7 @@ interface Article {
   stats_count: number;
   stats_verified_count: number;
   has_stats: boolean;
+  is_favorited: boolean;
 }
 
 interface FeedResponse {
@@ -322,11 +324,15 @@ export default function FeedPage() {
               {feedData.articles.map((article) => (
                 <div
                   key={article.id}
-                  className="bg-card rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer border-l-4 border-indigo-500"
-                  onClick={() => router.push(`/article/${article.id}`)}
+                  className="bg-card rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow border-l-4 border-indigo-500"
                 >
-                  {/* Header */}
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2 flex-wrap">
+                  <div className="flex items-start gap-4">
+                    <div
+                      className="flex-1 cursor-pointer"
+                      onClick={() => router.push(`/article/${article.id}`)}
+                    >
+                      {/* Header */}
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2 flex-wrap">
                     <span className="font-medium text-primary">{article.source_name}</span>
                     {article.source_bias && (
                       <SourceBiasBadge bias={article.source_bias} size="sm" />
@@ -416,6 +422,14 @@ export default function FeedPage() {
                       </div>
                     </div>
                   )}
+                    </div>
+
+                    <FavoriteButton
+                      articleId={article.id}
+                      initialFavorited={article.is_favorited}
+                      size="sm"
+                    />
+                  </div>
                 </div>
               ))}
             </div>

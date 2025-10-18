@@ -1,5 +1,5 @@
 from sqlmodel import SQLModel, Field, Relationship, Column
-from sqlalchemy import Enum as SQLEnum, UniqueConstraint
+from sqlalchemy import Enum as SQLEnum, UniqueConstraint, Index
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
@@ -100,6 +100,21 @@ class UserSourceSubscription(SQLModel, table=True):
     source_id: int = Field(foreign_key="sources.id", primary_key=True)
     subscribed: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ArticleFavorite(SQLModel, table=True):
+    """User's favorited articles for later reading."""
+    __tablename__ = "article_favorites"
+
+    user_id: int = Field(foreign_key="users.id", primary_key=True)
+    article_id: int = Field(foreign_key="articles.id", primary_key=True)
+    favorited_at: datetime = Field(default_factory=datetime.utcnow)
+    notes: Optional[str] = Field(default=None, max_length=500)
+
+    __table_args__ = (
+        Index("idx_user_favorites", "user_id", "favorited_at"),
+        Index("idx_article_favorites", "article_id"),
+    )
 
 
 # Main Tables
