@@ -712,11 +712,13 @@ class ApiClient {
       author?: string;
       published_date?: string;
       word_count?: number;
+      already_existed?: boolean;
       source?: {
         id: number;
         name: string;
         url: string;
         trust_score: number;
+        organizational_bias?: string | null;
       };
       is_user_submitted: boolean;
       analysis?: {

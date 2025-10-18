@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
 import { formatDate } from '@/lib/dateUtils';
 
-export default function AnalyzePage() {
+function AnalyzePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [url, setUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any | null>(null);
@@ -17,6 +18,19 @@ export default function AnalyzePage() {
 
   // Check if user is authenticated
   const isAuthenticated = typeof window !== 'undefined' && !!localStorage.getItem('token');
+
+  // Restore state from URL on mount
+  useEffect(() => {
+    const resultParam = searchParams.get('result');
+    if (resultParam) {
+      try {
+        const decoded = JSON.parse(decodeURIComponent(resultParam));
+        setAnalysisResult(decoded);
+      } catch (e) {
+        console.error('Failed to restore analysis result:', e);
+      }
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +81,11 @@ export default function AnalyzePage() {
         setAnalysisResult(result);
         setCurrentStep('Complete!');
       }
+
+      // Save result to URL for back button support
+      const resultParam = encodeURIComponent(JSON.stringify(result));
+      router.replace(`/analyze?result=${resultParam}`, { scroll: false });
+
     } catch (err: any) {
       setError(err.message || 'Failed to analyze article. Please try again.');
       setCurrentStep('');
@@ -463,5 +482,25 @@ export default function AnalyzePage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function AnalyzePage() {
+  return (
+    <Suspense fallback={
+      <>
+        <Navbar />
+        <div className="min-h-screen bg-background">
+          <div className="max-w-4xl mx-auto px-4 py-8">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              <p className="mt-4 text-muted-foreground">Loading...</p>
+            </div>
+          </div>
+        </div>
+      </>
+    }>
+      <AnalyzePageContent />
+    </Suspense>
   );
 }
