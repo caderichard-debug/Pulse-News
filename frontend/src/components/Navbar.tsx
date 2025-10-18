@@ -3,8 +3,9 @@
 
 import { useRouter, usePathname } from 'next/navigation';
 import { api } from '@/lib/api';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
+import { Menu, X } from 'lucide-react';
 
 
 export default function Navbar() {
@@ -13,6 +14,8 @@ export default function Navbar() {
   const [userName, setUserName] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -30,6 +33,36 @@ export default function Navbar() {
     return () => { mounted = false; };
   }, []);
 
+  // Close menu when clicking outside
+  useEffect(() => {
+    if (!isMenuOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isMenuOpen]);
+
+  // Close menu when pathname changes (user navigates)
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [pathname]);
+
   const handleLogout = () => {
     api.clearToken();
     router.push('/');
@@ -45,9 +78,19 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="bg-card border-b border-border transition-colors">
+    <nav className="bg-card border-b border-border transition-colors" ref={menuRef}>
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
+          {/* Mobile Menu Button (far left) */}
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="lg:hidden p-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+            aria-label="Navigation menu"
+            aria-expanded={isMenuOpen}
+          >
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+
           {/* Logo/Brand */}
           <div className="flex items-center">
             <button
@@ -61,19 +104,19 @@ export default function Navbar() {
                 height={32}
                 className="w-8 h-8 object-contain"
               />
-              Pulse
+              <span className="hidden sm:inline">Pulse</span>
             </button>
           </div>
 
-          {/* Navigation Links */}
-          <div className="flex items-center gap-1 absolute left-1/2 transform -translate-x-1/2 flex items-center gap-1">
+          {/* Desktop Navigation Links (hidden on mobile) */}
+          <div className="hidden lg:flex items-center gap-1 absolute left-1/2 transform -translate-x-1/2">
             {navItems
               .filter((item) => !item.adminOnly || isAdmin)
               .map((item) => (
                 <button
                   key={item.path}
                   onClick={() => router.push(item.path)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex flex-col xl:flex-row items-center gap-0.5 xl:gap-1 ${
                     pathname === item.path || (item.path === '/admin' && pathname.startsWith('/admin'))
                       ? item.adminOnly
                         ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
@@ -83,8 +126,8 @@ export default function Navbar() {
                       : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                   }`}
                 >
-                  <span className="mr-1">{item.icon}</span>
-                  <span className="whitespace-nowrap">{item.name}</span>
+                  <span className="text-lg xl:text-base">{item.icon}</span>
+                  <span className="text-xs xl:text-sm whitespace-nowrap">{item.name}</span>
                 </button>
               ))}
           </div>
@@ -93,7 +136,7 @@ export default function Navbar() {
           <div className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground">
             <button
               onClick={() => router.push('/preferences')}
-              className="ml-1 pl-1 hover:text-foreground transition-colors"
+              className="ml-1 pl-1 hover:text-foreground transition-colors hidden sm:block"
             >
             {loading ? null : userName && (
               <span>{userName}</span>
@@ -107,6 +150,37 @@ export default function Navbar() {
             </button>
           </div>
         </div>
+
+        {/* Mobile Menu Dropdown */}
+        {isMenuOpen && (
+          <div
+            className="lg:hidden border-t border-border animate-slideDown"
+            aria-hidden={!isMenuOpen}
+          >
+            <div className="py-2 space-y-1">
+              {navItems
+                .filter((item) => !item.adminOnly || isAdmin)
+                .map((item) => (
+                  <button
+                    key={item.path}
+                    onClick={() => router.push(item.path)}
+                    className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors flex items-center gap-2 ${
+                      pathname === item.path || (item.path === '/admin' && pathname.startsWith('/admin'))
+                        ? item.adminOnly
+                          ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                          : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
+                        : item.adminOnly
+                        ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                    }`}
+                  >
+                    <span>{item.icon}</span>
+                    <span>{item.name}</span>
+                  </button>
+                ))}
+            </div>
+          </div>
+        )}
       </div>
     </nav>
   );
