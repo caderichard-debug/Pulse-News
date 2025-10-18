@@ -1,14 +1,13 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
 import { formatDate } from '@/lib/dateUtils';
 
 function AnalyzePageContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [url, setUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -26,14 +25,18 @@ function AnalyzePageContent() {
   useEffect(() => {
     const urlParam = searchParams.get('url');
     if (urlParam) {
+      console.log('[Analyze Page] Setting URL from param:', urlParam);
       setUrl(urlParam);
 
       // Auto-submit if autoSubmit parameter is present
-      if (isExtensionMode && urlParam && !analysisResult && !isAnalyzing) {
+      const autoSubmit = searchParams.get('autoSubmit') === 'true';
+      if (autoSubmit && urlParam && !analysisResult && !isAnalyzing) {
+        console.log('[Analyze Page] Auto-submitting analysis for:', urlParam);
         // Call analyze directly with the URL parameter to avoid state timing issues
         analyzeArticle(urlParam);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   // Extracted analysis logic for reuse
@@ -615,7 +618,7 @@ function AnalyzePageContent() {
                                 }
                               } catch {
                                 // Fall back to splitting by newlines if not JSON
-                                return analysisResult.data.context.timeline.split('\n').filter(line => line.trim()).reverse().map((event, idx) => (
+                                return analysisResult.data.context.timeline.split('\n').filter((line: string) => line.trim()).reverse().map((event: string, idx: number) => (
                                   <div key={idx} className="relative">
                                     <div className="absolute -left-[1.6rem] top-1 w-3 h-3 bg-context-timeline-dot rounded-full border-2 border-context-timeline-dot"></div>
                                     <p className="text-card-foreground text-sm leading-relaxed">{event}</p>
