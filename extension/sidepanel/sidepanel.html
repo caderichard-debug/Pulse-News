@@ -81,9 +81,121 @@
       word-wrap: break-word;
     }
 
+    #tabSwitchedBanner {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      padding: 12px 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideDown {
+      from {
+        transform: translateY(-100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    #tabSwitchedBanner.visible {
+      display: block;
+    }
+
+    .banner-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .banner-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .banner-info h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .banner-info .url-preview {
+      font-size: 12px;
+      opacity: 0.9;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .banner-info .not-article {
+      font-size: 11px;
+      opacity: 0.85;
+      margin-top: 2px;
+    }
+
+    .banner-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .banner-actions button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .banner-actions .analyze-btn {
+      background: white;
+      color: #3b82f6;
+    }
+
+    .banner-actions .analyze-btn:hover {
+      background: #f1f5f9;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .banner-actions .analyze-btn:disabled {
+      background: #cbd5e1;
+      color: #94a3b8;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .banner-actions .cancel-btn {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .banner-actions .cancel-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
     iframe {
+      position: fixed;
+      top: 0;
+      left: 0;
       width: 100%;
-      height: 100%;
+      height: 100vh;
       border: none;
       display: none;
     }
@@ -103,6 +215,26 @@
     <h3>⚠️ Error Loading Extension</h3>
     <p id="errorMessage"></p>
     <div id="errorDetails" class="details"></div>
+  </div>
+
+  <!-- Banner for tab switch notification -->
+  <div id="tabSwitchedBanner">
+    <div class="banner-content">
+      <div class="banner-info">
+        <h3>
+          <span>📰</span>
+          <span>New article detected</span>
+        </h3>
+        <div id="urlPreview" class="url-preview"></div>
+        <div id="notArticle" class="not-article" style="display: none;">
+          ⚠️ This page might not be a news article
+        </div>
+      </div>
+      <div class="banner-actions">
+        <button id="analyzeButton" class="analyze-btn">Analyze</button>
+        <button id="cancelButton" class="cancel-btn">Cancel</button>
+      </div>
+    </div>
   </div>
 
   <iframe id="analysisFrame"></iframe>
