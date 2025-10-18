@@ -1,3 +1,44 @@
+## 2025-10-17 12:00
+
+**Dark Mode - Login & Signup Page Backgrounds** ✅
+
+### What Changed
+
+Added dark mode support to login and signup page background gradients.
+
+#### The Problem:
+- Login and signup pages had static light blue gradients (`from-blue-50 to-indigo-100`)
+- Backgrounds did not respond to dark mode toggle
+- Created visual inconsistency with other pages that support dark mode
+
+#### The Solution:
+Added dark mode gradient variants matching the pattern used on landing and how-it-works pages.
+
+**Gradient Changes:**
+- **Light mode**: `from-blue-50 to-indigo-100` (soft blue gradient)
+- **Dark mode**: `from-gray-900 to-gray-800` (dark gray gradient)
+- **Transition**: Added `transition-colors` for smooth theme switching
+
+#### Changes Made:
+1. [login/page.tsx](frontend/src/app/login/page.tsx:36):
+   - Updated background div with dark mode variants
+   
+2. [signup/page.tsx](frontend/src/app/signup/page.tsx:84):
+   - Updated background div with dark mode variants
+
+#### Result:
+- ✅ Login page background responds to dark mode toggle
+- ✅ Signup page background responds to dark mode toggle
+- ✅ Smooth transitions when switching themes
+- ✅ Visual consistency with other pages
+- ✅ Maintains good contrast in both modes
+
+**Files Modified:**
+- [login/page.tsx](frontend/src/app/login/page.tsx)
+- [signup/page.tsx](frontend/src/app/signup/page.tsx)
+
+---
+
 # Pulse Development Changelog
 
 This file tracks significant changes, decisions, and progress throughout development.
