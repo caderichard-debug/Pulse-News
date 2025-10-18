@@ -58,6 +58,7 @@ export default function FeedPage() {
   const [selectedTopic, setSelectedTopic] = useState<string>(storedFilters?.selectedTopic || '');
   const [selectedSource, setSelectedSource] = useState<number | null>(storedFilters?.selectedSource || null);
   const [selectedLean, setSelectedLean] = useState<string>(storedFilters?.selectedLean || '');
+  const [dateRange, setDateRange] = useState<string>(storedFilters?.dateRange || '');
   const [sortBy, setSortBy] = useState(storedFilters?.sortBy || 'newest');
   const [onlyAnalyzed, setOnlyAnalyzed] = useState(storedFilters?.onlyAnalyzed ?? true);
   const [onlyVerifiedStats, setOnlyVerifiedStats] = useState(storedFilters?.onlyVerifiedStats ?? false);
@@ -72,6 +73,7 @@ export default function FeedPage() {
         selectedTopic,
         selectedSource,
         selectedLean,
+        dateRange,
         sortBy,
         onlyAnalyzed,
         onlyVerifiedStats,
@@ -80,7 +82,7 @@ export default function FeedPage() {
       };
       localStorage.setItem('feedFilters', JSON.stringify(filters));
     }
-  }, [selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, page]);
+  }, [selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, page]);
 
   const loadFeedData = useCallback(async () => {
     try {
@@ -106,12 +108,12 @@ export default function FeedPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly]);
+  }, [page, selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly]);
 
   useEffect(() => {
     loadFeedData();
     loadFilters();
-  }, [selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, page, loadFeedData]);
+  }, [selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, page, loadFeedData]);
 
   async function loadFilters() {
     try {
