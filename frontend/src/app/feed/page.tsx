@@ -306,7 +306,7 @@ export default function FeedPage() {
                     First
                   </button>
                   <button
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    onClick={() => setPage((p: number) => Math.max(1, p - 1))}
                     disabled={page === 1}
                     className="px-3 py-1.5 bg-card border border-border rounded-md hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-card-foreground transition-colors"
                   >
@@ -329,7 +329,7 @@ export default function FeedPage() {
                     </span>
                   </div>
                   <button
-                    onClick={() => setPage(p => p + 1)}
+                    onClick={() => setPage((p: number) => p + 1)}
                     disabled={page >= Math.ceil(feedData.total_count / feedData.page_size)}
                     className="px-3 py-1.5 bg-card border border-border rounded-md hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-card-foreground transition-colors"
                   >
@@ -492,7 +492,7 @@ export default function FeedPage() {
                 First
               </button>
               <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
+                onClick={() => setPage((p: number) => Math.max(1, p - 1))}
                 disabled={page === 1}
                 className="px-4 py-2 bg-card border border-border rounded-md hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed font-medium text-card-foreground transition-colors"
               >
@@ -515,7 +515,7 @@ export default function FeedPage() {
                 </span>
               </div>
               <button
-                onClick={() => setPage(p => p + 1)}
+                onClick={() => setPage((p: number) => p + 1)}
                 disabled={page >= Math.ceil(feedData.total_count / feedData.page_size)}
                 className="px-4 py-2 bg-card border border-border rounded-md hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed font-medium text-card-foreground transition-colors"
               >
