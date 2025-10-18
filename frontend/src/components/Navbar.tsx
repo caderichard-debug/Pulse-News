@@ -65,7 +65,15 @@ export default function Navbar() {
               .map((item) => (
                 <button
                   key={item.path}
-                  onClick={() => router.push(item.path)}
+                  onClick={() => {
+                    if (item.path === '/analyze' && pathname === '/analyze') {
+                      // Reset the analyze page by navigating to clean URL
+                      router.push('/analyze');
+                      window.location.href = '/analyze';
+                    } else {
+                      router.push(item.path);
+                    }
+                  }}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     pathname === item.path || (item.path === '/admin' && pathname.startsWith('/admin'))
                       ? item.adminOnly
