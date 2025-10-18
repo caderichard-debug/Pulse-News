@@ -323,9 +323,10 @@ class URLAnalyzer:
 
         if context:
             response["context"] = {
-                "background": context.background_context,
-                "timeline": context.timeline_context,
-                "significance": context.significance_analysis
+                "background": context.background,
+                "key_players": context.key_players,
+                "timeline": context.timeline,
+                "significance": context.significance
             }
 
         return response
