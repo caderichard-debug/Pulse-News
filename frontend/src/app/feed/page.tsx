@@ -45,16 +45,41 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Load filters from localStorage or use defaults
+  const getStoredFilters = () => {
+    if (typeof window === 'undefined') return null;
+    const stored = localStorage.getItem('feedFilters');
+    return stored ? JSON.parse(stored) : null;
+  };
+
+  const storedFilters = getStoredFilters();
+
   // Filters
-  const [selectedTopic, setSelectedTopic] = useState<string>('');
-  const [selectedSource, setSelectedSource] = useState<number | null>(null);
-  const [selectedLean, setSelectedLean] = useState<string>('');
-  const [sortBy, setSortBy] = useState('newest');
-  const [onlyAnalyzed, setOnlyAnalyzed] = useState(true); // Default to true
-  const [onlyVerifiedStats, setOnlyVerifiedStats] = useState(false);
-  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState<string>(storedFilters?.selectedTopic || '');
+  const [selectedSource, setSelectedSource] = useState<number | null>(storedFilters?.selectedSource || null);
+  const [selectedLean, setSelectedLean] = useState<string>(storedFilters?.selectedLean || '');
+  const [sortBy, setSortBy] = useState(storedFilters?.sortBy || 'newest');
+  const [onlyAnalyzed, setOnlyAnalyzed] = useState(storedFilters?.onlyAnalyzed ?? true);
+  const [onlyVerifiedStats, setOnlyVerifiedStats] = useState(storedFilters?.onlyVerifiedStats ?? false);
+  const [favoritesOnly, setFavoritesOnly] = useState(storedFilters?.favoritesOnly ?? false);
   const [page, setPage] = useState(1);
   const [pageInput, setPageInput] = useState('1');
+
+  // Save filters to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const filters = {
+        selectedTopic,
+        selectedSource,
+        selectedLean,
+        sortBy,
+        onlyAnalyzed,
+        onlyVerifiedStats,
+        favoritesOnly
+      };
+      localStorage.setItem('feedFilters', JSON.stringify(filters));
+    }
+  }, [selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly]);
 
   const loadFeedData = useCallback(async () => {
     try {
