@@ -304,11 +304,11 @@ class URLAnalyzer:
             response["statistics"] = [
                 {
                     "id": stat.id,
-                    "claim_text": stat.claim_text,
+                    "claim_text": stat.statistic_text,
                     "verification_status": stat.verification_status.value if stat.verification_status else None,
                     "source_url": stat.source_url,
                     "source_name": stat.source_name,
-                    "credibility_score": stat.credibility_score
+                    "credibility_score": stat.source_credibility_score
                 }
                 for stat in statistics
             ]
