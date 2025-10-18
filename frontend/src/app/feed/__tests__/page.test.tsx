@@ -10,6 +10,7 @@ jest.mock('@/lib/api', () => ({
     getFeedTopics: jest.fn(),
     getFeedSources: jest.fn(),
     getCurrentUser: jest.fn(),
+    toggleFavorite: jest.fn(),
   },
 }));
 
@@ -22,6 +23,27 @@ jest.mock('next/navigation', () => ({
   usePathname: () => '/feed',
 }));
 
+// Mock localStorage
+const localStorageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] || null,
+    setItem: (key: string, value: string) => {
+      store[key] = value;
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+});
+
 describe('FeedPage', () => {
   const mockArticles = [
     {
@@ -31,6 +53,7 @@ describe('FeedPage', () => {
       published_at: '2025-10-03T10:00:00Z',
       source_name: 'Reuters',
       source_id: 1,
+      source_bias: null,
       topic_category: 'Politics',
       summary: 'This is a test article summary',
       sentiment_score: 5.2,
@@ -41,6 +64,7 @@ describe('FeedPage', () => {
       stats_count: 3,
       stats_verified_count: 2,
       has_stats: true,
+      is_favorited: false,
     },
     {
       id: 2,
@@ -49,6 +73,7 @@ describe('FeedPage', () => {
       published_at: '2025-10-02T15:00:00Z',
       source_name: 'BBC',
       source_id: 2,
+      source_bias: null,
       topic_category: 'Technology',
       summary: 'Another test article',
       sentiment_score: -2.5,
@@ -59,6 +84,7 @@ describe('FeedPage', () => {
       stats_count: 0,
       stats_verified_count: 0,
       has_stats: false,
+      is_favorited: false,
     },
   ];
 
@@ -367,7 +393,7 @@ describe('FeedPage', () => {
       await waitFor(() => {
         const prevButtons = screen.getAllByRole('button', { name: /previous/i });
         // Both previous buttons should be disabled on first page
-        prevButtons.forEach(button => {
+        prevButtons.forEach((button: HTMLElement) => {
           expect(button).toBeDisabled();
         });
       });
@@ -379,7 +405,7 @@ describe('FeedPage', () => {
       await waitFor(() => {
         const nextButtons = screen.getAllByRole('button', { name: /next/i });
         // Both next buttons should be enabled when more pages available
-        nextButtons.forEach(button => {
+        nextButtons.forEach((button: HTMLElement) => {
           expect(button).not.toBeDisabled();
         });
       });
