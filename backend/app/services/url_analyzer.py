@@ -20,6 +20,7 @@ from ..utils.openai_client import openai_client
 from ..services.framework_generator import map_articles_to_frameworks
 from ..services.statistics_verifier import extract_statistics_from_article
 from ..services.context_generator import generate_article_context
+from ..services.source_analyzer import SourceAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,19 @@ class URLAnalyzer:
                     self.db.refresh(existing_article)
                     logger.info(f"Updated article title to: {existing_article.title}")
 
+            # Analyze source bias if not already set
+            if existing_article.source and not existing_article.source.organizational_bias:
+                logger.info(f"Analyzing source bias for existing article's source: {existing_article.source.name}")
+                source_analyzer = SourceAnalyzer(self.db)
+                bias_analysis = source_analyzer.analyze_source_bias(
+                    source=existing_article.source,
+                    article_content=existing_article.content_text,
+                    article_title=existing_article.title
+                )
+                if bias_analysis:
+                    source_analyzer.update_source_with_bias(existing_article.source, bias_analysis)
+                    logger.info(f"Source bias updated: {existing_article.source.organizational_bias.value}")
+
             # Ensure all analysis is complete
             if not existing_article.analysis:
                 await self._complete_analysis(existing_article)
@@ -89,6 +103,19 @@ class URLAnalyzer:
 
         # Step 4: Get or create source
         source = self._get_or_create_source(url, extraction_result)
+
+        # Step 4.5: Analyze source bias for new sources
+        if not source.organizational_bias:
+            logger.info(f"Analyzing source bias for {source.name}...")
+            source_analyzer = SourceAnalyzer(self.db)
+            bias_analysis = source_analyzer.analyze_source_bias(
+                source=source,
+                article_content=extraction_result.get('content'),
+                article_title=extraction_result.get('title')
+            )
+            if bias_analysis:
+                source = source_analyzer.update_source_with_bias(source, bias_analysis)
+                logger.info(f"Source bias updated: {source.organizational_bias.value}")
 
         # Step 5: Create article record
         article = Article(
@@ -279,7 +306,9 @@ class URLAnalyzer:
                 "id": article.source.id,
                 "name": article.source.name,
                 "url": article.source.url,
-                "trust_score": article.source.trust_score
+                "trust_score": article.source.trust_score,
+                "organizational_bias": article.source.organizational_bias.value if article.source.organizational_bias else None,
+                "bias_description": article.source.bias_description
             }
 
         # Add analysis data
