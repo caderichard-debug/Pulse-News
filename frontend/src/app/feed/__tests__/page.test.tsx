@@ -237,6 +237,20 @@ describe('FeedPage', () => {
       expect(screen.getByRole('option', { name: 'Right' })).toBeInTheDocument();
     });
 
+    it('should render date range filter', async () => {
+      render(<FeedPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Date Range')).toBeInTheDocument();
+      });
+
+      expect(screen.getByRole('option', { name: /all time/i })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'Today' })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: /past week/i })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: /past month/i })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: /past year/i })).toBeInTheDocument();
+    });
+
     it('should render sort filter', async () => {
       render(<FeedPage />);
 
@@ -307,6 +321,25 @@ describe('FeedPage', () => {
       });
     });
 
+    it('should filter by date range', async () => {
+      const user = userEvent.setup();
+      render(<FeedPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Date Range')).toBeInTheDocument();
+      });
+
+      // Get all selects and find the fourth one (date range select)
+      const selects = screen.getAllByRole('combobox');
+      await user.selectOptions(selects[3], 'week');
+
+      await waitFor(() => {
+        expect(api.getFeedArticles).toHaveBeenCalledWith(
+          expect.objectContaining({ date_range: 'week' })
+        );
+      });
+    });
+
     it('should change sort order', async () => {
       const user = userEvent.setup();
       render(<FeedPage />);
@@ -315,9 +348,9 @@ describe('FeedPage', () => {
         expect(screen.getByText('Sort By')).toBeInTheDocument();
       });
 
-      // Get all selects and find the fourth one (sort select)
+      // Get all selects and find the fifth one (sort select)
       const selects = screen.getAllByRole('combobox');
-      await user.selectOptions(selects[3], 'sentiment_high');
+      await user.selectOptions(selects[4], 'sentiment_high');
 
       await waitFor(() => {
         expect(api.getFeedArticles).toHaveBeenCalledWith(
