@@ -27,46 +27,26 @@ export default function SourceBiasBadge({
   // Normalize bias string
   const normalizedBias = bias.toLowerCase() as BiasType;
 
-  // Color schemes for each bias type (muted)
-  const colorSchemes = {
-    'left': {
-      bg: 'bg-blue-100',
-      text: 'text-blue-700',
-      border: 'border-blue-300',
-      label: 'Left'
-    },
-    'center-left': {
-      bg: 'bg-blue-50',
-      text: 'text-blue-600',
-      border: 'border-blue-200',
-      label: 'Center-Left'
-    },
-    'center': {
-      bg: 'bg-purple-100',
-      text: 'text-purple-700',
-      border: 'border-purple-300',
-      label: 'Center'
-    },
-    'center-right': {
-      bg: 'bg-red-50',
-      text: 'text-red-600',
-      border: 'border-red-200',
-      label: 'Center-Right'
-    },
-    'right': {
-      bg: 'bg-red-100',
-      text: 'text-red-700',
-      border: 'border-red-300',
-      label: 'Right'
-    }
+  // Map bias types to CSS classes (with dark mode support from globals.css)
+  const biasClassMap = {
+    'left': 'bias-left',
+    'center-left': 'bias-center-left',
+    'center': 'bias-center',
+    'center-right': 'bias-center-right',
+    'right': 'bias-right'
   };
 
-  const scheme = colorSchemes[normalizedBias] || {
-    bg: 'bg-gray-100',
-    text: 'text-gray-700',
-    border: 'border-gray-300',
-    label: bias
+  // Labels for each bias type
+  const labelMap = {
+    'left': 'Left',
+    'center-left': 'Center-Left',
+    'center': 'Center',
+    'center-right': 'Center-Right',
+    'right': 'Right'
   };
+
+  const biasClass = biasClassMap[normalizedBias] || 'bias-fallback';
+  const label = labelMap[normalizedBias] || bias;
 
   // Size classes
   const sizeClasses = {
@@ -79,14 +59,14 @@ export default function SourceBiasBadge({
     <span
       className={`
         inline-flex items-center justify-center
-        ${scheme.bg} ${scheme.text} ${scheme.border}
+        ${biasClass}
         ${sizeClasses[size]}
         font-medium rounded-md border
         whitespace-nowrap
       `}
-      title={`Organizational Bias: ${scheme.label}`}
+      title={`Organizational Bias: ${label}`}
     >
-      {showLabel && scheme.label}
+      {showLabel && label}
     </span>
   );
 }

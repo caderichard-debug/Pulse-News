@@ -303,7 +303,7 @@ function PreferencesContent() {
                           <button
                             onClick={() => toggleActive(pref.id)}
                             className={`mr-3 w-12 h-6 rounded-full transition-colors relative ${
-                              pref.is_active ? 'bg-primary' : 'bg-muted dark:bg-gray-600'
+                              pref.is_active ? 'bg-primary' : 'toggle-switch-off'
                             }`}
                           >
                             <span

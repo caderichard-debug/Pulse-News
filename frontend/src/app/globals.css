@@ -139,4 +139,92 @@ body {
   .hover\:text-foreground:hover {
     color: var(--foreground);
   }
+
+  /* Toggle switch styles with better light mode visibility */
+  .toggle-switch-off {
+    background-color: #d1d5db; /* gray-300 in light mode */
+  }
+
+  :root.dark .toggle-switch-off {
+    background-color: #4b5563; /* gray-600 in dark mode */
+  }
+
+  /* Bias badge color schemes with dark mode support */
+  /* Left bias */
+  .bias-left {
+    background-color: #dbeafe; /* blue-100 */
+    color: #1d4ed8; /* blue-700 */
+    border-color: #93c5fd; /* blue-300 */
+  }
+
+  :root.dark .bias-left {
+    background-color: #1e3a8a; /* blue-900 */
+    color: #bfdbfe; /* blue-200 */
+    border-color: #1e40af; /* blue-800 */
+  }
+
+  /* Center-Left bias */
+  .bias-center-left {
+    background-color: #eff6ff; /* blue-50 */
+    color: #2563eb; /* blue-600 */
+    border-color: #bfdbfe; /* blue-200 */
+  }
+
+  :root.dark .bias-center-left {
+    background-color: #1e40af; /* blue-800 */
+    color: #dbeafe; /* blue-100 */
+    border-color: #2563eb; /* blue-600 */
+  }
+
+  /* Center bias */
+  .bias-center {
+    background-color: #f3e8ff; /* purple-100 */
+    color: #7c3aed; /* purple-700 */
+    border-color: #c4b5fd; /* purple-300 */
+  }
+
+  :root.dark .bias-center {
+    background-color: #581c87; /* purple-900 */
+    color: #d8b4fe; /* purple-300 */
+    border-color: #6b21a8; /* purple-800 */
+  }
+
+  /* Center-Right bias */
+  .bias-center-right {
+    background-color: #fef2f2; /* red-50 */
+    color: #dc2626; /* red-600 */
+    border-color: #fecaca; /* red-200 */
+  }
+
+  :root.dark .bias-center-right {
+    background-color: #991b1b; /* red-800 */
+    color: #fecaca; /* red-200 */
+    border-color: #dc2626; /* red-600 */
+  }
+
+  /* Right bias */
+  .bias-right {
+    background-color: #fee2e2; /* red-100 */
+    color: #b91c1c; /* red-700 */
+    border-color: #fca5a5; /* red-300 */
+  }
+
+  :root.dark .bias-right {
+    background-color: #7f1d1d; /* red-900 */
+    color: #fecaca; /* red-200 */
+    border-color: #991b1b; /* red-800 */
+  }
+
+  /* Fallback bias (unknown) */
+  .bias-fallback {
+    background-color: #f3f4f6; /* gray-100 */
+    color: #374151; /* gray-700 */
+    border-color: #d1d5db; /* gray-300 */
+  }
+
+  :root.dark .bias-fallback {
+    background-color: #374151; /* gray-700 */
+    color: #e5e7eb; /* gray-200 */
+    border-color: #4b5563; /* gray-600 */
+  }
 }
