@@ -291,6 +291,9 @@ class ApiClient {
     topic?: string;
     source_id?: number;
     political_lean?: string;
+    date_range?: string;
+    date_from?: string;
+    date_to?: string;
     sort_by?: string;
     only_analyzed?: boolean;
     only_verified_stats?: boolean;
@@ -302,6 +305,9 @@ class ApiClient {
     if (params?.topic) queryParams.append('topic', params.topic);
     if (params?.source_id) queryParams.append('source_id', params.source_id.toString());
     if (params?.political_lean) queryParams.append('political_lean', params.political_lean);
+    if (params?.date_range) queryParams.append('date_range', params.date_range);
+    if (params?.date_from) queryParams.append('date_from', params.date_from);
+    if (params?.date_to) queryParams.append('date_to', params.date_to);
     if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
     if (params?.only_analyzed) queryParams.append('only_analyzed', params.only_analyzed.toString());
     if (params?.only_verified_stats) queryParams.append('only_verified_stats', params.only_verified_stats.toString());
