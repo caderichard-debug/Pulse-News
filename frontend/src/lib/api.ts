@@ -699,6 +699,62 @@ class ApiClient {
       offset: number;
     }>(`/admin-panel/audit?${queryParams}`);
   }
+
+  // Article URL Analysis endpoints
+  async analyzeURL(url: string): Promise<{
+    success: boolean;
+    message: string;
+    data?: {
+      id: number;
+      title: string;
+      url: string;
+      content: string;
+      author?: string;
+      published_date?: string;
+      word_count?: number;
+      already_existed?: boolean;
+      source?: {
+        id: number;
+        name: string;
+        url: string;
+        trust_score: number;
+        organizational_bias?: string | null;
+      };
+      is_user_submitted: boolean;
+      analysis?: {
+        summary: string;
+        sentiment_score: number;
+        political_lean?: string;
+      };
+      frameworks?: Array<{
+        id: number;
+        name: string;
+        description: string;
+        relevance_score: number;
+        position_on_axis: number;
+        ai_explanation: string;
+      }>;
+      statistics?: Array<{
+        id: number;
+        claim_text: string;
+        verification_status: string;
+        source_url?: string;
+        source_name?: string;
+        credibility_score?: number;
+      }>;
+      context?: {
+        background: string;
+        timeline: string;
+        significance: string;
+      };
+    };
+    article_id?: number;
+  }> {
+    return this.request('/analyze/url', {
+      method: 'POST',
+      body: JSON.stringify({ url }),
+    });
+  }
 }
 
 export { ApiClient };
