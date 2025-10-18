@@ -229,6 +229,15 @@ For each article, provide:
 3. **Political Lean**: One of: "left", "center", or "right" (lowercase)
 4. **Bias Indicators**: Brief description of any detected bias (or "neutral" if none)
 5. **Key Statistics**: Any important numbers, percentages, or data points mentioned
+6. **Topic Category**: Classify into ONE of these categories (lowercase):
+   - general: General news and current events
+   - politics: Political news and policy
+   - economics: Business, finance, and economic policy
+   - technology: Tech industry, innovation, and digital culture
+   - science: Scientific research and discoveries
+   - culture: Arts, society, and cultural trends
+   - world: International news and global affairs
+   - environment: Climate, sustainability, and environmental issues
 
 Return your analysis as a JSON object with this structure:
 
@@ -239,7 +248,8 @@ Return your analysis as a JSON object with this structure:
       "sentiment_score": 0,
       "political_lean": "center",
       "bias_indicators": "Brief description or 'neutral'",
-      "key_stats": ["stat 1", "stat 2"]
+      "key_stats": ["stat 1", "stat 2"],
+      "topic_category": "general"
     }},
     ...
   ]
