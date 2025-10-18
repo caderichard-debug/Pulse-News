@@ -19,18 +19,19 @@ function AnalyzePageContent() {
   // Check if user is authenticated
   const isAuthenticated = typeof window !== 'undefined' && !!localStorage.getItem('token');
 
-  // Restore state from URL on mount
+  // Restore state from sessionStorage on mount (for back button support)
   useEffect(() => {
-    const resultParam = searchParams.get('result');
-    if (resultParam) {
+    const savedResult = sessionStorage.getItem('analyzeResult');
+    if (savedResult) {
       try {
-        const decoded = JSON.parse(decodeURIComponent(resultParam));
+        const decoded = JSON.parse(savedResult);
         setAnalysisResult(decoded);
       } catch (e) {
         console.error('Failed to restore analysis result:', e);
+        sessionStorage.removeItem('analyzeResult');
       }
     }
-  }, [searchParams]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,9 +83,9 @@ function AnalyzePageContent() {
         setCurrentStep('Complete!');
       }
 
-      // Save result to URL for back button support
-      const resultParam = encodeURIComponent(JSON.stringify(result));
-      router.replace(`/analyze?result=${resultParam}`, { scroll: false });
+      // Save result to sessionStorage for back button support
+      // (URL params would be too large and cause URI malformed errors)
+      sessionStorage.setItem('analyzeResult', JSON.stringify(result));
 
     } catch (err: any) {
       setError(err.message || 'Failed to analyze article. Please try again.');
@@ -105,6 +106,8 @@ function AnalyzePageContent() {
     setAnalysisResult(null);
     setError(null);
     setCurrentStep('');
+    // Clear saved result from sessionStorage
+    sessionStorage.removeItem('analyzeResult');
   };
 
   // Helper functions matching article detail page
