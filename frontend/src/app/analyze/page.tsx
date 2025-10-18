@@ -14,6 +14,9 @@ function AnalyzePageContent() {
   const [analysisResult, setAnalysisResult] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<string>('');
+  const [showSourceModal, setShowSourceModal] = useState(false);
+  const [sourceDetails, setSourceDetails] = useState<any | null>(null);
+  const [isLoadingSource, setIsLoadingSource] = useState(false);
 
   // Check if user is authenticated
   const isAuthenticated = typeof window !== 'undefined' && !!localStorage.getItem('token');
@@ -97,6 +100,23 @@ function AnalyzePageContent() {
   const handleViewArticle = () => {
     if (analysisResult?.article_id) {
       router.push(`/article/${analysisResult.article_id}`);
+    }
+  };
+
+  const handleAnalyzeSource = async () => {
+    if (!analysisResult?.data?.source?.id) return;
+
+    setIsLoadingSource(true);
+    setShowSourceModal(true);
+
+    try {
+      const details = await api.getSourceById(analysisResult.data.source.id);
+      setSourceDetails(details);
+    } catch (err: any) {
+      console.error('Failed to load source details:', err);
+      setSourceDetails(null);
+    } finally {
+      setIsLoadingSource(false);
     }
   };
 
@@ -302,72 +322,38 @@ function AnalyzePageContent() {
                 )}
               </div>
 
-              {/* Source Analysis */}
+              {/* Source Quick Info - Compact */}
               {analysisResult.data.source && (
-                <div className="mb-8">
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
-                    <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center gap-2">
-                      <span>📰</span>
-                      <span>Source Analysis</span>
-                    </h2>
-
-                    <div className="space-y-4">
-                      {/* Source Name and URL */}
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Source</p>
-                        <a
-                          href={analysisResult.data.source.url || '#'}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xl font-bold text-blue-600 dark:text-blue-400 hover:underline"
-                        >
-                          {analysisResult.data.source.name}
-                        </a>
-                      </div>
-
-                      {/* Organizational Bias */}
-                      {analysisResult.data.source.organizational_bias && (
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-2">Organizational Bias</p>
-                          <div className="flex items-center gap-3 mb-3">
-                            <SourceBiasBadge bias={analysisResult.data.source.organizational_bias} size="lg" />
-                            <span className="text-lg font-semibold text-foreground capitalize">
-                              {analysisResult.data.source.organizational_bias.replace('-', ' ')}
-                            </span>
-                          </div>
-                          {analysisResult.data.source.bias_description && (
-                            <p className="text-sm text-card-foreground bg-white/50 dark:bg-gray-900/50 rounded-lg p-3 border border-blue-200/50 dark:border-blue-800/50">
-                              {analysisResult.data.source.bias_description}
-                            </p>
-                          )}
+                <div className="mb-6">
+                  <div className="bg-card border border-border rounded-lg p-4">
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground text-sm">Source:</span>
+                          <a
+                            href={analysisResult.data.source.url || '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-semibold text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate"
+                          >
+                            {analysisResult.data.source.name}
+                          </a>
                         </div>
-                      )}
-
-                      {/* Trust Score */}
-                      {analysisResult.data.source.trust_score !== null && analysisResult.data.source.trust_score !== undefined && (
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-2">Trust Score</p>
-                          <div className="flex items-center gap-3">
-                            <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
-                              <div
-                                className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all"
-                                style={{ width: `${analysisResult.data.source.trust_score * 100}%` }}
-                              ></div>
-                            </div>
-                            <span className="text-lg font-bold text-foreground min-w-[3rem]">
-                              {(analysisResult.data.source.trust_score * 100).toFixed(0)}%
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Info Note */}
-                      <div className="bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 rounded-lg p-3 mt-4">
-                        <p className="text-xs text-blue-900 dark:text-blue-200">
-                          <strong>Note:</strong> Organizational bias refers to the overall editorial stance of the source,
-                          not the individual article. The &quot;Article Bias&quot; above shows this specific article&apos;s lean.
-                        </p>
+                        {analysisResult.data.source.organizational_bias && (
+                          <SourceBiasBadge bias={analysisResult.data.source.organizational_bias} size="sm" />
+                        )}
+                        {analysisResult.data.source.trust_score !== null && analysisResult.data.source.trust_score !== undefined && (
+                          <span className="text-sm text-muted-foreground">
+                            Trust: <span className="font-semibold text-foreground">{(analysisResult.data.source.trust_score * 100).toFixed(0)}%</span>
+                          </span>
+                        )}
                       </div>
+                      <button
+                        onClick={handleAnalyzeSource}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm whitespace-nowrap"
+                      >
+                        Analyze Source
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -564,6 +550,135 @@ function AnalyzePageContent() {
           )}
         </div>
       </div>
+
+      {/* Source Analysis Modal */}
+      {showSourceModal && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setShowSourceModal(false)}>
+          <div className="bg-background rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-background border-b border-border px-6 py-4 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-foreground">Source Analysis</h2>
+              <button
+                onClick={() => setShowSourceModal(false)}
+                className="text-muted-foreground hover:text-foreground transition-colors text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              {isLoadingSource ? (
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                  <p className="mt-4 text-muted-foreground">Loading source details...</p>
+                </div>
+              ) : sourceDetails ? (
+                <div className="space-y-6">
+                  {/* Source Name and URL */}
+                  <div>
+                    <h3 className="text-3xl font-bold text-foreground mb-2">{sourceDetails.name}</h3>
+                    <a
+                      href={sourceDetails.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      {sourceDetails.url}
+                    </a>
+                  </div>
+
+                  {/* Organizational Bias */}
+                  {sourceDetails.organizational_bias && (
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+                      <h4 className="text-lg font-semibold text-foreground mb-3">Organizational Bias</h4>
+                      <div className="flex items-center gap-3 mb-4">
+                        <SourceBiasBadge bias={sourceDetails.organizational_bias} size="lg" />
+                        <span className="text-xl font-bold text-foreground capitalize">
+                          {sourceDetails.organizational_bias.replace('-', ' ')}
+                        </span>
+                      </div>
+                      {sourceDetails.bias_description && (
+                        <p className="text-card-foreground leading-relaxed bg-white/50 dark:bg-gray-900/50 rounded-lg p-4 border border-blue-200/50 dark:border-blue-800/50">
+                          {sourceDetails.bias_description}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Trust Score */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-foreground mb-3">Trust Score</h4>
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all"
+                          style={{ width: `${sourceDetails.trust_score * 100}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-2xl font-bold text-foreground min-w-[4rem]">
+                        {(sourceDetails.trust_score * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Based on credibility, fact-checking record, and editorial standards
+                    </p>
+                  </div>
+
+                  {/* Description */}
+                  {sourceDetails.description && (
+                    <div>
+                      <h4 className="text-lg font-semibold text-foreground mb-3">About This Source</h4>
+                      <p className="text-card-foreground leading-relaxed">{sourceDetails.description}</p>
+                    </div>
+                  )}
+
+                  {/* Statistics */}
+                  <div className="grid grid-cols-2 gap-4 bg-card border border-border rounded-lg p-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Articles in Database</p>
+                      <p className="text-2xl font-bold text-foreground">{sourceDetails.article_count}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Status</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {sourceDetails.is_active ? '✓ Active' : '✗ Inactive'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Info Note */}
+                  <div className="bg-info border border-info rounded-lg p-4">
+                    <p className="text-sm text-info">
+                      <strong>Note:</strong> This analysis is based on the source&apos;s overall editorial stance and organizational structure. Individual articles may vary in their bias and perspective.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-red-600 dark:text-red-400">Failed to load source details.</p>
+                  <button
+                    onClick={handleAnalyzeSource}
+                    className="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-border px-6 py-4">
+              <button
+                onClick={() => setShowSourceModal(false)}
+                className="w-full px-6 py-3 bg-card hover:bg-secondary text-foreground rounded-lg transition-colors font-medium border border-border"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
