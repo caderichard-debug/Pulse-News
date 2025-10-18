@@ -10,6 +10,7 @@ from ..routes.auth import get_current_user
 from ..config import settings
 from pydantic import BaseModel, EmailStr
 from ..services.newsletter_service import send_test_newsletter
+from ..services.email_service import send_welcome_email
 import resend
 import logging
 
@@ -132,3 +133,57 @@ def get_email_config(current_user: User = Depends(get_current_user)):
         "api_key_set": "Yes" if settings.resend_api_key else "No (set RESEND_API_KEY in .env)",
         "api_key_preview": f"{settings.resend_api_key[:10]}..." if settings.resend_api_key else None
     }
+
+
+class SendTestWelcomeRequest(BaseModel):
+    to_email: EmailStr
+    user_name: str = "Test User"
+
+
+@router.post("/send-welcome")
+def send_test_welcome_email(
+    request: SendTestWelcomeRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Send a test welcome email to the specified email address.
+
+    This is useful for:
+    - Testing the welcome email template appearance
+    - Verifying email delivery
+    - Previewing personalization with different names
+
+    Requires authentication.
+    """
+    if not settings.resend_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Resend API key not configured. Set RESEND_API_KEY in .env file"
+        )
+
+    try:
+        success = send_welcome_email(
+            email=request.to_email,
+            user_name=request.user_name
+        )
+
+        if success:
+            logger.info(f"Test welcome email sent to {request.to_email} by {current_user.email}")
+            return {
+                "success": True,
+                "message": f"Test welcome email sent successfully to {request.to_email}",
+                "user_name": request.user_name,
+                "sent_by": current_user.email
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to send welcome email. Check server logs for details."
+            )
+
+    except Exception as e:
+        logger.error(f"Failed to send test welcome email: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to send welcome email: {str(e)}"
+        )
