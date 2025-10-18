@@ -14,7 +14,7 @@ from ..utils.auth import (
     create_verification_token,
     decode_access_token
 )
-from ..services.email_service import send_verification_email
+from ..services.email_service import send_verification_email, send_welcome_email
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from datetime import datetime
@@ -187,16 +187,26 @@ def register(
 
     # Send verification email
     verification_token = create_verification_token(user.email)
-    email_sent = send_verification_email(
+    verification_sent = send_verification_email(
         email=user.email,
         user_name=user.name or user.email,
         verification_token=verification_token
     )
 
-    if email_sent:
-        logger.info(f"New user registered and verification email sent: {user.email}")
+    # Send welcome email
+    welcome_sent = send_welcome_email(
+        email=user.email,
+        user_name=user.name or user.email
+    )
+
+    if verification_sent and welcome_sent:
+        logger.info(f"New user registered, verification and welcome emails sent: {user.email}")
+    elif verification_sent:
+        logger.warning(f"New user registered, verification email sent but welcome email failed: {user.email}")
+    elif welcome_sent:
+        logger.warning(f"New user registered, welcome email sent but verification email failed: {user.email}")
     else:
-        logger.warning(f"New user registered but verification email failed: {user.email}")
+        logger.warning(f"New user registered but both emails failed: {user.email}")
 
     return {
         "access_token": access_token,

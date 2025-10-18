@@ -4,6 +4,7 @@
 import { useRouter, usePathname } from 'next/navigation';
 import { api } from '@/lib/api';
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 
 
 export default function Navbar() {
@@ -51,8 +52,15 @@ export default function Navbar() {
           <div className="flex items-center">
             <button
               onClick={() => router.push('/feed')}
-              className="text-2xl font-bold text-primary hover:text-primary-hover transition-colors"
+              className="flex items-center gap-2 text-2xl font-bold text-primary hover:text-primary-hover transition-colors"
             >
+              <Image
+                src="/pulse-icon.png"
+                alt="Pulse Logo"
+                width={32}
+                height={32}
+                className="w-8 h-8 object-contain"
+              />
               Pulse
             </button>
           </div>
