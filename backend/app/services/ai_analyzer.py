@@ -4,7 +4,7 @@ Generates summaries, sentiment analysis, bias detection, and extracts key statis
 """
 
 from sqlmodel import Session, select
-from ..models import Article, ArticleAnalysis, ProcessingStatus, PoliticalLean
+from ..models import Article, ArticleAnalysis, ProcessingStatus, PoliticalLean, Topic, ArticleTopicLink
 from ..database import engine
 from ..utils.openai_client import openai_client
 from datetime import datetime
@@ -65,6 +65,10 @@ def analyze_articles_batch(session: Session, batch_size: int = 5) -> int:
         logger.error("Failed to get analyses from OpenAI")
         return 0
 
+    # Get all topics from database for mapping
+    all_topics = session.exec(select(Topic)).all()
+    topic_map = {topic.name.lower(): topic for topic in all_topics}
+
     # Process each analysis result
     for article, analysis_data in zip(articles_to_analyze, analyses):
         try:
@@ -79,6 +83,47 @@ def analyze_articles_batch(session: Session, batch_size: int = 5) -> int:
             except StopIteration:
                 logger.warning(f"Invalid political lean '{lean_str}', defaulting to center")
                 political_lean = PoliticalLean.CENTER
+
+            # Get topic category from AI response
+            topic_category = analysis_data.get('topic_category', 'general').lower()
+
+            # Update article's topic_category field for quick filtering
+            article.topic_category = topic_category
+
+            # Create ArticleTopicLink if topic exists in database
+            if topic_category in topic_map:
+                topic = topic_map[topic_category]
+
+                # Check if link already exists
+                existing_link = session.exec(
+                    select(ArticleTopicLink)
+                    .where(ArticleTopicLink.article_id == article.id)
+                    .where(ArticleTopicLink.topic_id == topic.id)
+                ).first()
+
+                if not existing_link:
+                    article_topic_link = ArticleTopicLink(
+                        article_id=article.id,
+                        topic_id=topic.id
+                    )
+                    session.add(article_topic_link)
+            else:
+                logger.warning(f"Topic '{topic_category}' not found in database, using 'general'")
+                # Fallback to 'general' topic
+                if 'general' in topic_map:
+                    topic = topic_map['general']
+                    existing_link = session.exec(
+                        select(ArticleTopicLink)
+                        .where(ArticleTopicLink.article_id == article.id)
+                        .where(ArticleTopicLink.topic_id == topic.id)
+                    ).first()
+                    if not existing_link:
+                        article_topic_link = ArticleTopicLink(
+                            article_id=article.id,
+                            topic_id=topic.id
+                        )
+                        session.add(article_topic_link)
+                    article.topic_category = 'general'
 
             # Create analysis record
             analysis = ArticleAnalysis(
@@ -99,7 +144,7 @@ def analyze_articles_batch(session: Session, batch_size: int = 5) -> int:
 
             logger.info(
                 f"  ✓ Analyzed: {article.title[:50]}... "
-                f"(sentiment: {analysis.sentiment_score}, lean: {analysis.political_lean})"
+                f"(sentiment: {analysis.sentiment_score}, lean: {analysis.political_lean}, topic: {topic_category})"
             )
 
         except Exception as e:
