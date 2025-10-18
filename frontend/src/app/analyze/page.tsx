@@ -556,8 +556,13 @@ function AnalyzePageContent() {
         <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setShowSourceModal(false)}>
           <div className="bg-background rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
-            <div className="sticky top-0 bg-background border-b border-border px-6 py-4 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-foreground">Source Analysis</h2>
+            <div className="sticky top-0 bg-background border-b border-border px-5 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-bold text-foreground">Source Analysis</h2>
+                {sourceDetails?.organizational_bias && (
+                  <SourceBiasBadge bias={sourceDetails.organizational_bias} size="sm" />
+                )}
+              </div>
               <button
                 onClick={() => setShowSourceModal(false)}
                 className="text-muted-foreground hover:text-foreground transition-colors text-2xl leading-none"
@@ -567,22 +572,22 @@ function AnalyzePageContent() {
             </div>
 
             {/* Modal Content */}
-            <div className="p-6">
+            <div className="p-5">
               {isLoadingSource ? (
-                <div className="text-center py-12">
-                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                  <p className="mt-4 text-muted-foreground">Loading source details...</p>
+                <div className="text-center py-8">
+                  <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+                  <p className="mt-3 text-sm text-muted-foreground">Loading source details...</p>
                 </div>
               ) : sourceDetails ? (
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {/* Source Name and URL */}
                   <div>
-                    <h3 className="text-3xl font-bold text-foreground mb-2">{sourceDetails.name}</h3>
+                    <h3 className="text-2xl font-bold text-foreground mb-1">{sourceDetails.name}</h3>
                     <a
                       href={sourceDetails.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                      className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                     >
                       {sourceDetails.url}
                     </a>
@@ -590,16 +595,16 @@ function AnalyzePageContent() {
 
                   {/* Organizational Bias */}
                   {sourceDetails.organizational_bias && (
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
-                      <h4 className="text-lg font-semibold text-foreground mb-3">Organizational Bias</h4>
-                      <div className="flex items-center gap-3 mb-4">
-                        <SourceBiasBadge bias={sourceDetails.organizational_bias} size="lg" />
-                        <span className="text-xl font-bold text-foreground capitalize">
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-foreground mb-2">Organizational Bias</h4>
+                      <div className="flex items-center gap-2 mb-3">
+                        <SourceBiasBadge bias={sourceDetails.organizational_bias} size="md" />
+                        <span className="text-lg font-bold text-foreground capitalize">
                           {sourceDetails.organizational_bias.replace('-', ' ')}
                         </span>
                       </div>
                       {sourceDetails.bias_description && (
-                        <p className="text-card-foreground leading-relaxed bg-white/50 dark:bg-gray-900/50 rounded-lg p-4 border border-blue-200/50 dark:border-blue-800/50">
+                        <p className="text-sm text-card-foreground leading-relaxed bg-white/50 dark:bg-gray-900/50 rounded-lg p-3 border border-blue-200/50 dark:border-blue-800/50">
                           {sourceDetails.bias_description}
                         </p>
                       )}
@@ -608,19 +613,19 @@ function AnalyzePageContent() {
 
                   {/* Trust Score */}
                   <div>
-                    <h4 className="text-lg font-semibold text-foreground mb-3">Trust Score</h4>
-                    <div className="flex items-center gap-4">
-                      <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
+                    <h4 className="text-sm font-semibold text-foreground mb-2">Trust Score</h4>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
                         <div
                           className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all"
                           style={{ width: `${sourceDetails.trust_score * 100}%` }}
                         ></div>
                       </div>
-                      <span className="text-2xl font-bold text-foreground min-w-[4rem]">
+                      <span className="text-xl font-bold text-foreground min-w-[3.5rem]">
                         {(sourceDetails.trust_score * 100).toFixed(0)}%
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-2">
+                    <p className="text-xs text-muted-foreground mt-1.5">
                       Based on credibility, fact-checking record, and editorial standards
                     </p>
                   </div>
@@ -628,38 +633,38 @@ function AnalyzePageContent() {
                   {/* Description */}
                   {sourceDetails.description && (
                     <div>
-                      <h4 className="text-lg font-semibold text-foreground mb-3">About This Source</h4>
-                      <p className="text-card-foreground leading-relaxed">{sourceDetails.description}</p>
+                      <h4 className="text-sm font-semibold text-foreground mb-2">About This Source</h4>
+                      <p className="text-sm text-card-foreground leading-relaxed">{sourceDetails.description}</p>
                     </div>
                   )}
 
                   {/* Statistics */}
-                  <div className="grid grid-cols-2 gap-4 bg-card border border-border rounded-lg p-4">
+                  <div className="grid grid-cols-2 gap-3 bg-card border border-border rounded-lg p-3">
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Articles in Database</p>
-                      <p className="text-2xl font-bold text-foreground">{sourceDetails.article_count}</p>
+                      <p className="text-xs text-muted-foreground mb-0.5">Articles in Database</p>
+                      <p className="text-xl font-bold text-foreground">{sourceDetails.article_count}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Status</p>
-                      <p className="text-2xl font-bold text-foreground">
+                      <p className="text-xs text-muted-foreground mb-0.5">Status</p>
+                      <p className="text-xl font-bold text-foreground">
                         {sourceDetails.is_active ? '✓ Active' : '✗ Inactive'}
                       </p>
                     </div>
                   </div>
 
                   {/* Info Note */}
-                  <div className="bg-info border border-info rounded-lg p-4">
-                    <p className="text-sm text-info">
+                  <div className="bg-info border border-info rounded-lg p-3">
+                    <p className="text-xs text-info">
                       <strong>Note:</strong> This analysis is based on the source&apos;s overall editorial stance and organizational structure. Individual articles may vary in their bias and perspective.
                     </p>
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <p className="text-red-600 dark:text-red-400">Failed to load source details.</p>
+                <div className="text-center py-8">
+                  <p className="text-sm text-red-600 dark:text-red-400">Failed to load source details.</p>
                   <button
                     onClick={handleAnalyzeSource}
-                    className="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
+                    className="mt-3 px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
                   >
                     Try Again
                   </button>
@@ -668,10 +673,10 @@ function AnalyzePageContent() {
             </div>
 
             {/* Modal Footer */}
-            <div className="border-t border-border px-6 py-4">
+            <div className="border-t border-border px-5 py-3">
               <button
                 onClick={() => setShowSourceModal(false)}
-                className="w-full px-6 py-3 bg-card hover:bg-secondary text-foreground rounded-lg transition-colors font-medium border border-border"
+                className="w-full px-4 py-2 text-sm bg-card hover:bg-secondary text-foreground rounded-lg transition-colors font-medium border border-border"
               >
                 Close
               </button>
