@@ -125,7 +125,7 @@ export default function Navbar() {
                       router.push(item.path);
                     }
                   }}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex flex-col xl:flex-row xl:gap-1 items-center ${
                     pathname === item.path || (item.path === '/admin' && pathname.startsWith('/admin'))
                       ? item.adminOnly
                         ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
@@ -135,8 +135,8 @@ export default function Navbar() {
                       : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                   }`}
                 >
-                  <span className="text-lg xl:text-base">{item.icon}</span>{' '}
-                  <span className="text-xs xl:text-sm">{item.name}</span>
+                  <span className="text-lg xl:text-base">{item.icon}</span>
+                  <span className="text-xs xl:text-sm whitespace-nowrap">{item.name}</span>
                 </button>
               ))}
           </div>
