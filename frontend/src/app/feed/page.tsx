@@ -62,10 +62,10 @@ export default function FeedPage() {
   const [onlyAnalyzed, setOnlyAnalyzed] = useState(storedFilters?.onlyAnalyzed ?? true);
   const [onlyVerifiedStats, setOnlyVerifiedStats] = useState(storedFilters?.onlyVerifiedStats ?? false);
   const [favoritesOnly, setFavoritesOnly] = useState(storedFilters?.favoritesOnly ?? false);
-  const [page, setPage] = useState(1);
-  const [pageInput, setPageInput] = useState('1');
+  const [page, setPage] = useState(storedFilters?.page || 1);
+  const [pageInput, setPageInput] = useState((storedFilters?.page || 1).toString());
 
-  // Save filters to localStorage whenever they change
+  // Save filters AND pagination to localStorage whenever they change
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const filters = {
@@ -75,11 +75,12 @@ export default function FeedPage() {
         sortBy,
         onlyAnalyzed,
         onlyVerifiedStats,
-        favoritesOnly
+        favoritesOnly,
+        page
       };
       localStorage.setItem('feedFilters', JSON.stringify(filters));
     }
-  }, [selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly]);
+  }, [selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, page]);
 
   const loadFeedData = useCallback(async () => {
     try {
