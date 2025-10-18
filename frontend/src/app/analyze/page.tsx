@@ -188,12 +188,12 @@ export default function AnalyzePage() {
           {analysisResult?.data && (
             <>
               {/* Success Message */}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                <p className="text-green-800 font-medium">
+              <div className="bg-success border border-success rounded-lg p-4 mb-6">
+                <p className="text-success font-medium">
                   ✅ {analysisResult.message}
                 </p>
                 {analysisResult.data?.already_existed && (
-                  <p className="text-green-700 text-sm mt-2">
+                  <p className="text-success-muted text-sm mt-2">
                     This article was already in our database - showing existing analysis.
                   </p>
                 )}

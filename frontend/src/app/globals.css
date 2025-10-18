@@ -155,6 +155,20 @@ body {
     @apply hover:text-blue-900 dark:hover:text-blue-300;
   }
 
+  /* Success Alert (Green theme) - Dark mode aware */
+  .bg-success {
+    @apply bg-green-50 dark:bg-green-950;
+  }
+  .border-success {
+    @apply border-green-200 dark:border-green-800;
+  }
+  .text-success {
+    @apply text-green-800 dark:text-green-200;
+  }
+  .text-success-muted {
+    @apply text-green-700 dark:text-green-300;
+  }
+
   .text-foreground {
     color: var(--foreground);
   }

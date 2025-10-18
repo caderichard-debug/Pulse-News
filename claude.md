@@ -605,6 +605,7 @@ CLAIMBUSTER_API_KEY=...
   - Context/Background sections: `bg-context-section`, `bg-context-header`, `text-context-heading`, `text-context-body`, `border-context`
   - Statistics sections: `bg-stats-section`, `bg-stats-card`, `text-stats-heading`, `border-stats`, `border-stats-accent`
   - Info alerts: `bg-info`, `border-info`, `text-info`
+  - Success alerts: `bg-success`, `border-success`, `text-success`, `text-success-muted`
   - Fact-check callouts: `bg-factcheck`, `border-factcheck`, `text-factcheck`
   - Source links: `text-source-link`, `hover:text-source-link`
   - Core semantic classes: `bg-background`, `bg-card`, `bg-secondary`, `text-foreground`, `text-muted-foreground`, `border-border`
