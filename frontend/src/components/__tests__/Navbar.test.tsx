@@ -237,4 +237,212 @@ describe('Navbar', () => {
     const feedButton = screen.getByRole('button', { name: /📰 feed/i });
     expect(feedButton).toHaveClass('transition-colors');
   });
+
+  describe('Collapsible Menu', () => {
+    it('renders mobile menu button', () => {
+      render(<Navbar />);
+
+      const menuButton = screen.getByRole('button', { name: /navigation menu/i });
+      expect(menuButton).toBeInTheDocument();
+    });
+
+    it('menu button has correct aria attributes', () => {
+      render(<Navbar />);
+
+      const menuButton = screen.getByRole('button', { name: /navigation menu/i });
+      expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+      expect(menuButton).toHaveAttribute('aria-label', 'Navigation menu');
+    });
+
+    it('opens mobile menu when menu button is clicked', () => {
+      render(<Navbar />);
+
+      const menuButton = screen.getByRole('button', { name: /navigation menu/i });
+
+      // Menu should be closed initially
+      expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+
+      // Click to open
+      fireEvent.click(menuButton);
+
+      // Menu should be open
+      expect(menuButton).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    it('closes mobile menu when clicking outside', () => {
+      render(<Navbar />);
+
+      const menuButton = screen.getByRole('button', { name: /navigation menu/i });
+
+      // Open menu
+      fireEvent.click(menuButton);
+      expect(menuButton).toHaveAttribute('aria-expanded', 'true');
+
+      // Click outside (on document body)
+      fireEvent.mouseDown(document.body);
+
+      // Menu should close
+      expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('closes mobile menu when pressing Escape key', () => {
+      render(<Navbar />);
+
+      const menuButton = screen.getByRole('button', { name: /navigation menu/i });
+
+      // Open menu
+      fireEvent.click(menuButton);
+      expect(menuButton).toHaveAttribute('aria-expanded', 'true');
+
+      // Press Escape
+      fireEvent.keyDown(document, { key: 'Escape' });
+
+      // Menu should close
+      expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('closes mobile menu when navigating to a page', async () => {
+      render(<Navbar />);
+
+      const menuButton = screen.getByRole('button', { name: /navigation menu/i });
+
+      // Open menu
+      fireEvent.click(menuButton);
+      expect(menuButton).toHaveAttribute('aria-expanded', 'true');
+
+      // Change pathname (simulates navigation)
+      (usePathname as jest.Mock).mockReturnValue('/analytics');
+
+      // Re-render with new pathname
+      const { rerender } = render(<Navbar />);
+      rerender(<Navbar />);
+
+      // Menu should close
+      await waitFor(() => {
+        expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+      });
+    });
+
+    it('toggles menu open and closed on successive clicks', () => {
+      render(<Navbar />);
+
+      const menuButton = screen.getByRole('button', { name: /navigation menu/i });
+
+      // Click to open
+      fireEvent.click(menuButton);
+      expect(menuButton).toHaveAttribute('aria-expanded', 'true');
+
+      // Click to close
+      fireEvent.click(menuButton);
+      expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+
+      // Click to open again
+      fireEvent.click(menuButton);
+      expect(menuButton).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    it('does not close menu when clicking inside menu', () => {
+      render(<Navbar />);
+
+      const menuButton = screen.getByRole('button', { name: /navigation menu/i });
+
+      // Open menu
+      fireEvent.click(menuButton);
+      expect(menuButton).toHaveAttribute('aria-expanded', 'true');
+
+      // Click inside menu (on a navigation link)
+      // Note: The navigation happens through router.push, not through DOM
+      // So we just verify the menu stays open after clicking a nav item
+      const feedButton = screen.getAllByRole('button', { name: /📰 feed/i })[0];
+      fireEvent.mouseDown(feedButton);
+
+      // Menu should remain open (pathname change will close it in real usage)
+      expect(menuButton).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    it('cleans up event listeners on unmount', () => {
+      const { unmount } = render(<Navbar />);
+
+      const menuButton = screen.getByRole('button', { name: /navigation menu/i });
+
+      // Open menu to set up event listeners
+      fireEvent.click(menuButton);
+
+      // Unmount component
+      unmount();
+
+      // If we press Escape now, it should not cause errors
+      expect(() => {
+        fireEvent.keyDown(document, { key: 'Escape' });
+      }).not.toThrow();
+    });
+  });
+
+  describe('Admin Menu', () => {
+    it('does not show admin link for non-admin users', async () => {
+      (api.getCurrentUser as jest.Mock).mockResolvedValue({
+        name: 'John Doe',
+        email: 'john@example.com',
+        is_admin: false,
+      });
+
+      render(<Navbar />);
+
+      await waitFor(() => {
+        expect(api.getCurrentUser).toHaveBeenCalled();
+      });
+
+      expect(screen.queryByRole('button', { name: /⚡ admin/i })).not.toBeInTheDocument();
+    });
+
+    it('shows admin link for admin users', async () => {
+      (api.getCurrentUser as jest.Mock).mockResolvedValue({
+        name: 'Admin User',
+        email: 'admin@example.com',
+        is_admin: true,
+      });
+
+      render(<Navbar />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /⚡ admin/i })).toBeInTheDocument();
+      });
+    });
+
+    it('highlights admin link with red styling when active', async () => {
+      (api.getCurrentUser as jest.Mock).mockResolvedValue({
+        name: 'Admin User',
+        email: 'admin@example.com',
+        is_admin: true,
+      });
+      (usePathname as jest.Mock).mockReturnValue('/admin');
+
+      render(<Navbar />);
+
+      await waitFor(() => {
+        const adminButton = screen.getByRole('button', { name: /⚡ admin/i });
+        expect(adminButton).toHaveClass('bg-red-100');
+        expect(adminButton).toHaveClass('text-red-700');
+      });
+    });
+
+    it('navigates to admin page when clicking admin button', async () => {
+      (api.getCurrentUser as jest.Mock).mockResolvedValue({
+        name: 'Admin User',
+        email: 'admin@example.com',
+        is_admin: true,
+      });
+
+      render(<Navbar />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /⚡ admin/i })).toBeInTheDocument();
+      });
+
+      const adminButton = screen.getByRole('button', { name: /⚡ admin/i });
+      fireEvent.click(adminButton);
+
+      expect(mockPush).toHaveBeenCalledWith('/admin');
+    });
+  });
 });
