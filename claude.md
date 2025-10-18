@@ -181,6 +181,13 @@
 - **Article Detail**: [article_detail.py](backend/app/routes/article_detail.py)
 - **Tests**: [test_feed.py](backend/tests/test_feed.py), [test_article_detail.py](backend/tests/test_article_detail.py)
 
+#### Article URL Analysis (On-Demand)
+- **Backend Service**: [url_analyzer.py](backend/app/services/url_analyzer.py) - orchestrates full analysis pipeline
+- **API Route**: [analyze.py](backend/app/routes/analyze.py) - `/analyze/url` POST endpoint
+- **Frontend**: [analyze/](frontend/src/app/analyze/) - URL submission and results display
+- **Features**: Instant analysis of any article URL, saves to database, appears in feed
+- **Models**: `is_user_submitted` field in [Article](backend/app/models.py:186)
+
 #### Newsletters
 - **Service**: [newsletter_service.py](backend/app/services/newsletter_service.py)
 - **Template**: [newsletter.html](backend/app/templates/newsletter.html)
@@ -430,13 +437,19 @@ See [ARCHITECTURE.md](docs/ARCHITECTURE.md#database-schema) for full schema with
 - Admin controls & job scheduling
 - **All 127 backend tests passing**
 
-### ✅ Completed (Frontend - Phases 1-3)
+### ✅ Completed (Frontend - Phases 1-3+)
 - **Phase 1**: Enhanced preferences (topics, sources, settings with 3-tab interface)
 - **Phase 2**: Dashboard with analytics visualizations (sentiment, bias, stats)
 - **Phase 3**: Article feed & detail pages (filtering, pagination, full analysis)
+- **Article URL Analysis**: On-demand analysis of any article URL with instant AI insights
+  - URL submission form with real-time progress indicators
+  - Complete analysis display (extraction → AI → frameworks → statistics → context)
+  - Database persistence (articles appear in feed)
+  - User association for authenticated users
+  - Duplicate detection for existing articles
 - Landing page with hero section
 - 2-step signup flow with topic selection
-- Global navigation bar (Dashboard, Feed, Preferences, How It Works)
+- Global navigation bar (Dashboard, Feed, Analyze, Preferences, How It Works)
 - "How It Works" educational page
 - UI polish (improved placeholder visibility on auth pages)
 - **All 107 frontend tests passing**
