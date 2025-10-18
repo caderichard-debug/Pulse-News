@@ -192,6 +192,11 @@ export default function AnalyzePage() {
                 <p className="text-green-800 font-medium">
                   ✅ {analysisResult.message}
                 </p>
+                {analysisResult.data?.already_existed && (
+                  <p className="text-green-700 text-sm mt-2">
+                    This article was already in our database - showing existing analysis.
+                  </p>
+                )}
               </div>
 
               {/* Article Header */}
@@ -435,16 +440,14 @@ export default function AnalyzePage() {
               <div className="flex gap-4">
                 <button
                   onClick={handleAnalyzeAnother}
-                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold
-                           py-3 px-6 rounded-lg transition-colors"
+                  className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium border border-gray-300"
                 >
                   Analyze Another Article
                 </button>
                 {analysisResult.article_id && (
                   <button
                     onClick={handleViewArticle}
-                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold
-                             py-3 px-6 rounded-lg transition-colors"
+                    className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
                   >
                     View in Feed
                   </button>

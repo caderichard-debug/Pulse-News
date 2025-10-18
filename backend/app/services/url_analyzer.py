@@ -63,7 +63,9 @@ class URLAnalyzer:
             # Ensure all analysis is complete
             if not existing_article.analysis:
                 await self._complete_analysis(existing_article)
-            return self._format_response(existing_article)
+            response = self._format_response(existing_article)
+            response['already_existed'] = True
+            return response
 
         # Step 3: Extract article content
         logger.info("Extracting article content...")
