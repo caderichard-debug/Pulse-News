@@ -105,7 +105,7 @@ export default function FeedPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed, onlyVerifiedStats]);
+  }, [page, selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly]);
 
   useEffect(() => {
     loadFeedData();
