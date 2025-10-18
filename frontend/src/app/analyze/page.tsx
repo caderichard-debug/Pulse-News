@@ -1,14 +1,13 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
 import { formatDate } from '@/lib/dateUtils';
 
 function AnalyzePageContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [url, setUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -19,43 +18,54 @@ function AnalyzePageContent() {
   // Check if user is authenticated
   const isAuthenticated = typeof window !== 'undefined' && !!localStorage.getItem('token');
 
-  // Restore state from URL on mount
+  // Check if we're in extension mode (has autoSubmit param)
+  const isExtensionMode = searchParams.get('autoSubmit') === 'true';
+
+  // Prefill URL from query params (from Chrome extension)
   useEffect(() => {
-    const resultParam = searchParams.get('result');
-    if (resultParam) {
-      try {
-        const decoded = JSON.parse(decodeURIComponent(resultParam));
-        setAnalysisResult(decoded);
-      } catch (e) {
-        console.error('Failed to restore analysis result:', e);
+    const urlParam = searchParams.get('url');
+    if (urlParam) {
+      console.log('[Analyze Page] Setting URL from param:', urlParam);
+      setUrl(urlParam);
+
+      // Auto-submit if autoSubmit parameter is present
+      const autoSubmit = searchParams.get('autoSubmit') === 'true';
+      if (autoSubmit && urlParam && !analysisResult && !isAnalyzing) {
+        console.log('[Analyze Page] Auto-submitting analysis for:', urlParam);
+        // Call analyze directly with the URL parameter to avoid state timing issues
+        analyzeArticle(urlParam);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setAnalysisResult(null);
+  // Extracted analysis logic for reuse
+  const analyzeArticle = async (articleUrl: string) => {
+    console.log('[Analyze Page] Starting analysis for URL:', articleUrl);
 
     // Validate URL
-    if (!url.trim()) {
+    if (!articleUrl.trim()) {
       setError('Please enter a valid URL');
       return;
     }
 
     try {
-      new URL(url); // Validate URL format
-    } catch {
+      new URL(articleUrl); // Validate URL format
+    } catch (e) {
+      console.error('[Analyze Page] Invalid URL format:', articleUrl, e);
       setError('Invalid URL format. Please enter a complete URL (e.g., https://example.com/article)');
       return;
     }
 
     setIsAnalyzing(true);
+    setError(null);
+    setAnalysisResult(null);
 
     try {
       // Make API call first to check if article already exists
       setCurrentStep('Checking article...');
-      const result = await api.analyzeURL(url);
+      console.log('[Analyze Page] Calling API with URL:', articleUrl);
+      const result = await api.analyzeURL(articleUrl);
 
       // If article already existed, skip the loading animation
       if (result.data?.already_existed) {
@@ -82,9 +92,12 @@ function AnalyzePageContent() {
         setCurrentStep('Complete!');
       }
 
-      // Save result to URL for back button support
-      const resultParam = encodeURIComponent(JSON.stringify(result));
-      router.replace(`/analyze?result=${resultParam}`, { scroll: false });
+      // Save result to sessionStorage for back button support
+      sessionStorage.setItem('analyzeResult', JSON.stringify(result));
+
+      // Debug: Log source data
+      console.log('[Analyze Page] Analysis result:', result);
+      console.log('[Analyze Page] Source data:', result.data?.source);
 
     } catch (err: any) {
       setError(err.message || 'Failed to analyze article. Please try again.');
@@ -94,17 +107,46 @@ function AnalyzePageContent() {
     }
   };
 
+  // Restore state from sessionStorage on mount (for back button support)
+  useEffect(() => {
+    const savedResult = sessionStorage.getItem('analyzeResult');
+    if (savedResult) {
+      try {
+        const decoded = JSON.parse(savedResult);
+        setAnalysisResult(decoded);
+      } catch (e) {
+        console.error('Failed to restore analysis result:', e);
+        sessionStorage.removeItem('analyzeResult');
+      }
+    }
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    analyzeArticle(url);
+  };
+
   const handleViewArticle = () => {
     if (analysisResult?.article_id) {
-      router.push(`/article/${analysisResult.article_id}`);
+      // Open in new tab (important for Chrome extension iframe usage)
+      const url = `${window.location.origin}/article/${analysisResult.article_id}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
     }
   };
 
   const handleAnalyzeAnother = () => {
-    setUrl('');
-    setAnalysisResult(null);
-    setError(null);
-    setCurrentStep('');
+    if (isExtensionMode) {
+      // In extension mode, open analyze page in new tab
+      window.open(`${window.location.origin}/analyze`, '_blank', 'noopener,noreferrer');
+    } else {
+      // Normal behavior: reset form
+      setUrl('');
+      setAnalysisResult(null);
+      setError(null);
+      setCurrentStep('');
+      // Clear saved result from sessionStorage
+      sessionStorage.removeItem('analyzeResult');
+    }
   };
 
   // Helper functions matching article detail page
@@ -125,19 +167,62 @@ function AnalyzePageContent() {
 
   return (
     <>
-      <Navbar />
+      {!isExtensionMode && <Navbar />}
       <div className="min-h-screen bg-background">
         <div className="max-w-4xl mx-auto px-4 py-8">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-foreground mb-4">
-              Analyze Any Article
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Paste any article URL to get instant AI-powered analysis, bias detection,
-              fact-checking, and ethical framework mapping.
-            </p>
-          </div>
+          {/* Extension Mode Header */}
+          {isExtensionMode && (
+            <div className="mb-6 flex items-center justify-between">
+              <button
+                onClick={() => window.open(window.location.origin, '_blank', 'noopener,noreferrer')}
+                className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+              >
+                <img src="/pulse-icon.png" alt="Pulse Logo" className="w-10 h-10" />
+                <h1 className="text-2xl font-bold text-foreground">Pulse AI Analysis</h1>
+              </button>
+
+              {/* Refresh Button */}
+              {analysisResult && (
+                <button
+                  onClick={() => analyzeArticle(url)}
+                  disabled={isAnalyzing}
+                  className="p-2.5 rounded-lg border border-border bg-card hover:bg-secondary
+                           transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+                           hover:shadow-md active:scale-95"
+                  title="Refresh analysis"
+                  aria-label="Refresh analysis"
+                >
+                  <svg
+                    className={`w-5 h-5 text-foreground ${isAnalyzing ? 'animate-spin' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Header (only show in non-extension mode) */}
+          {!isExtensionMode && (
+            <div className="text-center mb-8">
+              <h1 className="text-4xl font-bold text-foreground mb-4">
+                Analyze Any Article
+              </h1>
+              <p className="text-lg text-muted-foreground">
+                Paste any article URL to get instant AI-powered analysis, bias detection,
+                fact-checking, and ethical framework mapping.
+              </p>
+            </div>
+          )}
 
           {/* URL Input Form */}
           {!analysisResult && (
@@ -211,66 +296,70 @@ function AnalyzePageContent() {
           {/* Analysis Results */}
           {analysisResult?.data && (
             <>
-              {/* Success Message with Analyze Another button */}
-              <div className="bg-success border border-success rounded-lg p-4 mb-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <p className="text-success font-medium">
-                      ✅ {analysisResult.message}
-                    </p>
-                    {analysisResult.data?.already_existed && (
-                      <p className="text-success-muted text-sm mt-2">
-                        This article was already in our database - showing existing analysis.
+              {/* Success Message with Analyze Another button (hidden in extension mode) */}
+              {!isExtensionMode && (
+                <div className="bg-success border border-success rounded-lg p-4 mb-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <p className="text-success font-medium">
+                        ✅ {analysisResult.message}
                       </p>
+                      {analysisResult.data?.already_existed && (
+                        <p className="text-success-muted text-sm mt-2">
+                          This article was already in our database - showing existing analysis.
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={handleAnalyzeAnother}
+                      className="px-4 py-2 bg-card hover:bg-secondary text-foreground rounded-lg transition-colors font-medium border border-border whitespace-nowrap"
+                    >
+                      Analyze Another
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Article Header (hidden in extension mode) */}
+              {!isExtensionMode && (
+                <div className="mb-8">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3 flex-wrap">
+                    {analysisResult.data.source && (
+                      <>
+                        <a href={analysisResult.data.source.url || '#'} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">
+                          {analysisResult.data.source.name}
+                        </a>
+                        {analysisResult.data.source.organizational_bias && (
+                          <SourceBiasBadge bias={analysisResult.data.source.organizational_bias} size="sm" />
+                        )}
+                      </>
+                    )}
+                    {analysisResult.data.published_at && (
+                      <>
+                        <span>•</span>
+                        <span>{formatDate(analysisResult.data.published_at)}</span>
+                      </>
+                    )}
+                    {analysisResult.data.author && (
+                      <>
+                        <span>•</span>
+                        <span>By {analysisResult.data.author}</span>
+                      </>
                     )}
                   </div>
-                  <button
-                    onClick={handleAnalyzeAnother}
-                    className="px-4 py-2 bg-card hover:bg-secondary text-foreground rounded-lg transition-colors font-medium border border-border whitespace-nowrap"
+
+                  <h1 className="text-4xl font-bold mb-4 text-foreground">{analysisResult.data.title}</h1>
+
+                  <a
+                    href={analysisResult.data.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
                   >
-                    Analyze Another
-                  </button>
+                    Read original article →
+                  </a>
                 </div>
-              </div>
-
-              {/* Article Header */}
-              <div className="mb-8">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3 flex-wrap">
-                  {analysisResult.data.source && (
-                    <>
-                      <a href={analysisResult.data.source.url || '#'} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">
-                        {analysisResult.data.source.name}
-                      </a>
-                      {analysisResult.data.source.organizational_bias && (
-                        <SourceBiasBadge bias={analysisResult.data.source.organizational_bias} size="sm" />
-                      )}
-                    </>
-                  )}
-                  {analysisResult.data.published_at && (
-                    <>
-                      <span>•</span>
-                      <span>{formatDate(analysisResult.data.published_at)}</span>
-                    </>
-                  )}
-                  {analysisResult.data.author && (
-                    <>
-                      <span>•</span>
-                      <span>By {analysisResult.data.author}</span>
-                    </>
-                  )}
-                </div>
-
-                <h1 className="text-4xl font-bold mb-4 text-foreground">{analysisResult.data.title}</h1>
-
-                <a
-                  href={analysisResult.data.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
-                >
-                  Read original article →
-                </a>
-              </div>
+              )}
 
               {/* Sentiment & Bias */}
               <div className="bg-secondary border border-border rounded-lg p-6 mb-8">
@@ -299,6 +388,66 @@ function AnalyzePageContent() {
                   <p className="text-muted-foreground italic text-sm">AI analysis pending... Check back soon for sentiment and bias analysis.</p>
                 )}
               </div>
+
+              {/* Source Analysis - Inline */}
+              {analysisResult.data.source && (
+                <div className="mb-8">
+                  <h2 className="text-2xl font-semibold mb-4 text-foreground">Source Analysis</h2>
+                  <div className="bg-card border border-border rounded-lg p-6 space-y-5">
+                    {/* Source Name and URL */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h3 className="text-xl font-bold text-foreground">{analysisResult.data.source.name}</h3>
+                        {analysisResult.data.source.organizational_bias && (
+                          <SourceBiasBadge bias={analysisResult.data.source.organizational_bias} size="sm" />
+                        )}
+                      </div>
+                      <a
+                        href={analysisResult.data.source.url || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        {analysisResult.data.source.url}
+                      </a>
+                    </div>
+
+                    {/* Organizational Bias */}
+                    {analysisResult.data.source.organizational_bias && (
+                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                        <h4 className="text-sm font-semibold text-foreground mb-2">Organizational Bias</h4>
+                        <div className="flex items-center gap-2 mb-3">
+                          <SourceBiasBadge bias={analysisResult.data.source.organizational_bias} size="md" />
+                          <span className="text-lg font-bold text-foreground capitalize">
+                            {analysisResult.data.source.organizational_bias.replace('-', ' ')}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Trust Score */}
+                    {analysisResult.data.source.trust_score !== null && analysisResult.data.source.trust_score !== undefined && (
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground mb-2">Trust Score</h4>
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all"
+                              style={{ width: `${analysisResult.data.source.trust_score * 100}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-xl font-bold text-foreground min-w-[3.5rem]">
+                            {(analysisResult.data.source.trust_score * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1.5">
+                          Based on credibility, fact-checking record, and editorial standards
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Summary */}
               {analysisResult.data.analysis?.summary && (
@@ -449,11 +598,35 @@ function AnalyzePageContent() {
                       )}
                       {analysisResult.data.context.timeline && (
                         <div>
-                          <h3 className="font-semibold text-context-heading mb-2 flex items-center gap-2">
+                          <h3 className="font-semibold text-context-heading mb-3 flex items-center gap-2">
                             <span>⏱️</span>
                             <span>Timeline</span>
                           </h3>
-                          <p className="text-card-foreground leading-relaxed">{analysisResult.data.context.timeline}</p>
+                          <div className="relative border-l-2 border-context pl-6 ml-3 space-y-4">
+                            {(() => {
+                              try {
+                                const timelineData = JSON.parse(analysisResult.data.context.timeline);
+                                if (Array.isArray(timelineData)) {
+                                  return timelineData.reverse().map((item: { date: string; event: string }, idx: number) => (
+                                    <div key={idx} className="relative">
+                                      <div className="absolute -left-[1.6rem] top-1 w-3 h-3 bg-context-timeline-dot rounded-full border-2 border-context-timeline-dot"></div>
+                                      <p className="text-card-foreground text-sm leading-relaxed">
+                                        <strong className="text-context-body">{item.date}:</strong> {item.event}
+                                      </p>
+                                    </div>
+                                  ));
+                                }
+                              } catch {
+                                // Fall back to splitting by newlines if not JSON
+                                return analysisResult.data.context.timeline.split('\n').filter((line: string) => line.trim()).reverse().map((event: string, idx: number) => (
+                                  <div key={idx} className="relative">
+                                    <div className="absolute -left-[1.6rem] top-1 w-3 h-3 bg-context-timeline-dot rounded-full border-2 border-context-timeline-dot"></div>
+                                    <p className="text-card-foreground text-sm leading-relaxed">{event}</p>
+                                  </div>
+                                ));
+                              }
+                            })()}
+                          </div>
                         </div>
                       )}
                       {analysisResult.data.context.significance && (

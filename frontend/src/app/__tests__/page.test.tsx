@@ -1,7 +1,31 @@
 import { render, screen } from '@/__tests__/test-utils';
 import Home from '../page';
+import { api } from '@/lib/api';
+
+// Mock next/navigation
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+  }),
+}));
+
+// Mock API
+jest.mock('@/lib/api', () => ({
+  api: {
+    getCurrentUser: jest.fn(),
+  },
+}));
 
 describe('Landing Page', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Mock getCurrentUser to reject (user not logged in)
+    (api.getCurrentUser as jest.Mock).mockRejectedValue({
+      status: 403,
+      message: 'Not authenticated',
+    });
+  });
+
   it('renders hero section with title and tagline', () => {
     render(<Home />);
 

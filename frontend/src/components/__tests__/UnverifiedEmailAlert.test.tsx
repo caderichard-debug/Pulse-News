@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@/__tests__/test-utils';
+import { render, screen, waitFor, act } from '@/__tests__/test-utils';
 import UnverifiedEmailAlert from '../UnverifiedEmailAlert';
 import { api } from '@/lib/api';
 
@@ -24,15 +24,21 @@ describe('UnverifiedEmailAlert', () => {
       email_verified: true,
     });
 
-    const { container } = render(<UnverifiedEmailAlert />);
+    let container: HTMLElement;
+    await act(async () => {
+      const result = render(<UnverifiedEmailAlert />);
+      container = result.container;
+    });
 
-    // Wait for the component to finish loading
-    await waitFor(() => {
-      expect(api.getCurrentUser).toHaveBeenCalled();
+    // Wait for all state updates to complete
+    await act(async () => {
+      await waitFor(() => {
+        expect(api.getCurrentUser).toHaveBeenCalled();
+      });
     });
 
     // Alert should not be rendered
-    expect(container.firstChild).toBeNull();
+    expect(container!.firstChild).toBeNull();
   });
 
   it('should render alert when user email is not verified', async () => {
@@ -60,30 +66,42 @@ describe('UnverifiedEmailAlert', () => {
     // Mock API to throw an error
     (api.getCurrentUser as jest.Mock).mockRejectedValue(new Error('API Error'));
 
-    const { container } = render(<UnverifiedEmailAlert />);
+    let container: HTMLElement;
+    await act(async () => {
+      const result = render(<UnverifiedEmailAlert />);
+      container = result.container;
+    });
 
-    // Wait for the component to finish loading
-    await waitFor(() => {
-      expect(api.getCurrentUser).toHaveBeenCalled();
+    // Wait for all state updates to complete
+    await act(async () => {
+      await waitFor(() => {
+        expect(api.getCurrentUser).toHaveBeenCalled();
+      });
     });
 
     // Alert should not be rendered on error
-    expect(container.firstChild).toBeNull();
+    expect(container!.firstChild).toBeNull();
   });
 
   it('should not render when user is null', async () => {
     // Mock API to return null (no user logged in)
     (api.getCurrentUser as jest.Mock).mockResolvedValue(null);
 
-    const { container } = render(<UnverifiedEmailAlert />);
+    let container: HTMLElement;
+    await act(async () => {
+      const result = render(<UnverifiedEmailAlert />);
+      container = result.container;
+    });
 
-    // Wait for the component to finish loading
-    await waitFor(() => {
-      expect(api.getCurrentUser).toHaveBeenCalled();
+    // Wait for all state updates to complete
+    await act(async () => {
+      await waitFor(() => {
+        expect(api.getCurrentUser).toHaveBeenCalled();
+      });
     });
 
     // Alert should not be rendered
-    expect(container.firstChild).toBeNull();
+    expect(container!.firstChild).toBeNull();
   });
 
   it('should display the correct styling for a warning alert', async () => {
