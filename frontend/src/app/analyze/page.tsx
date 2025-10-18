@@ -39,29 +39,34 @@ export default function AnalyzePage() {
     setIsAnalyzing(true);
 
     try {
-      // Simulate progress steps
-      setCurrentStep('Validating URL...');
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      setCurrentStep('Extracting article content...');
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      setCurrentStep('Analyzing with AI...');
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      setCurrentStep('Generating ethical frameworks...');
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      setCurrentStep('Verifying statistics...');
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      setCurrentStep('Generating context...');
-
-      // Make actual API call
+      // Make API call first to check if article already exists
+      setCurrentStep('Checking article...');
       const result = await api.analyzeURL(url);
 
-      setAnalysisResult(result);
-      setCurrentStep('Complete!');
+      // If article already existed, skip the loading animation
+      if (result.data?.already_existed) {
+        setAnalysisResult(result);
+        setCurrentStep('Complete!');
+      } else {
+        // Simulate progress steps for new analysis
+        setCurrentStep('Extracting article content...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        setCurrentStep('Analyzing with AI...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        setCurrentStep('Generating ethical frameworks...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        setCurrentStep('Verifying statistics...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        setCurrentStep('Generating context...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        setAnalysisResult(result);
+        setCurrentStep('Complete!');
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to analyze article. Please try again.');
       setCurrentStep('');

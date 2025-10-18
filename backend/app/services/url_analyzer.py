@@ -60,9 +60,22 @@ class URLAnalyzer:
 
         if existing_article:
             logger.info(f"Article already exists with ID {existing_article.id}")
+
+            # Fix missing or default title
+            if not existing_article.title or existing_article.title == "Untitled":
+                logger.info("Article has missing title, re-extracting...")
+                extraction_result = extract_article_content(url)
+                if extraction_result.get('success') and extraction_result.get('title'):
+                    existing_article.title = extraction_result['title']
+                    self.db.add(existing_article)
+                    self.db.commit()
+                    self.db.refresh(existing_article)
+                    logger.info(f"Updated article title to: {existing_article.title}")
+
             # Ensure all analysis is complete
             if not existing_article.analysis:
                 await self._complete_analysis(existing_article)
+
             response = self._format_response(existing_article)
             response['already_existed'] = True
             return response
