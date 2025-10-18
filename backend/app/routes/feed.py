@@ -69,6 +69,7 @@ async def get_feed_articles(
     sort_by: str = Query(default="newest", description="Sort order: newest, oldest, sentiment_high, sentiment_low"),
     only_analyzed: bool = Query(default=False, description="Show only articles with analysis"),
     only_verified_stats: bool = Query(default=False, description="Show only articles with verified statistics"),
+    favorites_only: bool = Query(default=False, description="Show only favorited articles (requires authentication)"),
     session: Session = Depends(get_session)
 ):
     """
@@ -107,6 +108,24 @@ async def get_feed_articles(
             .distinct()
         )
         query = query.where(Article.id.in_(verified_articles_subquery))
+
+    if favorites_only:
+        # Filter for only favorited articles (requires authentication)
+        if not current_user:
+            # Return empty result if not authenticated
+            return FeedResponse(
+                articles=[],
+                total_count=0,
+                page=page,
+                page_size=page_size
+            )
+
+        favorited_articles_subquery = (
+            select(ArticleFavorite.article_id)
+            .where(ArticleFavorite.user_id == current_user.id)
+            .distinct()
+        )
+        query = query.where(Article.id.in_(favorited_articles_subquery))
 
     # Get total count before pagination
     count_query = select(func.count()).select_from(query.subquery())

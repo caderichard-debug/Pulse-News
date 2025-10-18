@@ -294,6 +294,7 @@ class ApiClient {
     sort_by?: string;
     only_analyzed?: boolean;
     only_verified_stats?: boolean;
+    favorites_only?: boolean;
   }) {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
@@ -304,6 +305,7 @@ class ApiClient {
     if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
     if (params?.only_analyzed) queryParams.append('only_analyzed', params.only_analyzed.toString());
     if (params?.only_verified_stats) queryParams.append('only_verified_stats', params.only_verified_stats.toString());
+    if (params?.favorites_only) queryParams.append('favorites_only', params.favorites_only.toString());
 
     return this.request<{
       articles: Array<{

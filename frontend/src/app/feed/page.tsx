@@ -52,6 +52,7 @@ export default function FeedPage() {
   const [sortBy, setSortBy] = useState('newest');
   const [onlyAnalyzed, setOnlyAnalyzed] = useState(true); // Default to true
   const [onlyVerifiedStats, setOnlyVerifiedStats] = useState(false);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [pageInput, setPageInput] = useState('1');
 
@@ -67,6 +68,7 @@ export default function FeedPage() {
         sort_by: sortBy,
         only_analyzed: onlyAnalyzed,
         only_verified_stats: onlyVerifiedStats,
+        favorites_only: favoritesOnly,
       });
       setFeedData(data);
       setPageInput(page.toString());
@@ -82,7 +84,7 @@ export default function FeedPage() {
   useEffect(() => {
     loadFeedData();
     loadFilters();
-  }, [selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed, onlyVerifiedStats, page, loadFeedData]);
+  }, [selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, page, loadFeedData]);
 
   async function loadFilters() {
     try {
@@ -249,6 +251,19 @@ export default function FeedPage() {
                 />
                 <label htmlFor="only-verified-stats" className="ml-2 text-sm font-medium text-card-foreground">
                   Show only articles with verified statistics
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="favorites-only"
+                  checked={favoritesOnly}
+                  onChange={(e) => { setFavoritesOnly(e.target.checked); setPage(1); }}
+                  className="w-4 h-4 text-primary border-border rounded focus:ring-indigo-500"
+                />
+                <label htmlFor="favorites-only" className="ml-2 text-sm font-medium text-card-foreground">
+                  ⭐ Show only favorite articles
                 </label>
               </div>
             </div>
