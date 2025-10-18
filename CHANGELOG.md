@@ -1,3 +1,64 @@
+## 2025-10-18 17:15
+
+**Source Organizational Bias Analysis for Analyze Endpoint** ✅
+
+### What Changed
+
+Enhanced the article URL analysis pipeline to automatically detect and analyze organizational bias of news sources when users submit article URLs.
+
+#### Backend Implementation:
+
+- **SourceAnalyzer Service**: Created [source_analyzer.py](backend/app/services/source_analyzer.py) to analyze source organizational bias using AI:
+  - Uses OpenAI GPT-4o-mini to analyze source name, domain, and article content
+  - Classifies sources into 5 bias categories: left, center-left, center, center-right, right
+  - Returns bias description and confidence score (0.0-1.0)
+  - Skips analysis for sources that already have bias set
+  - Gracefully handles OpenAI unavailability
+
+- **URLAnalyzer Integration**: Updated [url_analyzer.py](backend/app/services/url_analyzer.py:94) to call source analyzer:
+  - Analyzes bias for newly created sources
+  - Also analyzes existing sources that don't have bias set
+  - Logs bias updates for transparency
+  - Updates source record in database with bias info
+
+- **API Response Enhancement**: Updated `_format_response()` in [url_analyzer.py](backend/app/services/url_analyzer.py:310) to include:
+  - `organizational_bias` field (left/center-left/center/center-right/right or null)
+  - `bias_description` field with AI-generated explanation
+
+#### Testing:
+
+- **SourceAnalyzer Tests**: Created [test_source_analyzer.py](backend/tests/services/test_source_analyzer.py) with 9 passing tests:
+  - Handles OpenAI unavailability
+  - Returns existing bias when already set
+  - Successfully analyzes new sources
+  - Correctly maps all 5 bias types
+  - Updates sources with bias analysis
+  - Handles errors gracefully
+  - Builds prompts correctly with/without article content
+
+- **URLAnalyzer Integration Tests**: Created [test_url_analyzer_source_bias.py](backend/tests/services/test_url_analyzer_source_bias.py) with 4 passing tests:
+  - Response format includes source bias fields
+  - Handles sources without bias (null values)
+  - Calls source analyzer for new sources
+  - Skips analysis for sources with existing bias
+
+### Test Results
+- **Backend**: 422 tests passing (added 13 new tests for source bias)
+- All new source bias functionality fully tested and working
+
+### Impact
+- User-submitted articles now include source bias analysis automatically
+- Helps users understand the organizational lean of unfamiliar news sources
+- Consistent with existing source bias features in feed and article detail pages
+- No breaking changes to API - backward compatible
+
+**Code References:**
+- Service: [source_analyzer.py](backend/app/services/source_analyzer.py)
+- Integration: [url_analyzer.py](backend/app/services/url_analyzer.py:94)
+- Tests: [test_source_analyzer.py](backend/tests/services/test_source_analyzer.py), [test_url_analyzer_source_bias.py](backend/tests/services/test_url_analyzer_source_bias.py)
+
+---
+
 ## 2025-10-17 22:15
 
 **Article URL Analysis Feature** ✅
