@@ -14,6 +14,8 @@ from datetime import datetime
 import logging
 from functools import wraps
 from typing import Callable, Dict, Any
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -97,13 +99,14 @@ def track_job_execution(job_id: str, job_name: str):
 
 
 @track_job_execution(job_id="scrape_rss", job_name="Scrape RSS Feeds")
-def scrape_job(session: Session = None):
+def scrape_job(session: Session = None, chain_extraction: bool = True):
     """
     Job 1: Scrape RSS feeds from all active sources.
     Scheduled to run every 3 hours.
 
     Args:
         session: Optional session (for testing). If None, creates new session.
+        chain_extraction: If True, automatically triggers extraction job after completion.
     """
     try:
         logger.info("=" * 60)
@@ -120,6 +123,11 @@ def scrape_job(session: Session = None):
         logger.info(f"RSS scrape job completed: {count} new articles")
         logger.info("=" * 60)
 
+        # Chain extraction job if new articles were found
+        if chain_extraction and count > 0:
+            logger.info("Chaining extraction job...")
+            extract_job(session=None, chain_processing=True)
+
         return {"success": True, "articles_scraped": count}
     except Exception as e:
         logger.error(f"RSS scrape job failed: {e}", exc_info=True)
@@ -127,13 +135,14 @@ def scrape_job(session: Session = None):
 
 
 @track_job_execution(job_id="extract_articles", job_name="Extract Article Content")
-def extract_job(session: Session = None):
+def extract_job(session: Session = None, chain_processing: bool = False):
     """
     Job 2: Extract full article content from pending articles.
     Scheduled to run every 4 hours.
 
     Args:
         session: Optional session (for testing). If None, creates new session.
+        chain_processing: If True, automatically triggers article processing job after completion.
     """
     try:
         logger.info("=" * 60)
@@ -151,6 +160,11 @@ def extract_job(session: Session = None):
         logger.info(f"Article extraction job completed: {count} articles processed")
         logger.info("=" * 60)
 
+        # Chain processing job if articles were extracted
+        if chain_processing and count > 0:
+            logger.info("Chaining article processing job...")
+            process_articles_job(session=None)
+
         return {"success": True, "articles_processed": count}
     except Exception as e:
         logger.error(f"Article extraction job failed: {e}", exc_info=True)
@@ -163,6 +177,10 @@ def analyze_job(session: Session = None):
     Job 3: Analyze articles with AI (sentiment, bias, frameworks).
     Scheduled to run every 6 hours.
 
+    This job processes ALL unanalyzed articles in the database by running
+    batches until no more articles remain. This prevents backlogs of
+    "analysis pending" articles.
+
     Args:
         session: Optional session (for testing). If None, creates new session.
     """
@@ -171,27 +189,55 @@ def analyze_job(session: Session = None):
         logger.info("Starting scheduled AI analysis job")
         logger.info("=" * 60)
 
-        from ..services.ai_analyzer import analyze_articles_batch
+        from ..services.ai_analyzer import analyze_articles_batch, get_unanalyzed_article_count
 
-        # Process up to 10 articles (2 batches of 5)
         total_analyzed = 0
+        batch_num = 0
 
+        # Get initial count of unanalyzed articles
+        if session is None:
+            with Session(engine) as temp_session:
+                initial_count = get_unanalyzed_article_count(temp_session)
+        else:
+            initial_count = get_unanalyzed_article_count(session)
+
+        logger.info(f"Found {initial_count} unanalyzed articles in database")
+
+        # Process batches until no more articles remain
         if session is None:
             with Session(engine) as session:
-                for i in range(2):
+                while True:
+                    batch_num += 1
+                    logger.info(f"Processing batch {batch_num}...")
                     count = analyze_articles_batch(session, batch_size=5)
                     total_analyzed += count
+
                     if count == 0:
+                        logger.info("No more articles to analyze")
                         break  # No more articles to process
+
+                    # Add a small delay between batches to avoid rate limiting
+                    if count > 0:
+                        import time
+                        time.sleep(1)
         else:
-            for i in range(2):
+            while True:
+                batch_num += 1
+                logger.info(f"Processing batch {batch_num}...")
                 count = analyze_articles_batch(session, batch_size=5)
                 total_analyzed += count
+
                 if count == 0:
+                    logger.info("No more articles to analyze")
                     break  # No more articles to process
 
+                # Add a small delay between batches to avoid rate limiting
+                if count > 0:
+                    import time
+                    time.sleep(1)
+
         logger.info("=" * 60)
-        logger.info(f"AI analysis job completed: {total_analyzed} articles analyzed")
+        logger.info(f"AI analysis job completed: {total_analyzed}/{initial_count} articles analyzed in {batch_num} batches")
         logger.info("=" * 60)
 
         return {"success": True, "articles_analyzed": total_analyzed}
@@ -426,4 +472,289 @@ def context_generation_job(session: Session = None):
         }
     except Exception as e:
         logger.error(f"Context generation job failed: {e}", exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
+@track_job_execution(job_id="process_articles", job_name="Process Articles (Monolithic)")
+def process_articles_job(session: Session = None):
+    """
+    Job 9: Monolithic article processing job that runs all analysis tasks concurrently.
+
+    This job combines:
+    - AI analysis (sentiment, bias, summary)
+    - Framework mapping
+    - Statistics verification
+    - Article clustering
+    - Context generation
+
+    All tasks are run in parallel using ThreadPoolExecutor for maximum efficiency.
+
+    Args:
+        session: Optional session (for testing). If None, creates new session.
+    """
+    try:
+        logger.info("=" * 60)
+        logger.info("Starting monolithic article processing job")
+        logger.info("=" * 60)
+
+        # Define processing tasks with their respective functions and limits
+        def run_analysis():
+            """Run AI analysis on unanalyzed articles"""
+            try:
+                from ..services.ai_analyzer import analyze_articles_batch, get_unanalyzed_article_count
+
+                with Session(engine) as task_session:
+                    total_analyzed = 0
+                    initial_count = get_unanalyzed_article_count(task_session)
+                    logger.info(f"[Analysis] Found {initial_count} unanalyzed articles")
+
+                    # Process all unanalyzed articles in batches
+                    while True:
+                        count = analyze_articles_batch(task_session, batch_size=5)
+                        total_analyzed += count
+                        if count == 0:
+                            break
+                        time.sleep(1)  # Rate limiting
+
+                    logger.info(f"[Analysis] Completed: {total_analyzed} articles analyzed")
+                    return {"task": "analysis", "articles_analyzed": total_analyzed}
+            except Exception as e:
+                logger.error(f"[Analysis] Failed: {e}", exc_info=True)
+                return {"task": "analysis", "error": str(e)}
+
+        def run_frameworks():
+            """Map articles to ethical frameworks"""
+            try:
+                from ..services.framework_generator import map_articles_to_frameworks, discover_new_frameworks
+                from sqlmodel import select
+                from ..models import Article, ArticleAnalysis, ArticleFrameworkLink
+
+                with Session(engine) as task_session:
+                    # Count unmapped articles
+                    unmapped_articles = task_session.exec(
+                        select(Article)
+                        .join(ArticleAnalysis)
+                        .where(~Article.id.in_(
+                            select(ArticleFrameworkLink.article_id)
+                        ))
+                    ).all()
+                    initial_count = len(unmapped_articles)
+                    logger.info(f"[Frameworks] Found {initial_count} unmapped articles")
+
+                    # Process all unmapped articles in batches
+                    total_mappings = 0
+                    batch_num = 0
+                    while True:
+                        batch_num += 1
+                        logger.info(f"[Frameworks] Processing batch {batch_num}...")
+                        count = map_articles_to_frameworks(task_session, limit=20)
+                        total_mappings += count
+                        if count == 0:
+                            break
+                        time.sleep(0.5)  # Brief delay between batches
+
+                    # Discover new frameworks on Sundays
+                    new_frameworks = 0
+                    if datetime.utcnow().weekday() == 6:
+                        logger.info("[Frameworks] Sunday - discovering new frameworks...")
+                        new_frameworks = discover_new_frameworks(task_session, min_articles=50)
+
+                    logger.info(f"[Frameworks] Completed: {total_mappings} mappings, {new_frameworks} new frameworks")
+                    return {
+                        "task": "frameworks",
+                        "mappings_created": total_mappings,
+                        "frameworks_discovered": new_frameworks
+                    }
+            except Exception as e:
+                logger.error(f"[Frameworks] Failed: {e}", exc_info=True)
+                return {"task": "frameworks", "error": str(e)}
+
+        def run_statistics():
+            """Verify statistics in articles"""
+            try:
+                from ..services.statistics_verifier import process_pending_verifications
+                from sqlmodel import select
+                from ..models import Article, ArticleAnalysis
+
+                with Session(engine) as task_session:
+                    # Count articles without statistics verification
+                    pending_articles = task_session.exec(
+                        select(Article)
+                        .join(ArticleAnalysis)
+                        .where(ArticleAnalysis.stats_verification_date.is_(None))
+                    ).all()
+                    initial_count = len(pending_articles)
+                    logger.info(f"[Statistics] Found {initial_count} articles pending verification")
+
+                    # Process all pending articles in batches
+                    total_stats = {
+                        "articles_processed": 0,
+                        "stats_extracted": 0,
+                        "stats_verified": 0
+                    }
+                    batch_num = 0
+                    while True:
+                        batch_num += 1
+                        logger.info(f"[Statistics] Processing batch {batch_num}...")
+                        stats = process_pending_verifications(task_session, limit=10)
+
+                        total_stats["articles_processed"] += stats["articles_processed"]
+                        total_stats["stats_extracted"] += stats["stats_extracted"]
+                        total_stats["stats_verified"] += stats["stats_verified"]
+
+                        if stats["articles_processed"] == 0:
+                            break
+                        time.sleep(1)  # Rate limiting for API calls
+
+                    logger.info(
+                        f"[Statistics] Completed: {total_stats['articles_processed']} articles, "
+                        f"{total_stats['stats_extracted']} extracted, {total_stats['stats_verified']} verified"
+                    )
+                    return {
+                        "task": "statistics",
+                        "articles_processed": total_stats["articles_processed"],
+                        "stats_extracted": total_stats["stats_extracted"],
+                        "stats_verified": total_stats["stats_verified"]
+                    }
+            except Exception as e:
+                logger.error(f"[Statistics] Failed: {e}", exc_info=True)
+                return {"task": "statistics", "error": str(e)}
+
+        def run_clustering():
+            """Cluster similar articles"""
+            try:
+                from ..services.article_clusterer import process_article_clustering
+                from sqlmodel import select
+                from ..models import Article, ArticleAnalysis, ArticleClusterMember
+
+                with Session(engine) as task_session:
+                    # Count unclustered articles
+                    unclustered_articles = task_session.exec(
+                        select(Article)
+                        .join(ArticleAnalysis)
+                        .where(~Article.id.in_(
+                            select(ArticleClusterMember.article_id)
+                        ))
+                    ).all()
+                    initial_count = len(unclustered_articles)
+                    logger.info(f"[Clustering] Found {initial_count} unclustered articles")
+
+                    # Process all unclustered articles in batches
+                    total_stats = {
+                        "articles_processed": 0,
+                        "clusters_created": 0,
+                        "articles_clustered": 0
+                    }
+                    batch_num = 0
+                    while True:
+                        batch_num += 1
+                        logger.info(f"[Clustering] Processing batch {batch_num}...")
+                        stats = process_article_clustering(task_session, limit=20)
+
+                        total_stats["articles_processed"] += stats["articles_processed"]
+                        total_stats["clusters_created"] += stats["clusters_created"]
+                        total_stats["articles_clustered"] += stats["articles_clustered"]
+
+                        if stats["articles_processed"] == 0:
+                            break
+                        time.sleep(0.5)  # Brief delay between batches
+
+                    logger.info(
+                        f"[Clustering] Completed: {total_stats['articles_processed']} articles, "
+                        f"{total_stats['clusters_created']} clusters, {total_stats['articles_clustered']} clustered"
+                    )
+                    return {
+                        "task": "clustering",
+                        "articles_processed": total_stats["articles_processed"],
+                        "clusters_created": total_stats["clusters_created"],
+                        "articles_clustered": total_stats["articles_clustered"]
+                    }
+            except Exception as e:
+                logger.error(f"[Clustering] Failed: {e}", exc_info=True)
+                return {"task": "clustering", "error": str(e)}
+
+        def run_context():
+            """Generate article contexts"""
+            try:
+                from ..services.context_generator import process_article_contexts
+                from sqlmodel import select
+                from ..models import ArticleAnalysis
+
+                with Session(engine) as task_session:
+                    # Count articles without context
+                    no_context_articles = task_session.exec(
+                        select(ArticleAnalysis)
+                        .where(ArticleAnalysis.has_context == False)
+                    ).all()
+                    initial_count = len(no_context_articles)
+                    logger.info(f"[Context] Found {initial_count} articles without context")
+
+                    # Process all articles without context in batches
+                    total_stats = {
+                        "articles_processed": 0,
+                        "contexts_generated": 0,
+                        "total_tokens": 0
+                    }
+                    batch_num = 0
+                    while True:
+                        batch_num += 1
+                        logger.info(f"[Context] Processing batch {batch_num}...")
+                        stats = process_article_contexts(task_session, limit=5)
+
+                        total_stats["articles_processed"] += stats["articles_processed"]
+                        total_stats["contexts_generated"] += stats["contexts_generated"]
+                        total_stats["total_tokens"] += stats["total_tokens"]
+
+                        if stats["articles_processed"] == 0:
+                            break
+                        time.sleep(1)  # Rate limiting for API calls
+
+                    logger.info(
+                        f"[Context] Completed: {total_stats['articles_processed']} articles, "
+                        f"{total_stats['contexts_generated']} contexts, {total_stats['total_tokens']} tokens"
+                    )
+                    return {
+                        "task": "context",
+                        "articles_processed": total_stats["articles_processed"],
+                        "contexts_generated": total_stats["contexts_generated"],
+                        "tokens_used": total_stats["total_tokens"]
+                    }
+            except Exception as e:
+                logger.error(f"[Context] Failed: {e}", exc_info=True)
+                return {"task": "context", "error": str(e)}
+
+        # Execute all tasks concurrently
+        tasks = [run_analysis, run_frameworks, run_statistics, run_clustering, run_context]
+        results = []
+
+        logger.info(f"Executing {len(tasks)} processing tasks concurrently...")
+
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            # Submit all tasks
+            futures = {executor.submit(task): task.__name__ for task in tasks}
+
+            # Collect results as they complete
+            for future in as_completed(futures):
+                task_name = futures[future]
+                try:
+                    result = future.result()
+                    results.append(result)
+                    logger.info(f"✓ Task completed: {task_name}")
+                except Exception as e:
+                    logger.error(f"✗ Task failed: {task_name} - {e}")
+                    results.append({"task": task_name, "error": str(e)})
+
+        logger.info("=" * 60)
+        logger.info("Monolithic article processing job completed")
+        logger.info(f"Results: {len([r for r in results if 'error' not in r])}/{len(tasks)} tasks succeeded")
+        logger.info("=" * 60)
+
+        return {
+            "success": True,
+            "tasks_completed": len([r for r in results if "error" not in r]),
+            "tasks_failed": len([r for r in results if "error" in r]),
+            "results": results
+        }
+    except Exception as e:
+        logger.error(f"Monolithic processing job failed: {e}", exc_info=True)
         return {"success": False, "error": str(e)}

@@ -9,7 +9,8 @@ from ..models import Article, Source, Framework, User, ProcessingStatus
 from ..database import get_session
 from ..jobs.tasks import (
     scrape_job, extract_job, analyze_job, framework_job,
-    statistics_verification_job, article_clustering_job, context_generation_job
+    statistics_verification_job, article_clustering_job, context_generation_job,
+    process_articles_job
 )
 from ..jobs.scheduler import get_job_status
 from datetime import datetime, timedelta
@@ -259,6 +260,26 @@ def trigger_context_generation_job_endpoint(background_tasks: BackgroundTasks) -
         "status": "triggered",
         "job": "generate_context",
         "message": "Context generation job started in background"
+    }
+
+
+@router.post("/jobs/process-articles")
+def trigger_process_articles_job(background_tasks: BackgroundTasks) -> Dict[str, str]:
+    """
+    Manually trigger monolithic article processing job in the background.
+
+    This job runs all processing tasks concurrently:
+    - AI analysis
+    - Framework mapping
+    - Statistics verification
+    - Article clustering
+    - Context generation
+    """
+    background_tasks.add_task(process_articles_job)
+    return {
+        "status": "triggered",
+        "job": "process_articles",
+        "message": "Monolithic article processing job started in background (running 5 tasks concurrently)"
     }
 
 

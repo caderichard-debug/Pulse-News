@@ -14,7 +14,8 @@ from ..jobs.tasks import (
     newsletter_job,
     statistics_verification_job,
     article_clustering_job,
-    context_generation_job
+    context_generation_job,
+    process_articles_job
 )
 from ..config import settings
 import logging
@@ -29,57 +30,32 @@ def start_scheduler():
     """
     Initialize and start the background job scheduler.
     This should be called once when the application starts.
+
+    SIMPLIFIED WORKFLOW (chained jobs):
+    - Scrape job runs every 3 hours
+      → Auto-chains to extraction job
+        → Auto-chains to monolithic processing job (runs 5 tasks concurrently)
+    - Newsletter job runs daily at 10:20 AM PST
     """
     if scheduler.running:
         logger.warning("Scheduler is already running")
         return
 
-    logger.info("Initializing APScheduler with 8 jobs...")
+    logger.info("Initializing APScheduler with simplified chained workflow...")
 
-    # Job 1: Scrape RSS feeds every 3 hours
+    # Job 1: Scrape RSS feeds every 3 hours (chains to extraction → processing)
     scheduler.add_job(
         func=scrape_job,
         trigger=IntervalTrigger(hours=settings.scrape_interval_hours),
         id='scrape_rss',
-        name='Scrape RSS Feeds',
+        name='Scrape RSS Feeds (chains to extraction → processing)',
         replace_existing=True,
         max_instances=1,  # Only one instance at a time
     )
     logger.info(f"✓ Scheduled: RSS scraping every {settings.scrape_interval_hours} hours")
+    logger.info("  └─> Auto-chains: extraction → processing (5 tasks concurrently)")
 
-    # Job 2: Extract article content every 4 hours
-    scheduler.add_job(
-        func=extract_job,
-        trigger=IntervalTrigger(hours=settings.process_interval_hours),
-        id='extract_articles',
-        name='Extract Article Content',
-        replace_existing=True,
-        max_instances=1,  # Prevent overlapping runs
-    )
-    logger.info(f"✓ Scheduled: Article extraction every {settings.process_interval_hours} hours")
-
-    # Job 3: AI analysis every 6 hours (after extraction has run)
-    scheduler.add_job(
-        func=analyze_job,
-        trigger=IntervalTrigger(hours=6),
-        id='analyze_articles',
-        name='AI Article Analysis',
-        replace_existing=True,
-        max_instances=1,
-    )
-    logger.info("✓ Scheduled: AI analysis every 6 hours")
-
-    # Job 4: Update frameworks daily at 2am
-    scheduler.add_job(
-        func=framework_job,
-        trigger=CronTrigger(hour=2, minute=0),
-        id='update_frameworks',
-        name='Update Frameworks',
-        replace_existing=True,
-    )
-    logger.info("✓ Scheduled: Framework updates daily at 2:00 AM")
-
-    # Job 5: Send newsletters daily at 10:20 AM PST
+    # Job 2: Send newsletters daily at 10:20 AM PST
     scheduler.add_job(
         func=newsletter_job,
         trigger=CronTrigger(hour=10, minute=20, timezone='America/Los_Angeles'),
@@ -89,42 +65,10 @@ def start_scheduler():
     )
     logger.info("✓ Scheduled: Newsletter sending daily at 10:20 AM PST")
 
-    # Job 6: Statistics verification every 6 hours
-    scheduler.add_job(
-        func=statistics_verification_job,
-        trigger=IntervalTrigger(hours=6),
-        id='verify_statistics',
-        name='Verify Statistics',
-        replace_existing=True,
-        max_instances=1,
-    )
-    logger.info("✓ Scheduled: Statistics verification every 6 hours")
-
-    # Job 7: Article clustering every 4 hours
-    scheduler.add_job(
-        func=article_clustering_job,
-        trigger=IntervalTrigger(hours=4),
-        id='cluster_articles',
-        name='Cluster Articles',
-        replace_existing=True,
-        max_instances=1,
-    )
-    logger.info("✓ Scheduled: Article clustering every 4 hours")
-
-    # Job 8: Context generation every 8 hours
-    scheduler.add_job(
-        func=context_generation_job,
-        trigger=IntervalTrigger(hours=8),
-        id='generate_context',
-        name='Generate Context',
-        replace_existing=True,
-        max_instances=1,
-    )
-    logger.info("✓ Scheduled: Context generation every 8 hours")
-
     # Start the scheduler
     scheduler.start()
     logger.info("🚀 APScheduler started successfully!")
+    logger.info("📋 Note: Individual jobs (analyze, frameworks, etc.) can still be triggered manually via /admin/jobs/* endpoints")
 
     # Log next run times
     for job in scheduler.get_jobs():
