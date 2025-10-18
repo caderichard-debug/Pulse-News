@@ -288,9 +288,9 @@ export default function ArticleDetailPage() {
       {/* Background & Context */}
       {article.context && (
         <div className="mb-8">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg overflow-hidden">
-            <div className="bg-blue-100 border-b border-blue-200 px-6 py-4">
-              <h2 className="text-2xl font-semibold text-blue-900 flex items-center gap-2">
+          <div className="bg-context border border-context rounded-lg overflow-hidden">
+            <div className="bg-context-header border-b border-context px-6 py-4">
+              <h2 className="text-2xl font-semibold text-context-heading flex items-center gap-2">
                 <span>📚</span>
                 <span>Background & Context</span>
               </h2>
@@ -298,7 +298,7 @@ export default function ArticleDetailPage() {
             <div className="p-6 space-y-6">
               {article.context.background && (
                 <div>
-                  <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                  <h3 className="font-semibold text-context-heading mb-2 flex items-center gap-2">
                     <span>📖</span>
                     <span>Background</span>
                   </h3>
@@ -307,7 +307,7 @@ export default function ArticleDetailPage() {
               )}
               {article.context.key_players && (
                 <div>
-                  <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                  <h3 className="font-semibold text-context-heading mb-2 flex items-center gap-2">
                     <span>👥</span>
                     <span>Key Players</span>
                   </h3>
@@ -332,20 +332,20 @@ export default function ArticleDetailPage() {
               )}
               {article.context.timeline && (
                 <div>
-                  <h3 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                  <h3 className="font-semibold text-context-heading mb-3 flex items-center gap-2">
                     <span>⏱️</span>
                     <span>Timeline</span>
                   </h3>
-                  <div className="relative border-l-2 border-blue-300 pl-6 ml-3 space-y-4">
+                  <div className="relative border-l-2 border-context pl-6 ml-3 space-y-4">
                     {(() => {
                       try {
                         const timelineData = JSON.parse(article.context.timeline);
                         if (Array.isArray(timelineData)) {
                           return timelineData.reverse().map((item: { date: string; event: string }, idx: number) => (
                             <div key={idx} className="relative">
-                              <div className="absolute -left-[1.6rem] top-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-blue-50"></div>
+                              <div className="absolute -left-[1.6rem] top-1 w-3 h-3 bg-primary rounded-full border-2 border-context"></div>
                               <p className="text-card-foreground text-sm leading-relaxed">
-                                <strong className="text-blue-800">{item.date}:</strong> {item.event}
+                                <strong className="text-context-heading">{item.date}:</strong> {item.event}
                               </p>
                             </div>
                           ));
@@ -354,7 +354,7 @@ export default function ArticleDetailPage() {
                         // Fall back to splitting by newlines if not JSON
                         return article.context.timeline.split('\n').filter(line => line.trim()).reverse().map((event, idx) => (
                           <div key={idx} className="relative">
-                            <div className="absolute -left-[1.6rem] top-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-blue-50"></div>
+                            <div className="absolute -left-[1.6rem] top-1 w-3 h-3 bg-primary rounded-full border-2 border-context"></div>
                             <p className="text-card-foreground text-sm leading-relaxed">{event}</p>
                           </div>
                         ));
@@ -365,7 +365,7 @@ export default function ArticleDetailPage() {
               )}
               {article.context.significance && (
                 <div>
-                  <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                  <h3 className="font-semibold text-context-heading mb-2 flex items-center gap-2">
                     <span>💡</span>
                     <span>Why This Matters</span>
                   </h3>
@@ -425,8 +425,8 @@ export default function ArticleDetailPage() {
       {/* Key Statistics - Enhanced with newsletter-style design */}
       {article.statistics.length > 0 && (
         <div className="mb-8">
-          <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-md p-6">
-            <h2 className="text-2xl font-semibold mb-6 text-yellow-900">
+          <div className="bg-stats border-l-4 border-stats rounded-md p-6">
+            <h2 className="text-2xl font-semibold mb-6 text-stats-heading">
               Key Statistics
             </h2>
 
@@ -455,7 +455,7 @@ export default function ArticleDetailPage() {
                   </div>
                 ) : (
                   // Full card for all other stats
-                  <div key={idx} className="bg-yellow-50/50 rounded-lg p-4 border border-yellow-200">
+                  <div key={idx} className="bg-stats-card rounded-lg p-4 border border-stats-card">
                     {/* Statistic text with context inline */}
                     <div className="text-sm text-foreground mb-3 font-medium">
                       {stat.statistic}
