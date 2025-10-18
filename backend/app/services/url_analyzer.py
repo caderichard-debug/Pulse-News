@@ -115,6 +115,8 @@ class URLAnalyzer:
             )
             if bias_analysis:
                 source = source_analyzer.update_source_with_bias(source, bias_analysis)
+                self.db.commit()
+                self.db.refresh(source)
                 logger.info(f"Source bias updated: {source.organizational_bias.value}")
 
         # Step 5: Create article record

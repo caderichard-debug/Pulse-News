@@ -9,56 +9,60 @@ import { formatDate } from '@/lib/dateUtils';
 
 function AnalyzePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [url, setUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<string>('');
-  const [showSourceModal, setShowSourceModal] = useState(false);
-  const [sourceDetails, setSourceDetails] = useState<any | null>(null);
-  const [isLoadingSource, setIsLoadingSource] = useState(false);
 
   // Check if user is authenticated
   const isAuthenticated = typeof window !== 'undefined' && !!localStorage.getItem('token');
 
-  // Restore state from sessionStorage on mount (for back button support)
+  // Check if we're in extension mode (has autoSubmit param)
+  const isExtensionMode = searchParams.get('autoSubmit') === 'true';
+
+  // Prefill URL from query params (from Chrome extension)
   useEffect(() => {
-    const savedResult = sessionStorage.getItem('analyzeResult');
-    if (savedResult) {
-      try {
-        const decoded = JSON.parse(savedResult);
-        setAnalysisResult(decoded);
-      } catch (e) {
-        console.error('Failed to restore analysis result:', e);
-        sessionStorage.removeItem('analyzeResult');
+    const urlParam = searchParams.get('url');
+    if (urlParam) {
+      setUrl(urlParam);
+
+      // Auto-submit if autoSubmit parameter is present
+      if (isExtensionMode && urlParam && !analysisResult && !isAnalyzing) {
+        // Call analyze directly with the URL parameter to avoid state timing issues
+        analyzeArticle(urlParam);
       }
     }
-  }, []);
+  }, [searchParams]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setAnalysisResult(null);
+  // Extracted analysis logic for reuse
+  const analyzeArticle = async (articleUrl: string) => {
+    console.log('[Analyze Page] Starting analysis for URL:', articleUrl);
 
     // Validate URL
-    if (!url.trim()) {
+    if (!articleUrl.trim()) {
       setError('Please enter a valid URL');
       return;
     }
 
     try {
-      new URL(url); // Validate URL format
-    } catch {
+      new URL(articleUrl); // Validate URL format
+    } catch (e) {
+      console.error('[Analyze Page] Invalid URL format:', articleUrl, e);
       setError('Invalid URL format. Please enter a complete URL (e.g., https://example.com/article)');
       return;
     }
 
     setIsAnalyzing(true);
+    setError(null);
+    setAnalysisResult(null);
 
     try {
       // Make API call first to check if article already exists
       setCurrentStep('Checking article...');
-      const result = await api.analyzeURL(url);
+      console.log('[Analyze Page] Calling API with URL:', articleUrl);
+      const result = await api.analyzeURL(articleUrl);
 
       // If article already existed, skip the loading animation
       if (result.data?.already_existed) {
@@ -86,8 +90,11 @@ function AnalyzePageContent() {
       }
 
       // Save result to sessionStorage for back button support
-      // (URL params would be too large and cause URI malformed errors)
       sessionStorage.setItem('analyzeResult', JSON.stringify(result));
+
+      // Debug: Log source data
+      console.log('[Analyze Page] Analysis result:', result);
+      console.log('[Analyze Page] Source data:', result.data?.source);
 
     } catch (err: any) {
       setError(err.message || 'Failed to analyze article. Please try again.');
@@ -97,36 +104,46 @@ function AnalyzePageContent() {
     }
   };
 
-  const handleViewArticle = () => {
-    if (analysisResult?.article_id) {
-      router.push(`/article/${analysisResult.article_id}`);
+  // Restore state from sessionStorage on mount (for back button support)
+  useEffect(() => {
+    const savedResult = sessionStorage.getItem('analyzeResult');
+    if (savedResult) {
+      try {
+        const decoded = JSON.parse(savedResult);
+        setAnalysisResult(decoded);
+      } catch (e) {
+        console.error('Failed to restore analysis result:', e);
+        sessionStorage.removeItem('analyzeResult');
+      }
     }
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    analyzeArticle(url);
   };
 
-  const handleAnalyzeSource = async () => {
-    if (!analysisResult?.data?.source?.id) return;
-
-    setIsLoadingSource(true);
-    setShowSourceModal(true);
-
-    try {
-      const details = await api.getSourceById(analysisResult.data.source.id);
-      setSourceDetails(details);
-    } catch (err: any) {
-      console.error('Failed to load source details:', err);
-      setSourceDetails(null);
-    } finally {
-      setIsLoadingSource(false);
+  const handleViewArticle = () => {
+    if (analysisResult?.article_id) {
+      // Open in new tab (important for Chrome extension iframe usage)
+      const url = `${window.location.origin}/article/${analysisResult.article_id}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
     }
   };
 
   const handleAnalyzeAnother = () => {
-    setUrl('');
-    setAnalysisResult(null);
-    setError(null);
-    setCurrentStep('');
-    // Clear saved result from sessionStorage
-    sessionStorage.removeItem('analyzeResult');
+    if (isExtensionMode) {
+      // In extension mode, open analyze page in new tab
+      window.open(`${window.location.origin}/analyze`, '_blank', 'noopener,noreferrer');
+    } else {
+      // Normal behavior: reset form
+      setUrl('');
+      setAnalysisResult(null);
+      setError(null);
+      setCurrentStep('');
+      // Clear saved result from sessionStorage
+      sessionStorage.removeItem('analyzeResult');
+    }
   };
 
   // Helper functions matching article detail page
@@ -147,19 +164,34 @@ function AnalyzePageContent() {
 
   return (
     <>
-      <Navbar />
+      {!isExtensionMode && <Navbar />}
       <div className="min-h-screen bg-background">
         <div className="max-w-4xl mx-auto px-4 py-8">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-foreground mb-4">
-              Analyze Any Article
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Paste any article URL to get instant AI-powered analysis, bias detection,
-              fact-checking, and ethical framework mapping.
-            </p>
-          </div>
+          {/* Extension Mode Header */}
+          {isExtensionMode && (
+            <div className="mb-6">
+              <button
+                onClick={() => window.open(window.location.origin, '_blank', 'noopener,noreferrer')}
+                className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+              >
+                <img src="/pulse-icon.png" alt="Pulse Logo" className="w-10 h-10" />
+                <h1 className="text-2xl font-bold text-foreground">Pulse AI Analysis</h1>
+              </button>
+            </div>
+          )}
+
+          {/* Header (only show in non-extension mode) */}
+          {!isExtensionMode && (
+            <div className="text-center mb-8">
+              <h1 className="text-4xl font-bold text-foreground mb-4">
+                Analyze Any Article
+              </h1>
+              <p className="text-lg text-muted-foreground">
+                Paste any article URL to get instant AI-powered analysis, bias detection,
+                fact-checking, and ethical framework mapping.
+              </p>
+            </div>
+          )}
 
           {/* URL Input Form */}
           {!analysisResult && (
@@ -233,66 +265,70 @@ function AnalyzePageContent() {
           {/* Analysis Results */}
           {analysisResult?.data && (
             <>
-              {/* Success Message with Analyze Another button */}
-              <div className="bg-success border border-success rounded-lg p-4 mb-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <p className="text-success font-medium">
-                      ✅ {analysisResult.message}
-                    </p>
-                    {analysisResult.data?.already_existed && (
-                      <p className="text-success-muted text-sm mt-2">
-                        This article was already in our database - showing existing analysis.
+              {/* Success Message with Analyze Another button (hidden in extension mode) */}
+              {!isExtensionMode && (
+                <div className="bg-success border border-success rounded-lg p-4 mb-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <p className="text-success font-medium">
+                        ✅ {analysisResult.message}
                       </p>
+                      {analysisResult.data?.already_existed && (
+                        <p className="text-success-muted text-sm mt-2">
+                          This article was already in our database - showing existing analysis.
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={handleAnalyzeAnother}
+                      className="px-4 py-2 bg-card hover:bg-secondary text-foreground rounded-lg transition-colors font-medium border border-border whitespace-nowrap"
+                    >
+                      Analyze Another
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Article Header (hidden in extension mode) */}
+              {!isExtensionMode && (
+                <div className="mb-8">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3 flex-wrap">
+                    {analysisResult.data.source && (
+                      <>
+                        <a href={analysisResult.data.source.url || '#'} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">
+                          {analysisResult.data.source.name}
+                        </a>
+                        {analysisResult.data.source.organizational_bias && (
+                          <SourceBiasBadge bias={analysisResult.data.source.organizational_bias} size="sm" />
+                        )}
+                      </>
+                    )}
+                    {analysisResult.data.published_at && (
+                      <>
+                        <span>•</span>
+                        <span>{formatDate(analysisResult.data.published_at)}</span>
+                      </>
+                    )}
+                    {analysisResult.data.author && (
+                      <>
+                        <span>•</span>
+                        <span>By {analysisResult.data.author}</span>
+                      </>
                     )}
                   </div>
-                  <button
-                    onClick={handleAnalyzeAnother}
-                    className="px-4 py-2 bg-card hover:bg-secondary text-foreground rounded-lg transition-colors font-medium border border-border whitespace-nowrap"
+
+                  <h1 className="text-4xl font-bold mb-4 text-foreground">{analysisResult.data.title}</h1>
+
+                  <a
+                    href={analysisResult.data.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
                   >
-                    Analyze Another
-                  </button>
+                    Read original article →
+                  </a>
                 </div>
-              </div>
-
-              {/* Article Header */}
-              <div className="mb-8">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3 flex-wrap">
-                  {analysisResult.data.source && (
-                    <>
-                      <a href={analysisResult.data.source.url || '#'} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">
-                        {analysisResult.data.source.name}
-                      </a>
-                      {analysisResult.data.source.organizational_bias && (
-                        <SourceBiasBadge bias={analysisResult.data.source.organizational_bias} size="sm" />
-                      )}
-                    </>
-                  )}
-                  {analysisResult.data.published_at && (
-                    <>
-                      <span>•</span>
-                      <span>{formatDate(analysisResult.data.published_at)}</span>
-                    </>
-                  )}
-                  {analysisResult.data.author && (
-                    <>
-                      <span>•</span>
-                      <span>By {analysisResult.data.author}</span>
-                    </>
-                  )}
-                </div>
-
-                <h1 className="text-4xl font-bold mb-4 text-foreground">{analysisResult.data.title}</h1>
-
-                <a
-                  href={analysisResult.data.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
-                >
-                  Read original article →
-                </a>
-              </div>
+              )}
 
               {/* Sentiment & Bias */}
               <div className="bg-secondary border border-border rounded-lg p-6 mb-8">
@@ -322,39 +358,62 @@ function AnalyzePageContent() {
                 )}
               </div>
 
-              {/* Source Quick Info - Compact */}
+              {/* Source Analysis - Inline */}
               {analysisResult.data.source && (
-                <div className="mb-6">
-                  <div className="bg-card border border-border rounded-lg p-4">
-                    <div className="flex items-center justify-between gap-4 flex-wrap">
-                      <div className="flex items-center gap-4 flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground text-sm">Source:</span>
-                          <a
-                            href={analysisResult.data.source.url || '#'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-semibold text-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate"
-                          >
-                            {analysisResult.data.source.name}
-                          </a>
-                        </div>
+                <div className="mb-8">
+                  <h2 className="text-2xl font-semibold mb-4 text-foreground">Source Analysis</h2>
+                  <div className="bg-card border border-border rounded-lg p-6 space-y-5">
+                    {/* Source Name and URL */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h3 className="text-xl font-bold text-foreground">{analysisResult.data.source.name}</h3>
                         {analysisResult.data.source.organizational_bias && (
                           <SourceBiasBadge bias={analysisResult.data.source.organizational_bias} size="sm" />
                         )}
-                        {analysisResult.data.source.trust_score !== null && analysisResult.data.source.trust_score !== undefined && (
-                          <span className="text-sm text-muted-foreground">
-                            Trust: <span className="font-semibold text-foreground">{(analysisResult.data.source.trust_score * 100).toFixed(0)}%</span>
-                          </span>
-                        )}
                       </div>
-                      <button
-                        onClick={handleAnalyzeSource}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm whitespace-nowrap"
+                      <a
+                        href={analysisResult.data.source.url || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                       >
-                        Analyze Source
-                      </button>
+                        {analysisResult.data.source.url}
+                      </a>
                     </div>
+
+                    {/* Organizational Bias */}
+                    {analysisResult.data.source.organizational_bias && (
+                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                        <h4 className="text-sm font-semibold text-foreground mb-2">Organizational Bias</h4>
+                        <div className="flex items-center gap-2 mb-3">
+                          <SourceBiasBadge bias={analysisResult.data.source.organizational_bias} size="md" />
+                          <span className="text-lg font-bold text-foreground capitalize">
+                            {analysisResult.data.source.organizational_bias.replace('-', ' ')}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Trust Score */}
+                    {analysisResult.data.source.trust_score !== null && analysisResult.data.source.trust_score !== undefined && (
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground mb-2">Trust Score</h4>
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all"
+                              style={{ width: `${analysisResult.data.source.trust_score * 100}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-xl font-bold text-foreground min-w-[3.5rem]">
+                            {(analysisResult.data.source.trust_score * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1.5">
+                          Based on credibility, fact-checking record, and editorial standards
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -512,7 +571,9 @@ function AnalyzePageContent() {
                             <span>⏱️</span>
                             <span>Timeline</span>
                           </h3>
-                          <p className="text-card-foreground leading-relaxed">{analysisResult.data.context.timeline}</p>
+                          <div className="text-card-foreground leading-relaxed whitespace-pre-line">
+                            {analysisResult.data.context.timeline}
+                          </div>
                         </div>
                       )}
                       {analysisResult.data.context.significance && (
@@ -550,140 +611,6 @@ function AnalyzePageContent() {
           )}
         </div>
       </div>
-
-      {/* Source Analysis Modal */}
-      {showSourceModal && (
-        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setShowSourceModal(false)}>
-          <div className="bg-background rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            {/* Modal Header */}
-            <div className="sticky top-0 bg-background border-b border-border px-5 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl font-bold text-foreground">Source Analysis</h2>
-                {sourceDetails?.organizational_bias && (
-                  <SourceBiasBadge bias={sourceDetails.organizational_bias} size="sm" />
-                )}
-              </div>
-              <button
-                onClick={() => setShowSourceModal(false)}
-                className="text-muted-foreground hover:text-foreground transition-colors text-2xl leading-none"
-              >
-                ×
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="p-5">
-              {isLoadingSource ? (
-                <div className="text-center py-8">
-                  <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-                  <p className="mt-3 text-sm text-muted-foreground">Loading source details...</p>
-                </div>
-              ) : sourceDetails ? (
-                <div className="space-y-4">
-                  {/* Source Name and URL */}
-                  <div>
-                    <h3 className="text-2xl font-bold text-foreground mb-1">{sourceDetails.name}</h3>
-                    <a
-                      href={sourceDetails.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                    >
-                      {sourceDetails.url}
-                    </a>
-                  </div>
-
-                  {/* Organizational Bias */}
-                  {sourceDetails.organizational_bias && (
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                      <h4 className="text-sm font-semibold text-foreground mb-2">Organizational Bias</h4>
-                      <div className="flex items-center gap-2 mb-3">
-                        <SourceBiasBadge bias={sourceDetails.organizational_bias} size="md" />
-                        <span className="text-lg font-bold text-foreground capitalize">
-                          {sourceDetails.organizational_bias.replace('-', ' ')}
-                        </span>
-                      </div>
-                      {sourceDetails.bias_description && (
-                        <p className="text-sm text-card-foreground leading-relaxed bg-white/50 dark:bg-gray-900/50 rounded-lg p-3 border border-blue-200/50 dark:border-blue-800/50">
-                          {sourceDetails.bias_description}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Trust Score */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-foreground mb-2">Trust Score</h4>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all"
-                          style={{ width: `${sourceDetails.trust_score * 100}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-xl font-bold text-foreground min-w-[3.5rem]">
-                        {(sourceDetails.trust_score * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1.5">
-                      Based on credibility, fact-checking record, and editorial standards
-                    </p>
-                  </div>
-
-                  {/* Description */}
-                  {sourceDetails.description && (
-                    <div>
-                      <h4 className="text-sm font-semibold text-foreground mb-2">About This Source</h4>
-                      <p className="text-sm text-card-foreground leading-relaxed">{sourceDetails.description}</p>
-                    </div>
-                  )}
-
-                  {/* Statistics */}
-                  <div className="grid grid-cols-2 gap-3 bg-card border border-border rounded-lg p-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Articles in Database</p>
-                      <p className="text-xl font-bold text-foreground">{sourceDetails.article_count}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Status</p>
-                      <p className="text-xl font-bold text-foreground">
-                        {sourceDetails.is_active ? '✓ Active' : '✗ Inactive'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Info Note */}
-                  <div className="bg-info border border-info rounded-lg p-3">
-                    <p className="text-xs text-info">
-                      <strong>Note:</strong> This analysis is based on the source&apos;s overall editorial stance and organizational structure. Individual articles may vary in their bias and perspective.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-sm text-red-600 dark:text-red-400">Failed to load source details.</p>
-                  <button
-                    onClick={handleAnalyzeSource}
-                    className="mt-3 px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
-                  >
-                    Try Again
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="border-t border-border px-5 py-3">
-              <button
-                onClick={() => setShowSourceModal(false)}
-                className="w-full px-4 py-2 text-sm bg-card hover:bg-secondary text-foreground rounded-lg transition-colors font-medium border border-border"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
