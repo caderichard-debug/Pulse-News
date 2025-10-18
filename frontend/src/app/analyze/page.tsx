@@ -9,7 +9,6 @@ import { formatDate } from '@/lib/dateUtils';
 
 function AnalyzePageContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [url, setUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any | null>(null);
@@ -302,6 +301,77 @@ function AnalyzePageContent() {
                   <p className="text-muted-foreground italic text-sm">AI analysis pending... Check back soon for sentiment and bias analysis.</p>
                 )}
               </div>
+
+              {/* Source Analysis */}
+              {analysisResult.data.source && (
+                <div className="mb-8">
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+                    <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center gap-2">
+                      <span>📰</span>
+                      <span>Source Analysis</span>
+                    </h2>
+
+                    <div className="space-y-4">
+                      {/* Source Name and URL */}
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Source</p>
+                        <a
+                          href={analysisResult.data.source.url || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xl font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          {analysisResult.data.source.name}
+                        </a>
+                      </div>
+
+                      {/* Organizational Bias */}
+                      {analysisResult.data.source.organizational_bias && (
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-2">Organizational Bias</p>
+                          <div className="flex items-center gap-3 mb-3">
+                            <SourceBiasBadge bias={analysisResult.data.source.organizational_bias} size="lg" />
+                            <span className="text-lg font-semibold text-foreground capitalize">
+                              {analysisResult.data.source.organizational_bias.replace('-', ' ')}
+                            </span>
+                          </div>
+                          {analysisResult.data.source.bias_description && (
+                            <p className="text-sm text-card-foreground bg-white/50 dark:bg-gray-900/50 rounded-lg p-3 border border-blue-200/50 dark:border-blue-800/50">
+                              {analysisResult.data.source.bias_description}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Trust Score */}
+                      {analysisResult.data.source.trust_score !== null && analysisResult.data.source.trust_score !== undefined && (
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-2">Trust Score</p>
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all"
+                                style={{ width: `${analysisResult.data.source.trust_score * 100}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-lg font-bold text-foreground min-w-[3rem]">
+                              {(analysisResult.data.source.trust_score * 100).toFixed(0)}%
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Info Note */}
+                      <div className="bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 rounded-lg p-3 mt-4">
+                        <p className="text-xs text-blue-900 dark:text-blue-200">
+                          <strong>Note:</strong> Organizational bias refers to the overall editorial stance of the source,
+                          not the individual article. The &quot;Article Bias&quot; above shows this specific article&apos;s lean.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Summary */}
               {analysisResult.data.analysis?.summary && (
