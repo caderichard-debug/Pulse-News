@@ -73,13 +73,14 @@ export default function DarkModeToggle() {
   };
 
   const getNextTheme = () => {
-    switch (theme) {
-      case 'dark':
-        return 'light';
-      case 'light':
-        return 'auto';
-      case 'auto':
-        return 'dark';
+    // Toggle between auto and the opposite of the auto-detected theme
+    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    const oppositeOfSystem = systemTheme === 'light' ? 'dark' : 'light';
+
+    if (theme === 'auto') {
+      return oppositeOfSystem;
+    } else {
+      return 'auto';
     }
   };
 
@@ -88,7 +89,7 @@ export default function DarkModeToggle() {
       onClick={toggleTheme}
       className="relative inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-border bg-card hover:bg-accent transition-colors"
       aria-label={`Current theme: ${theme}. Click to switch to ${getNextTheme()} mode`}
-      title={`Theme: ${getThemeLabel()} (click to cycle)`}
+      title={`Theme: ${getThemeLabel()} (click to toggle)`}
     >
       {getThemeIcon()}
       <span className="text-sm font-medium text-foreground">{getThemeLabel()}</span>

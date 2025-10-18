@@ -84,14 +84,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleTheme = () => {
-    // Cycle through: dark → light → auto
+    // Toggle between auto and the opposite of the auto-detected theme
+    // If auto-detected is light, toggle between auto and dark
+    // If auto-detected is dark, toggle between auto and light
+    const systemTheme = getSystemTheme();
+    const oppositeOfSystem = systemTheme === 'light' ? 'dark' : 'light';
+
     let newTheme: Theme;
-    if (theme === 'dark') {
-      newTheme = 'light';
-    } else if (theme === 'light') {
-      newTheme = 'auto';
+    if (theme === 'auto') {
+      // Switch from auto to the opposite of system
+      newTheme = oppositeOfSystem;
     } else {
-      newTheme = 'dark';
+      // Switch back to auto
+      newTheme = 'auto';
     }
     setTheme(newTheme);
   };
