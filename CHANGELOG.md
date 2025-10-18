@@ -1,3 +1,135 @@
+## 2025-10-17 12:15
+
+**Documentation - Frontend Customization Guide** ✅
+
+### What Changed
+
+Created comprehensive documentation for customizing Pulse's visual appearance and styling.
+
+#### Purpose:
+Enable developers and designers to easily customize Pulse's look and feel without deep codebase knowledge.
+
+#### Guide Contents:
+
+**1. Color Palette Customization**
+- Complete explanation of CSS variable system
+- Step-by-step color editing for light and dark modes
+- Example themes: Green, Monochrome, Warm Orange, High Contrast
+- Color usage reference table
+
+**2. Typography & Fonts**
+- Google Fonts integration guide
+- Custom/self-hosted fonts setup
+- Font size scale configuration
+
+**3. Spacing & Layout**
+- Container width customization
+- Responsive breakpoint configuration
+- Spacing scale adjustments
+
+**4. Animations & Transitions**
+- Global transition settings
+- Custom animation examples
+- Component-specific transition timing
+
+**5. Component-Specific Styling**
+- Navbar active/inactive states
+- Dark mode toggle button
+- Cards and panels
+- Buttons (primary/secondary)
+- Hero background gradients
+
+**6. Advanced Customization**
+- Tailwind config setup
+- Custom utility classes
+- Shadow system
+- Dark mode behavior tweaks
+
+**Additional Sections:**
+- Quick customization recipes (3 ready-to-use themes)
+- Testing & validation checklist (accessibility, contrast, browser compatibility)
+- Troubleshooting common issues
+- Resource links (color tools, fonts, design inspiration)
+
+#### Key Features:
+- ✅ **826 lines** of comprehensive documentation
+- ✅ **40+ subsections** organized by topic
+- ✅ **Code examples** throughout
+- ✅ **Step-by-step instructions** for common tasks
+- ✅ **Reference tables** for quick lookup
+- ✅ **Accessibility guidance** (WCAG compliance)
+- ✅ **Browser compatibility** notes
+- ✅ **Performance considerations**
+
+#### Quick Start Example:
+
+Changing the entire site from blue to green theme:
+
+```css
+/* Edit frontend/src/app/globals.css */
+:root {
+  --primary: #059669;        /* Emerald green */
+  --primary-hover: #047857;
+}
+
+:root.dark {
+  --primary: #10b981;        /* Brighter for dark mode */
+}
+```
+
+#### Result:
+- ✅ Complete customization reference in one document
+- ✅ Easy color palette changes via CSS variables
+- ✅ No need to search through component files
+- ✅ Includes accessibility and testing guidelines
+- ✅ Beginner-friendly with advanced tips
+
+**File Created:**
+- [FRONTEND_CUSTOMIZATION_GUIDE.md](docs/FRONTEND_CUSTOMIZATION_GUIDE.md)
+
+---
+
+## 2025-10-17 12:00
+
+**Dark Mode - Login & Signup Page Backgrounds** ✅
+
+### What Changed
+
+Added dark mode support to login and signup page background gradients.
+
+#### The Problem:
+- Login and signup pages had static light blue gradients (`from-blue-50 to-indigo-100`)
+- Backgrounds did not respond to dark mode toggle
+- Created visual inconsistency with other pages that support dark mode
+
+#### The Solution:
+Added dark mode gradient variants matching the pattern used on landing and how-it-works pages.
+
+**Gradient Changes:**
+- **Light mode**: `from-blue-50 to-indigo-100` (soft blue gradient)
+- **Dark mode**: `from-gray-900 to-gray-800` (dark gray gradient)
+- **Transition**: Added `transition-colors` for smooth theme switching
+
+#### Changes Made:
+1. [login/page.tsx](frontend/src/app/login/page.tsx:36):
+   - Updated background div with dark mode variants
+   
+2. [signup/page.tsx](frontend/src/app/signup/page.tsx:84):
+   - Updated background div with dark mode variants
+
+#### Result:
+- ✅ Login page background responds to dark mode toggle
+- ✅ Signup page background responds to dark mode toggle
+- ✅ Smooth transitions when switching themes
+- ✅ Visual consistency with other pages
+- ✅ Maintains good contrast in both modes
+
+**Files Modified:**
+- [login/page.tsx](frontend/src/app/login/page.tsx)
+- [signup/page.tsx](frontend/src/app/signup/page.tsx)
+
+---
+
 # Pulse Development Changelog
 
 This file tracks significant changes, decisions, and progress throughout development.
