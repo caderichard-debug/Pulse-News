@@ -76,10 +76,11 @@ class TestSourceAnalyzer:
             "confidence": 0.85
         }'''
 
-        with patch('app.services.source_analyzer.openai_client') as mock_client:
+        with patch('app.services.source_analyzer.openai_client') as mock_client, \
+             patch('app.services.source_analyzer.settings') as mock_settings:
             mock_client.is_available.return_value = True
             mock_client.client.chat.completions.create.return_value = mock_response
-            mock_client.model_name = "gpt-4o-mini"
+            mock_settings.ai_model = "gpt-4o-mini"
 
             result = analyzer.analyze_source_bias(
                 source=source,
@@ -121,10 +122,11 @@ class TestSourceAnalyzer:
                 "confidence": 0.8
             }}'''
 
-            with patch('app.services.source_analyzer.openai_client') as mock_client:
+            with patch('app.services.source_analyzer.openai_client') as mock_client, \
+                 patch('app.services.source_analyzer.settings') as mock_settings:
                 mock_client.is_available.return_value = True
                 mock_client.client.chat.completions.create.return_value = mock_response
-                mock_client.model_name = "gpt-4o-mini"
+                mock_settings.ai_model = "gpt-4o-mini"
 
                 result = analyzer.analyze_source_bias(source)
 

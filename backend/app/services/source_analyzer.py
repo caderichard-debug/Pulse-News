@@ -13,6 +13,7 @@ from sqlmodel import Session, select
 
 from ..models import Source, OrganizationalBias
 from ..utils.openai_client import openai_client
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +74,7 @@ class SourceAnalyzer:
 
             # Call OpenAI
             response = openai_client.client.chat.completions.create(
-                model=openai_client.model_name,
+                model=settings.ai_model,
                 messages=[
                     {
                         "role": "system",
