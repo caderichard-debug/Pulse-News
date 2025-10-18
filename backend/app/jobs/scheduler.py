@@ -15,7 +15,8 @@ from ..jobs.tasks import (
     statistics_verification_job,
     article_clustering_job,
     context_generation_job,
-    process_articles_job
+    process_articles_job,
+    process_unprocessed_articles_job
 )
 from ..config import settings
 import logging
@@ -31,31 +32,48 @@ def start_scheduler():
     Initialize and start the background job scheduler.
     This should be called once when the application starts.
 
-    SIMPLIFIED WORKFLOW (chained jobs):
-    - Scrape job runs every 3 hours
-      → Auto-chains to extraction job
-        → Auto-chains to monolithic processing job (runs 5 tasks concurrently)
-    - Newsletter job runs daily at 10:20 AM PST
+    PIPELINE WORKFLOW:
+    - Main pipeline (every 6 hours): scrape → extract → analyze → process
+      - Scrape: Fetch articles from RSS feeds
+      - Extract: Get full article content
+      - Analyze: AI analysis (sentiment, bias, summary)
+      - Process: 4 concurrent tasks (frameworks, stats, clustering, context)
+
+    - Backup job (every 10 hours): Check for any missed/unprocessed articles
+
+    - Newsletter job (daily at 10:20 AM PST): Send daily newsletters
     """
     if scheduler.running:
         logger.warning("Scheduler is already running")
         return
 
-    logger.info("Initializing APScheduler with simplified chained workflow...")
+    logger.info("Initializing APScheduler with 3 scheduled jobs...")
 
-    # Job 1: Scrape RSS feeds every 3 hours (chains to extraction → processing)
+    # Job 1: Main article pipeline - runs every 6 hours
     scheduler.add_job(
         func=scrape_job,
-        trigger=IntervalTrigger(hours=settings.scrape_interval_hours),
+        trigger=IntervalTrigger(hours=6),
         id='scrape_rss',
-        name='Scrape RSS Feeds (chains to extraction → processing)',
+        name='Article Pipeline (scrape → extract → analyze → process)',
         replace_existing=True,
         max_instances=1,  # Only one instance at a time
     )
-    logger.info(f"✓ Scheduled: RSS scraping every {settings.scrape_interval_hours} hours")
-    logger.info("  └─> Auto-chains: extraction → processing (5 tasks concurrently)")
+    logger.info("✓ Scheduled: Article pipeline every 6 hours")
+    logger.info("  └─> Chains: scrape → extract → analyze → process (4 concurrent tasks)")
 
-    # Job 2: Send newsletters daily at 10:20 AM PST
+    # Job 2: Backup cleanup job - runs every 10 hours
+    scheduler.add_job(
+        func=process_unprocessed_articles_job,
+        trigger=IntervalTrigger(hours=10),
+        id='process_unprocessed',
+        name='Process Unprocessed Articles',
+        replace_existing=True,
+        max_instances=1,
+    )
+    logger.info("✓ Scheduled: Unprocessed articles check every 10 hours")
+    logger.info("  └─> Catches articles that missed main pipeline")
+
+    # Job 3: Send newsletters daily at 10:20 AM PST
     scheduler.add_job(
         func=newsletter_job,
         trigger=CronTrigger(hour=10, minute=20, timezone='America/Los_Angeles'),
@@ -68,7 +86,7 @@ def start_scheduler():
     # Start the scheduler
     scheduler.start()
     logger.info("🚀 APScheduler started successfully!")
-    logger.info("📋 Note: Individual jobs (analyze, frameworks, etc.) can still be triggered manually via /admin/jobs/* endpoints")
+    logger.info("📋 Note: Individual jobs can still be triggered manually via /admin/jobs/* endpoints")
 
     # Log next run times
     for job in scheduler.get_jobs():

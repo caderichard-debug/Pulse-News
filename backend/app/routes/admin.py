@@ -10,7 +10,7 @@ from ..database import get_session
 from ..jobs.tasks import (
     scrape_job, extract_job, analyze_job, framework_job,
     statistics_verification_job, article_clustering_job, context_generation_job,
-    process_articles_job
+    process_articles_job, process_unprocessed_articles_job
 )
 from ..jobs.scheduler import get_job_status
 from datetime import datetime, timedelta
@@ -266,20 +266,40 @@ def trigger_context_generation_job_endpoint(background_tasks: BackgroundTasks) -
 @router.post("/jobs/process-articles")
 def trigger_process_articles_job(background_tasks: BackgroundTasks) -> Dict[str, str]:
     """
-    Manually trigger monolithic article processing job in the background.
+    Manually trigger post-analysis processing job in the background.
 
-    This job runs all processing tasks concurrently:
-    - AI analysis
+    This job runs post-analysis tasks concurrently:
     - Framework mapping
     - Statistics verification
     - Article clustering
     - Context generation
+
+    Note: Requires articles to be analyzed first.
     """
     background_tasks.add_task(process_articles_job)
     return {
         "status": "triggered",
         "job": "process_articles",
-        "message": "Monolithic article processing job started in background (running 5 tasks concurrently)"
+        "message": "Post-analysis processing job started in background (running 4 tasks concurrently)"
+    }
+
+
+@router.post("/jobs/process-unprocessed")
+def trigger_process_unprocessed_job(background_tasks: BackgroundTasks) -> Dict[str, str]:
+    """
+    Manually trigger unprocessed articles scan job in the background.
+
+    This backup job searches for articles that may have missed the main pipeline:
+    - Extracted but not analyzed
+    - Analyzed but not processed
+
+    It automatically triggers the appropriate jobs to complete processing.
+    """
+    background_tasks.add_task(process_unprocessed_articles_job)
+    return {
+        "status": "triggered",
+        "job": "process_unprocessed",
+        "message": "Unprocessed articles scan started in background"
     }
 
 

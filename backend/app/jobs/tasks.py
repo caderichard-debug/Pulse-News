@@ -26,25 +26,64 @@ def track_job_execution(job_id: str, job_name: str):
 
     Creates a history record before execution, updates it on completion.
     Captures success/failure status, duration, and result metrics.
+
+    Also implements job locking to prevent concurrent executions of the same job.
     """
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(session: Session = None, *args, **kwargs) -> Dict[str, Any]:
-            # Create execution history record
-            history = JobExecutionHistory(
-                job_id=job_id,
-                job_name=job_name,
-                started_at=datetime.utcnow(),
-                status="running",
-                triggered_by="scheduler"
-            )
+            # Use PostgreSQL advisory lock to prevent concurrent executions
+            # Convert job_id string to integer hash for advisory lock
+            lock_id = hash(job_id) % (2**31)  # Keep within PostgreSQL bigint range
 
-            # Save history record in a separate session to ensure it persists
-            with Session(engine) as history_session:
-                history_session.add(history)
-                history_session.commit()
-                history_session.refresh(history)
-                history_id = history.id
+            with Session(engine) as lock_session:
+                from sqlmodel import select, text
+
+                # Try to acquire advisory lock (non-blocking)
+                result = lock_session.exec(text(f"SELECT pg_try_advisory_lock({lock_id})")).first()
+                lock_acquired = result[0] if result else False
+
+                if not lock_acquired:
+                    logger.warning(f"Job {job_id} is already running (could not acquire lock). Skipping this execution.")
+                    return {
+                        "success": False,
+                        "error": "Job already running (lock not acquired)",
+                        "skipped": True
+                    }
+
+                try:
+                    # Double-check database for safety
+                    running_job = lock_session.exec(
+                        select(JobExecutionHistory)
+                        .where(JobExecutionHistory.job_id == job_id)
+                        .where(JobExecutionHistory.status == "running")
+                    ).first()
+
+                    if running_job:
+                        logger.warning(f"Job {job_id} is already running (started at {running_job.started_at}). Skipping this execution.")
+                        lock_session.exec(text(f"SELECT pg_advisory_unlock({lock_id})"))
+                        return {
+                            "success": False,
+                            "error": f"Job already running (started at {running_job.started_at})",
+                            "skipped": True
+                        }
+
+                    # Create execution history record
+                    history = JobExecutionHistory(
+                        job_id=job_id,
+                        job_name=job_name,
+                        started_at=datetime.utcnow(),
+                        status="running",
+                        triggered_by="scheduler"
+                    )
+                    lock_session.add(history)
+                    lock_session.commit()
+                    lock_session.refresh(history)
+                    history_id = history.id
+                finally:
+                    # Release the advisory lock after creating the record
+                    lock_session.exec(text(f"SELECT pg_advisory_unlock({lock_id})"))
+                    lock_session.commit()
 
             # Execute the job
             try:
@@ -126,7 +165,11 @@ def scrape_job(session: Session = None, chain_extraction: bool = True):
         # Chain extraction job if new articles were found
         if chain_extraction and count > 0:
             logger.info("Chaining extraction job...")
-            extract_job(session=None, chain_processing=True)
+            try:
+                extract_job(session=None, chain_analysis=True)
+            except Exception as e:
+                logger.error(f"Chained extraction job failed: {e}", exc_info=True)
+                # Don't fail the scrape job if chained job fails
 
         return {"success": True, "articles_scraped": count}
     except Exception as e:
@@ -135,14 +178,13 @@ def scrape_job(session: Session = None, chain_extraction: bool = True):
 
 
 @track_job_execution(job_id="extract_articles", job_name="Extract Article Content")
-def extract_job(session: Session = None, chain_processing: bool = False):
+def extract_job(session: Session = None, chain_analysis: bool = False):
     """
     Job 2: Extract full article content from pending articles.
-    Scheduled to run every 4 hours.
 
     Args:
         session: Optional session (for testing). If None, creates new session.
-        chain_processing: If True, automatically triggers article processing job after completion.
+        chain_analysis: If True, automatically triggers analysis job after completion.
     """
     try:
         logger.info("=" * 60)
@@ -160,10 +202,14 @@ def extract_job(session: Session = None, chain_processing: bool = False):
         logger.info(f"Article extraction job completed: {count} articles processed")
         logger.info("=" * 60)
 
-        # Chain processing job if articles were extracted
-        if chain_processing and count > 0:
-            logger.info("Chaining article processing job...")
-            process_articles_job(session=None)
+        # Chain analysis job if articles were extracted
+        if chain_analysis and count > 0:
+            logger.info("Chaining analysis job...")
+            try:
+                analyze_job(session=None, chain_processing=True)
+            except Exception as e:
+                logger.error(f"Chained analysis job failed: {e}", exc_info=True)
+                # Don't fail the extraction job if chained job fails
 
         return {"success": True, "articles_processed": count}
     except Exception as e:
@@ -172,10 +218,9 @@ def extract_job(session: Session = None, chain_processing: bool = False):
 
 
 @track_job_execution(job_id="analyze_articles", job_name="AI Article Analysis")
-def analyze_job(session: Session = None):
+def analyze_job(session: Session = None, chain_processing: bool = False):
     """
-    Job 3: Analyze articles with AI (sentiment, bias, frameworks).
-    Scheduled to run every 6 hours.
+    Job 3: Analyze articles with AI (sentiment, bias, summary).
 
     This job processes ALL unanalyzed articles in the database by running
     batches until no more articles remain. This prevents backlogs of
@@ -183,6 +228,7 @@ def analyze_job(session: Session = None):
 
     Args:
         session: Optional session (for testing). If None, creates new session.
+        chain_processing: If True, automatically triggers processing job after completion.
     """
     try:
         logger.info("=" * 60)
@@ -218,7 +264,6 @@ def analyze_job(session: Session = None):
 
                     # Add a small delay between batches to avoid rate limiting
                     if count > 0:
-                        import time
                         time.sleep(1)
         else:
             while True:
@@ -233,12 +278,20 @@ def analyze_job(session: Session = None):
 
                 # Add a small delay between batches to avoid rate limiting
                 if count > 0:
-                    import time
                     time.sleep(1)
 
         logger.info("=" * 60)
         logger.info(f"AI analysis job completed: {total_analyzed}/{initial_count} articles analyzed in {batch_num} batches")
         logger.info("=" * 60)
+
+        # Chain processing job if articles were analyzed
+        if chain_processing and total_analyzed > 0:
+            logger.info("Chaining processing job...")
+            try:
+                process_articles_job(session=None)
+            except Exception as e:
+                logger.error(f"Chained processing job failed: {e}", exc_info=True)
+                # Don't fail the analysis job if chained job fails
 
         return {"success": True, "articles_analyzed": total_analyzed}
     except Exception as e:
@@ -475,13 +528,12 @@ def context_generation_job(session: Session = None):
         return {"success": False, "error": str(e)}
 
 
-@track_job_execution(job_id="process_articles", job_name="Process Articles (Monolithic)")
+@track_job_execution(job_id="process_articles", job_name="Process Articles (Post-Analysis)")
 def process_articles_job(session: Session = None):
     """
-    Job 9: Monolithic article processing job that runs all analysis tasks concurrently.
+    Job 4: Article processing job that runs post-analysis tasks concurrently.
 
-    This job combines:
-    - AI analysis (sentiment, bias, summary)
+    This job combines (requires ArticleAnalysis to exist):
     - Framework mapping
     - Statistics verification
     - Article clustering
@@ -494,33 +546,8 @@ def process_articles_job(session: Session = None):
     """
     try:
         logger.info("=" * 60)
-        logger.info("Starting monolithic article processing job")
+        logger.info("Starting article processing job (post-analysis)")
         logger.info("=" * 60)
-
-        # Define processing tasks with their respective functions and limits
-        def run_analysis():
-            """Run AI analysis on unanalyzed articles"""
-            try:
-                from ..services.ai_analyzer import analyze_articles_batch, get_unanalyzed_article_count
-
-                with Session(engine) as task_session:
-                    total_analyzed = 0
-                    initial_count = get_unanalyzed_article_count(task_session)
-                    logger.info(f"[Analysis] Found {initial_count} unanalyzed articles")
-
-                    # Process all unanalyzed articles in batches
-                    while True:
-                        count = analyze_articles_batch(task_session, batch_size=5)
-                        total_analyzed += count
-                        if count == 0:
-                            break
-                        time.sleep(1)  # Rate limiting
-
-                    logger.info(f"[Analysis] Completed: {total_analyzed} articles analyzed")
-                    return {"task": "analysis", "articles_analyzed": total_analyzed}
-            except Exception as e:
-                logger.error(f"[Analysis] Failed: {e}", exc_info=True)
-                return {"task": "analysis", "error": str(e)}
 
         def run_frameworks():
             """Map articles to ethical frameworks"""
@@ -723,13 +750,13 @@ def process_articles_job(session: Session = None):
                 logger.error(f"[Context] Failed: {e}", exc_info=True)
                 return {"task": "context", "error": str(e)}
 
-        # Execute all tasks concurrently
-        tasks = [run_analysis, run_frameworks, run_statistics, run_clustering, run_context]
+        # Execute all tasks concurrently (4 post-analysis tasks)
+        tasks = [run_frameworks, run_statistics, run_clustering, run_context]
         results = []
 
-        logger.info(f"Executing {len(tasks)} processing tasks concurrently...")
+        logger.info(f"Executing {len(tasks)} post-analysis tasks concurrently...")
 
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers=4) as executor:
             # Submit all tasks
             futures = {executor.submit(task): task.__name__ for task in tasks}
 
@@ -745,7 +772,7 @@ def process_articles_job(session: Session = None):
                     results.append({"task": task_name, "error": str(e)})
 
         logger.info("=" * 60)
-        logger.info("Monolithic article processing job completed")
+        logger.info("Article processing job completed")
         logger.info(f"Results: {len([r for r in results if 'error' not in r])}/{len(tasks)} tasks succeeded")
         logger.info("=" * 60)
 
@@ -756,5 +783,91 @@ def process_articles_job(session: Session = None):
             "results": results
         }
     except Exception as e:
-        logger.error(f"Monolithic processing job failed: {e}", exc_info=True)
+        logger.error(f"Article processing job failed: {e}", exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
+@track_job_execution(job_id="process_unprocessed", job_name="Process Unprocessed Articles")
+def process_unprocessed_articles_job(session: Session = None):
+    """
+    Job 5: Search for and process any articles that missed the main pipeline.
+
+    This backup job runs every 10 hours to catch articles that may have been:
+    - Extracted but not analyzed
+    - Analyzed but not processed (frameworks/stats/clustering/context)
+
+    It ensures no articles get stuck in partial processing states.
+
+    Args:
+        session: Optional session (for testing). If None, creates new session.
+    """
+    try:
+        logger.info("=" * 60)
+        logger.info("Starting unprocessed articles scan job")
+        logger.info("=" * 60)
+
+        from ..services.ai_analyzer import get_unanalyzed_article_count
+        from sqlmodel import select
+        from ..models import Article, ArticleAnalysis, ArticleFrameworkLink
+
+        stats = {
+            "unanalyzed_found": 0,
+            "analyzed_unprocessed_found": 0,
+            "actions_taken": []
+        }
+
+        with Session(engine) as job_session:
+            # Step 1: Find extracted but unanalyzed articles
+            unanalyzed_count = get_unanalyzed_article_count(job_session)
+            stats["unanalyzed_found"] = unanalyzed_count
+
+            if unanalyzed_count > 0:
+                logger.info(f"Found {unanalyzed_count} extracted but unanalyzed articles")
+                logger.info("Triggering analysis job...")
+                stats["actions_taken"].append(f"analyze_{unanalyzed_count}_articles")
+                # Run analysis with chaining to process
+                try:
+                    analyze_job(session=None, chain_processing=True)
+                except Exception as e:
+                    logger.error(f"Triggered analysis job failed: {e}", exc_info=True)
+                    # Don't fail the unprocessed scan if triggered job fails
+            else:
+                logger.info("All extracted articles have been analyzed ✓")
+
+                # Step 2: Find analyzed but unprocessed articles (missing frameworks)
+                analyzed_unprocessed = job_session.exec(
+                    select(Article)
+                    .join(ArticleAnalysis)
+                    .where(~Article.id.in_(
+                        select(ArticleFrameworkLink.article_id)
+                    ))
+                ).all()
+
+                stats["analyzed_unprocessed_found"] = len(analyzed_unprocessed)
+
+                if analyzed_unprocessed:
+                    logger.info(f"Found {len(analyzed_unprocessed)} analyzed but unprocessed articles")
+                    logger.info("Triggering processing job...")
+                    stats["actions_taken"].append(f"process_{len(analyzed_unprocessed)}_articles")
+                    try:
+                        process_articles_job(session=None)
+                    except Exception as e:
+                        logger.error(f"Triggered processing job failed: {e}", exc_info=True)
+                        # Don't fail the unprocessed scan if triggered job fails
+                else:
+                    logger.info("All analyzed articles have been processed ✓")
+
+        logger.info("=" * 60)
+        logger.info(f"Unprocessed articles scan completed")
+        logger.info(f"Actions taken: {', '.join(stats['actions_taken']) if stats['actions_taken'] else 'None - all caught up!'}")
+        logger.info("=" * 60)
+
+        return {
+            "success": True,
+            "unanalyzed_found": stats["unanalyzed_found"],
+            "analyzed_unprocessed_found": stats["analyzed_unprocessed_found"],
+            "actions_taken": stats["actions_taken"]
+        }
+    except Exception as e:
+        logger.error(f"Unprocessed articles scan job failed: {e}", exc_info=True)
         return {"success": False, "error": str(e)}
