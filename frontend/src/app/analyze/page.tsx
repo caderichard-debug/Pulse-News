@@ -211,16 +211,26 @@ function AnalyzePageContent() {
           {/* Analysis Results */}
           {analysisResult?.data && (
             <>
-              {/* Success Message */}
+              {/* Success Message with Analyze Another button */}
               <div className="bg-success border border-success rounded-lg p-4 mb-6">
-                <p className="text-success font-medium">
-                  ✅ {analysisResult.message}
-                </p>
-                {analysisResult.data?.already_existed && (
-                  <p className="text-success-muted text-sm mt-2">
-                    This article was already in our database - showing existing analysis.
-                  </p>
-                )}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <p className="text-success font-medium">
+                      ✅ {analysisResult.message}
+                    </p>
+                    {analysisResult.data?.already_existed && (
+                      <p className="text-success-muted text-sm mt-2">
+                        This article was already in our database - showing existing analysis.
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleAnalyzeAnother}
+                    className="px-4 py-2 bg-card hover:bg-secondary text-foreground rounded-lg transition-colors font-medium border border-border whitespace-nowrap"
+                  >
+                    Analyze Another
+                  </button>
+                </div>
               </div>
 
               {/* Article Header */}
