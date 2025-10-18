@@ -116,7 +116,7 @@ export default function Navbar() {
                 <button
                   key={item.path}
                   onClick={() => router.push(item.path)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex flex-col items-center gap-0.5 ${
                     pathname === item.path || (item.path === '/admin' && pathname.startsWith('/admin'))
                       ? item.adminOnly
                         ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
@@ -126,8 +126,8 @@ export default function Navbar() {
                       : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                   }`}
                 >
-                  <span className="mr-1">{item.icon}</span>
-                  <span className="whitespace-nowrap">{item.name}</span>
+                  <span className="text-lg">{item.icon}</span>
+                  <span className="text-xs whitespace-nowrap">{item.name}</span>
                 </button>
               ))}
           </div>

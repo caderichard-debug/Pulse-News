@@ -1,3 +1,36 @@
+## 2025-10-18 17:00
+
+**Improve Navbar Tab Layout Consistency** ✅
+
+### What Changed
+
+Redesigned desktop navigation tabs to display with consistent vertical layout (emoji above text) for better visual uniformity across all window sizes.
+
+#### Problem:
+Previously, tabs had emoji and text side-by-side, which could cause inconsistent wrapping at certain window sizes - some tabs would wrap while others wouldn't, creating a misaligned appearance.
+
+#### Solution:
+- Changed tab layout from horizontal (emoji + text side-by-side) to vertical (emoji above text)
+- Used `flex flex-col items-center` for vertical stacking
+- Made emoji larger (`text-lg`) for better visibility
+- Made text smaller (`text-xs`) to fit better in vertical layout
+- All tabs now have uniform appearance regardless of screen width
+
+#### Result:
+- All tabs consistently show emoji on top, text below
+- No inconsistent wrapping between tabs
+- Cleaner, more compact design
+- Better use of navbar space
+- Maintains all hover and active states
+
+**Files Modified:**
+- [Navbar.tsx](frontend/src/components/Navbar.tsx:112-133) - Updated desktop nav to vertical layout
+
+**Code References:**
+- Component: [Navbar.tsx](frontend/src/components/Navbar.tsx:112)
+
+---
+
 ## 2025-10-18 16:45
 
 **Navbar Collapsible Menu for Mobile Responsiveness** ✅
