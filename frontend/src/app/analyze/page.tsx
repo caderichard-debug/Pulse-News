@@ -140,8 +140,8 @@ export default function AnalyzePage() {
                 </div>
 
                 {!isAuthenticated && (
-                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-800">
+                  <div className="mb-4 p-3 bg-info border border-info rounded-lg">
+                    <p className="text-sm text-info">
                       💡 <a href="/login" className="underline font-medium">Log in</a> to save analyzed articles to your feed
                     </p>
                   </div>
@@ -167,10 +167,10 @@ export default function AnalyzePage() {
 
               {/* Progress Indicator */}
               {isAnalyzing && currentStep && (
-                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="mt-4 p-4 bg-info border border-info rounded-lg">
                   <div className="flex items-center gap-3">
-                    <div className="animate-pulse w-2 h-2 bg-blue-600 rounded-full" />
-                    <p className="text-sm text-blue-800">{currentStep}</p>
+                    <div className="animate-pulse w-2 h-2 bg-primary rounded-full" />
+                    <p className="text-sm text-info">{currentStep}</p>
                   </div>
                 </div>
               )}
@@ -335,14 +335,14 @@ export default function AnalyzePage() {
               {/* Key Statistics */}
               {analysisResult.data.statistics && analysisResult.data.statistics.length > 0 && (
                 <div className="mb-8">
-                  <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-md p-6">
-                    <h2 className="text-2xl font-semibold mb-6 text-yellow-900">
+                  <div className="bg-stats-section border-l-4 border-stats-accent rounded-md p-6">
+                    <h2 className="text-2xl font-semibold mb-6 text-stats-heading">
                       Key Statistics
                     </h2>
 
                     <div className="space-y-4">
                       {analysisResult.data.statistics.map((stat: any, idx: number) => (
-                        <div key={idx} className="bg-yellow-50/50 rounded-lg p-4 border border-yellow-200">
+                        <div key={idx} className="bg-stats-card rounded-lg p-4 border border-stats">
                           <div className="text-sm text-foreground mb-3 font-medium">
                             {stat.claim_text || stat.statistic}
                           </div>
@@ -370,12 +370,12 @@ export default function AnalyzePage() {
                                     href={stat.source_url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-blue-700 hover:underline"
+                                    className="text-source-link hover:underline"
                                   >
                                     {stat.source_name}
                                   </a>
                                 ) : (
-                                  <span className="text-blue-700">{stat.source_name}</span>
+                                  <span className="text-source-link">{stat.source_name}</span>
                                 )}
                               </span>
                             )}
@@ -396,9 +396,9 @@ export default function AnalyzePage() {
               {/* Background & Context */}
               {analysisResult.data.context && (
                 <div className="mb-8">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg overflow-hidden">
-                    <div className="bg-blue-100 border-b border-blue-200 px-6 py-4">
-                      <h2 className="text-2xl font-semibold text-blue-900 flex items-center gap-2">
+                  <div className="bg-context-section border border-context rounded-lg overflow-hidden">
+                    <div className="bg-context-header border-b border-context px-6 py-4">
+                      <h2 className="text-2xl font-semibold text-context-heading flex items-center gap-2">
                         <span>📚</span>
                         <span>Background & Context</span>
                       </h2>
@@ -406,7 +406,7 @@ export default function AnalyzePage() {
                     <div className="p-6 space-y-6">
                       {analysisResult.data.context.background && (
                         <div>
-                          <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                          <h3 className="font-semibold text-context-heading mb-2 flex items-center gap-2">
                             <span>📖</span>
                             <span>Background</span>
                           </h3>
@@ -415,7 +415,7 @@ export default function AnalyzePage() {
                       )}
                       {analysisResult.data.context.timeline && (
                         <div>
-                          <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                          <h3 className="font-semibold text-context-heading mb-2 flex items-center gap-2">
                             <span>⏱️</span>
                             <span>Timeline</span>
                           </h3>
@@ -424,7 +424,7 @@ export default function AnalyzePage() {
                       )}
                       {analysisResult.data.context.significance && (
                         <div>
-                          <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                          <h3 className="font-semibold text-context-heading mb-2 flex items-center gap-2">
                             <span>💡</span>
                             <span>Why This Matters</span>
                           </h3>

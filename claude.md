@@ -597,6 +597,41 @@ CLAIMBUSTER_API_KEY=...
 - **Models**: SQLModel schemas with validation
 - **Tests**: One test file per service/route
 
+### Frontend Development & Dark Mode
+- **ALWAYS implement dark mode support** when creating new components or UI elements
+- **Use semantic CSS classes** from `frontend/src/app/globals.css` instead of hardcoded Tailwind colors
+- **Never use hardcoded colors** like `bg-blue-50`, `text-yellow-900` without dark mode variants
+- **Available dark mode-aware utility classes**:
+  - Context/Background sections: `bg-context-section`, `bg-context-header`, `text-context-heading`, `text-context-body`, `border-context`
+  - Statistics sections: `bg-stats-section`, `bg-stats-card`, `text-stats-heading`, `border-stats`, `border-stats-accent`
+  - Info alerts: `bg-info`, `border-info`, `text-info`
+  - Fact-check callouts: `bg-factcheck`, `border-factcheck`, `text-factcheck`
+  - Source links: `text-source-link`, `hover:text-source-link`
+  - Core semantic classes: `bg-background`, `bg-card`, `bg-secondary`, `text-foreground`, `text-muted-foreground`, `border-border`
+- **If you need new themed sections**, add dark mode-aware utility classes to `globals.css` using the `@apply` directive
+- **Test in both light and dark mode** before considering the feature complete
+- **Color usage guidelines**:
+  - ✅ DO: Use semantic classes (`bg-card`, `text-foreground`, `bg-context-section`)
+  - ✅ DO: Add `dark:` variants when using Tailwind directly (`bg-blue-50 dark:bg-blue-950`)
+  - ❌ DON'T: Use hardcoded colors without dark mode support (`bg-blue-50`, `text-yellow-900`)
+  - ❌ DON'T: Assume light mode only - always consider dark mode users
+
+**Example - Good (dark mode aware)**:
+```tsx
+<div className="bg-context-section border border-context">
+  <h2 className="text-context-heading">Section Title</h2>
+  <p className="text-card-foreground">Content text</p>
+</div>
+```
+
+**Example - Bad (hardcoded colors)**:
+```tsx
+<div className="bg-blue-50 border border-blue-200">
+  <h2 className="text-blue-900">Section Title</h2>
+  <p className="text-gray-700">Content text</p>
+</div>
+```
+
 ### Naming Conventions
 - **Files**: `snake_case.py`
 - **Classes**: `PascalCase`
