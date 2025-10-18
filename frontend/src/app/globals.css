@@ -69,6 +69,22 @@ body {
 
 /* Utility classes for common patterns */
 @layer utilities {
+  /* Cursor pointer for all clickable elements */
+  button,
+  a,
+  [role="button"],
+  [type="button"],
+  [type="submit"],
+  [type="reset"],
+  select,
+  label[for],
+  input[type="checkbox"],
+  input[type="radio"],
+  summary,
+  .cursor-pointer {
+    cursor: pointer;
+  }
+
   .text-foreground {
     color: var(--foreground);
   }
