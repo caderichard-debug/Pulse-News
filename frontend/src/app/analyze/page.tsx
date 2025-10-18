@@ -169,7 +169,7 @@ function AnalyzePageContent() {
         <div className="max-w-4xl mx-auto px-4 py-8">
           {/* Extension Mode Header */}
           {isExtensionMode && (
-            <div className="mb-6">
+            <div className="mb-6 flex items-center justify-between">
               <button
                 onClick={() => window.open(window.location.origin, '_blank', 'noopener,noreferrer')}
                 className="flex items-center gap-3 hover:opacity-80 transition-opacity"
@@ -177,6 +177,34 @@ function AnalyzePageContent() {
                 <img src="/pulse-icon.png" alt="Pulse Logo" className="w-10 h-10" />
                 <h1 className="text-2xl font-bold text-foreground">Pulse AI Analysis</h1>
               </button>
+
+              {/* Refresh Button */}
+              {analysisResult && (
+                <button
+                  onClick={() => analyzeArticle(url)}
+                  disabled={isAnalyzing}
+                  className="p-2.5 rounded-lg border border-border bg-card hover:bg-secondary
+                           transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+                           hover:shadow-md active:scale-95"
+                  title="Refresh analysis"
+                  aria-label="Refresh analysis"
+                >
+                  <svg
+                    className={`w-5 h-5 text-foreground ${isAnalyzing ? 'animate-spin' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                </button>
+              )}
             </div>
           )}
 
@@ -567,12 +595,34 @@ function AnalyzePageContent() {
                       )}
                       {analysisResult.data.context.timeline && (
                         <div>
-                          <h3 className="font-semibold text-context-heading mb-2 flex items-center gap-2">
+                          <h3 className="font-semibold text-context-heading mb-3 flex items-center gap-2">
                             <span>⏱️</span>
                             <span>Timeline</span>
                           </h3>
-                          <div className="text-card-foreground leading-relaxed whitespace-pre-line">
-                            {analysisResult.data.context.timeline}
+                          <div className="relative border-l-2 border-context pl-6 ml-3 space-y-4">
+                            {(() => {
+                              try {
+                                const timelineData = JSON.parse(analysisResult.data.context.timeline);
+                                if (Array.isArray(timelineData)) {
+                                  return timelineData.reverse().map((item: { date: string; event: string }, idx: number) => (
+                                    <div key={idx} className="relative">
+                                      <div className="absolute -left-[1.6rem] top-1 w-3 h-3 bg-context-timeline-dot rounded-full border-2 border-context-timeline-dot"></div>
+                                      <p className="text-card-foreground text-sm leading-relaxed">
+                                        <strong className="text-context-body">{item.date}:</strong> {item.event}
+                                      </p>
+                                    </div>
+                                  ));
+                                }
+                              } catch {
+                                // Fall back to splitting by newlines if not JSON
+                                return analysisResult.data.context.timeline.split('\n').filter(line => line.trim()).reverse().map((event, idx) => (
+                                  <div key={idx} className="relative">
+                                    <div className="absolute -left-[1.6rem] top-1 w-3 h-3 bg-context-timeline-dot rounded-full border-2 border-context-timeline-dot"></div>
+                                    <p className="text-card-foreground text-sm leading-relaxed">{event}</p>
+                                  </div>
+                                ));
+                              }
+                            })()}
                           </div>
                         </div>
                       )}
