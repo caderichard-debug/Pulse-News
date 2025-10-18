@@ -101,6 +101,90 @@ body {
     cursor: pointer;
   }
 
+  /* Context/Background Section (Blue theme) - Dark mode aware */
+  .bg-context-section {
+    @apply bg-blue-50 dark:bg-blue-950;
+  }
+  .bg-context-header {
+    @apply bg-blue-100 dark:bg-blue-900;
+  }
+  .border-context {
+    @apply border-blue-200 dark:border-blue-800;
+  }
+  .text-context-heading {
+    @apply text-blue-900 dark:text-blue-100;
+  }
+  .text-context-body {
+    @apply text-blue-800 dark:text-blue-200;
+  }
+  .bg-context-timeline-dot {
+    @apply bg-blue-500 dark:bg-blue-400;
+  }
+  .border-context-timeline-dot {
+    @apply border-blue-50 dark:border-blue-950;
+  }
+
+  /* Statistics Section (Yellow theme) - Dark mode aware */
+  .bg-stats-section {
+    @apply bg-yellow-50 dark:bg-yellow-950;
+  }
+  .bg-stats-card {
+    @apply bg-yellow-50/50 dark:bg-yellow-900/20;
+  }
+  .border-stats {
+    @apply border-yellow-200 dark:border-yellow-800;
+  }
+  .border-stats-accent {
+    @apply border-yellow-400 dark:border-yellow-600;
+  }
+  .text-stats-heading {
+    @apply text-yellow-900 dark:text-yellow-100;
+  }
+
+  /* Fact Check Callout (Blue theme) - Dark mode aware */
+  .bg-factcheck {
+    @apply bg-blue-50 dark:bg-blue-950;
+  }
+  .border-factcheck {
+    @apply border-blue-700 dark:border-blue-400;
+  }
+  .text-factcheck {
+    @apply text-blue-900 dark:text-blue-100;
+  }
+
+  /* Info Alert (Blue theme) - Dark mode aware */
+  .bg-info {
+    @apply bg-blue-50 dark:bg-blue-950;
+  }
+  .border-info {
+    @apply border-blue-200 dark:border-blue-800;
+  }
+  .text-info {
+    @apply text-blue-800 dark:text-blue-200;
+  }
+
+  /* Source Links - Dark mode aware */
+  .text-source-link {
+    @apply text-blue-700 dark:text-blue-400;
+  }
+  .hover\:text-source-link:hover {
+    @apply hover:text-blue-900 dark:hover:text-blue-300;
+  }
+
+  /* Success Alert (Green theme) - Dark mode aware */
+  .bg-success {
+    @apply bg-green-50 dark:bg-green-900/30;
+  }
+  .border-success {
+    @apply border-green-200 dark:border-green-700;
+  }
+  .text-success {
+    @apply text-green-800 dark:text-green-300;
+  }
+  .text-success-muted {
+    @apply text-green-700 dark:text-green-400;
+  }
+
   .text-foreground {
     color: var(--foreground);
   }

@@ -1,3 +1,111 @@
+## 2025-10-17 22:15
+
+**Article URL Analysis Feature** ✅
+
+### What Changed
+
+Implemented a comprehensive on-demand article analysis feature that allows users to paste any article URL and receive instant AI-powered insights, bypassing the need to wait for RSS scraping.
+
+#### Backend Implementation:
+
+- **Database Schema Update**: Added `is_user_submitted` and `submitted_by_user_id` fields to [Article model](backend/app/models.py:186) to distinguish user-submitted articles
+  - Created migration [9c422eafa504_add_user_submitted_articles.py](backend/alembic/versions/9c422eafa504_add_user_submitted_articles.py) with proper data handling for existing articles
+
+- **URLAnalyzer Service**: Created [url_analyzer.py](backend/app/services/url_analyzer.py) to orchestrate the complete analysis pipeline:
+  - URL validation and accessibility checking with async HTTP client
+  - Duplicate article detection by URL
+  - Article content extraction using existing `extract_article_content()`
+  - Source creation/retrieval with domain-based matching
+  - Full AI analysis (summary, sentiment, political lean)
+  - Ethical framework generation
+  - Statistics verification with source tracing
+  - Context generation (background, timeline, significance)
+  - Comprehensive error handling for paywalls, 404s, and extraction failures
+
+- **API Endpoint**: Created [analyze.py](backend/app/routes/analyze.py) with `/analyze/url` POST endpoint:
+  - Accepts any article URL
+  - Works with or without authentication
+  - Associates articles with users when authenticated
+  - Returns complete analysis data in single response
+  - Proper HTTP status codes and error messages
+
+- **Router Registration**: Added analyze router to [main.py](backend/app/main.py:8)
+
+- **Optional Authentication**: Utilized existing `get_optional_user` dependency from [auth.py](backend/app/routes/auth.py:93) for flexible authentication
+
+#### Frontend Implementation:
+
+- **API Client Method**: Added `analyzeURL()` method to [api.ts](frontend/src/lib/api.ts:704) with comprehensive TypeScript types
+
+- **Analyze Page**: Created [/analyze](frontend/src/app/analyze/page.tsx) with full-featured UI:
+  - URL input form with validation
+  - Real-time progress indicators (5 stages: validate → extract → analyze → frameworks → statistics → context)
+  - Authentication detection with login prompt for unauthenticated users
+  - Results display matching article detail page structure:
+    - Article header with source info
+    - AI analysis (summary, sentiment, political lean)
+    - Ethical frameworks with relevance scores
+    - Verified statistics with credibility ratings
+    - Context & background sections
+  - "Analyze Another" workflow
+  - "View in Feed" button to navigate to full article page
+  - Error handling with user-friendly messages
+  - Dark mode support
+  - Mobile-responsive design
+
+- **Navigation Update**: Added "Analyze" 🔍 link to [Navbar.tsx](frontend/src/components/Navbar.tsx:39) between Feed and Sources
+
+### Features
+
+✅ **Instant Analysis**: Submit any article URL for immediate processing
+✅ **Full Pipeline**: Extraction → AI analysis → frameworks → statistics → context
+✅ **Database Persistence**: Articles saved and appear in feed (can be shared/revisited)
+✅ **User Association**: Authenticated users have articles linked to their account
+✅ **Duplicate Detection**: Existing articles return cached analysis instantly
+✅ **Progress Tracking**: Real-time status updates during ~30-second analysis
+✅ **Comprehensive Results**: All analysis data displayed inline
+✅ **Error Handling**: Graceful handling of paywalls, 404s, extraction failures
+✅ **Source Management**: Auto-creates source records for new domains
+
+### Technical Highlights
+
+- Async URL validation with httpx (10-second timeout)
+- Reuses existing extraction and AI analysis services
+- Dummy RSS feed URLs for user-submitted sources (satisfies NOT NULL constraint)
+- Context-aware framework generation using `map_articles_to_frameworks()`
+- Statistics extraction with `extract_statistics_from_article()`
+- Context generation with `generate_article_context()`
+
+### User Experience
+
+1. **Unauthenticated Users**:
+   - Can analyze any article
+   - Results displayed immediately
+   - Prompted to log in to save articles
+
+2. **Authenticated Users**:
+   - Articles automatically saved to database
+   - Appear in feed alongside RSS-scraped articles
+   - Can revisit analyzed articles anytime
+   - Associated with user's account
+
+### Future Enhancements
+
+Potential improvements documented in [ARTICLE_URL_ANALYSIS_PLAN.md](docs/ARTICLE_URL_ANALYSIS_PLAN.md):
+- Batch URL submission
+- Browser extension integration
+- Social sharing of analysis results
+- Analysis history dashboard
+- Export options (PDF/Markdown)
+- Real-time WebSocket progress
+- Custom analysis pipelines
+
+**Code References:**
+- Backend Service: [url_analyzer.py](backend/app/services/url_analyzer.py)
+- API Route: [analyze.py](backend/app/routes/analyze.py)
+- Frontend Page: [analyze/page.tsx](frontend/src/app/analyze/page.tsx)
+- API Client: [api.ts](frontend/src/lib/api.ts:704)
+- Migration: [9c422eafa504_add_user_submitted_articles.py](backend/alembic/versions/9c422eafa504_add_user_submitted_articles.py)
 ## 2025-10-18 17:00
 
 **Add Responsive Navbar Tab Layout** ✅
