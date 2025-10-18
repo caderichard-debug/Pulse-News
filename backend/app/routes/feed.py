@@ -13,7 +13,7 @@ from ..models import (
 from ..routes.auth import get_optional_user
 from pydantic import BaseModel
 from typing import List, Optional, Dict
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 
 router = APIRouter(prefix="/feed", tags=["feed"])
@@ -62,6 +62,9 @@ async def get_feed_articles(
     topic: Optional[str] = Query(default=None, description="Filter by topic name"),
     source_id: Optional[int] = Query(default=None, description="Filter by source ID"),
     political_lean: Optional[str] = Query(default=None, description="Filter by political lean: left, center, right"),
+    date_from: Optional[datetime] = Query(default=None, description="Filter articles published on or after this date"),
+    date_to: Optional[datetime] = Query(default=None, description="Filter articles published on or before this date"),
+    date_range: Optional[str] = Query(default=None, description="Preset date range: today, week, month, year"),
     sort_by: str = Query(default="newest", description="Sort order: newest, oldest, sentiment_high, sentiment_low"),
     only_analyzed: bool = Query(default=False, description="Show only articles with analysis"),
     only_verified_stats: bool = Query(default=False, description="Show only articles with verified statistics"),
@@ -80,6 +83,18 @@ async def get_feed_articles(
         .where(Article.processing_status == ProcessingStatus.COMPLETED)
     )
 
+    # Handle preset date ranges
+    if date_range:
+        now = datetime.utcnow()
+        if date_range == "today":
+            date_from = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif date_range == "week":
+            date_from = now - timedelta(days=7)
+        elif date_range == "month":
+            date_from = now - timedelta(days=30)
+        elif date_range == "year":
+            date_from = now - timedelta(days=365)
+
     # Apply filters
     if topic:
         query = query.where(Article.topic_category == topic)
@@ -91,6 +106,12 @@ async def get_feed_articles(
         # Convert string to enum
         lean_enum = PoliticalLean(political_lean)
         query = query.where(ArticleAnalysis.political_lean == lean_enum)
+
+    if date_from:
+        query = query.where(Article.published_at >= date_from)
+
+    if date_to:
+        query = query.where(Article.published_at <= date_to)
 
     if only_analyzed:
         query = query.where(ArticleAnalysis.id.isnot(None))

@@ -47,6 +47,7 @@ export default function FeedPage() {
   const [selectedTopic, setSelectedTopic] = useState<string>('');
   const [selectedSource, setSelectedSource] = useState<number | null>(null);
   const [selectedLean, setSelectedLean] = useState<string>('');
+  const [dateRange, setDateRange] = useState<string>('');
   const [sortBy, setSortBy] = useState('newest');
   const [onlyAnalyzed, setOnlyAnalyzed] = useState(true); // Default to true
   const [onlyVerifiedStats, setOnlyVerifiedStats] = useState(false);
@@ -62,6 +63,7 @@ export default function FeedPage() {
         topic: selectedTopic || undefined,
         source_id: selectedSource || undefined,
         political_lean: selectedLean || undefined,
+        date_range: dateRange || undefined,
         sort_by: sortBy,
         only_analyzed: onlyAnalyzed,
         only_verified_stats: onlyVerifiedStats,
@@ -75,12 +77,12 @@ export default function FeedPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed, onlyVerifiedStats]);
+  }, [page, selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats]);
 
   useEffect(() => {
     loadFeedData();
     loadFilters();
-  }, [selectedTopic, selectedSource, selectedLean, sortBy, onlyAnalyzed, onlyVerifiedStats, page, loadFeedData]);
+  }, [selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, page, loadFeedData]);
 
   async function loadFilters() {
     try {
@@ -156,7 +158,7 @@ export default function FeedPage() {
 
           {/* Filters */}
           <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
           {/* Topic filter */}
           <div>
             <label className="block text-sm font-medium text-card-foreground mb-1">Topic</label>
@@ -203,6 +205,22 @@ export default function FeedPage() {
               <option value="left">Left</option>
               <option value="center">Center</option>
               <option value="right">Right</option>
+            </select>
+          </div>
+
+          {/* Date range filter */}
+          <div>
+            <label className="block text-sm font-medium text-card-foreground mb-1">Date Range</label>
+            <select
+              value={dateRange}
+              onChange={(e) => { setDateRange(e.target.value); setPage(1); }}
+              className="w-full px-3 py-2 border border-border rounded-md text-foreground"
+            >
+              <option value="">All Time</option>
+              <option value="today">Today</option>
+              <option value="week">Past Week</option>
+              <option value="month">Past Month</option>
+              <option value="year">Past Year</option>
             </select>
           </div>
 
