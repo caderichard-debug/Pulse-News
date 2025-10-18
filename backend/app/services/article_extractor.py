@@ -31,6 +31,9 @@ def extract_article_content(url: str, timeout: int = 10) -> Dict[str, any]:
     """
     result = {
         'content': None,
+        'title': None,
+        'author': None,
+        'published_date': None,
         'method': None,
         'word_count': 0,
         'success': False
@@ -53,12 +56,34 @@ def extract_article_content(url: str, timeout: int = 10) -> Dict[str, any]:
             output_format='txt'
         )
 
+        # Extract metadata using trafilatura
+        metadata = trafilatura.extract_metadata(html)
+
         if content and len(content) > 200:  # Minimum reasonable article length
             result['content'] = content
             result['method'] = 'trafilatura'
             result['word_count'] = len(content.split())
             result['success'] = True
-            logger.debug(f"Extracted {result['word_count']} words using trafilatura")
+
+            # Add metadata if available
+            if metadata:
+                result['title'] = metadata.title
+                result['author'] = metadata.author
+                result['published_date'] = metadata.date
+
+            # Fallback to BeautifulSoup for title if trafilatura didn't get it
+            if not result['title']:
+                soup = BeautifulSoup(html, 'html.parser')
+                title_tag = soup.find('title')
+                if title_tag:
+                    result['title'] = title_tag.get_text().strip()
+                # Try og:title meta tag
+                if not result['title']:
+                    og_title = soup.find('meta', property='og:title')
+                    if og_title and og_title.get('content'):
+                        result['title'] = og_title.get('content').strip()
+
+            logger.debug(f"Extracted {result['word_count']} words using trafilatura (title: {result['title']})")
             return result
 
         # Method 2: readability-lxml (fallback)
@@ -72,7 +97,23 @@ def extract_article_content(url: str, timeout: int = 10) -> Dict[str, any]:
             result['method'] = 'readability'
             result['word_count'] = len(text.split())
             result['success'] = True
-            logger.debug(f"Extracted {result['word_count']} words using readability")
+
+            # Extract title using readability
+            result['title'] = doc.title()
+
+            # Fallback to BeautifulSoup for title if readability didn't get it
+            if not result['title']:
+                soup = BeautifulSoup(html, 'html.parser')
+                title_tag = soup.find('title')
+                if title_tag:
+                    result['title'] = title_tag.get_text().strip()
+                # Try og:title meta tag
+                if not result['title']:
+                    og_title = soup.find('meta', property='og:title')
+                    if og_title and og_title.get('content'):
+                        result['title'] = og_title.get('content').strip()
+
+            logger.debug(f"Extracted {result['word_count']} words using readability (title: {result['title']})")
             return result
 
         logger.warning(f"Both extraction methods failed for {url}")

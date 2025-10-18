@@ -70,6 +70,7 @@ export default function Navbar() {
 
   const navItems = [
     { name: 'Feed', path: '/feed', icon: '📰', adminOnly: false },
+    { name: 'Analyze', path: '/analyze', icon: '🔍', adminOnly: false },
     { name: 'Sources', path: '/sources', icon: '📑', adminOnly: false },
     { name: 'Analytics', path: '/analytics', icon: '📊', adminOnly: false },
     { name: 'Preferences', path: '/preferences', icon: '⚙️', adminOnly: false },
@@ -115,8 +116,16 @@ export default function Navbar() {
               .map((item) => (
                 <button
                   key={item.path}
-                  onClick={() => router.push(item.path)}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex flex-col xl:flex-row items-center gap-0.5 xl:gap-1 ${
+                  onClick={() => {
+                    if (item.path === '/analyze' && pathname === '/analyze') {
+                      // Reset the analyze page by navigating to clean URL
+                      router.push('/analyze');
+                      window.location.href = '/analyze';
+                    } else {
+                      router.push(item.path);
+                    }
+                  }}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     pathname === item.path || (item.path === '/admin' && pathname.startsWith('/admin'))
                       ? item.adminOnly
                         ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
