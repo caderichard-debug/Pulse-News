@@ -122,6 +122,26 @@ class ApiClient {
     return this.request('/auth/logout', { method: 'POST' });
   }
 
+  async deleteAccount() {
+    const response = await fetch(`${this.baseUrl}/auth/account`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({
+        detail: 'Failed to delete account',
+      }));
+      throw new Error(error.detail);
+    }
+
+    // Clear token after successful deletion
+    this.clearToken();
+    return;
+  }
+
   async requestPasswordReset(data: { email: string }) {
     return this.request<{ message: string }>('/auth/request-password-reset', {
       method: 'POST',
