@@ -203,6 +203,7 @@ function ResetPasswordForm() {
           </Link>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

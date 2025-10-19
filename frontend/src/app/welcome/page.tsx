@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Footer from '@/components/Footer';
 
 export default function WelcomePage() {
   const router = useRouter();
@@ -186,14 +187,7 @@ export default function WelcomePage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="border-t border-border bg-card/50 backdrop-blur mt-16">
-        <div className="max-w-6xl mx-auto px-4 py-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Pulse News. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

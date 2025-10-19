@@ -8,6 +8,7 @@ import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
 import FavoriteButton from '@/components/FavoriteButton';
+import Footer from '@/components/Footer';
 
 interface Article {
   id: number;
@@ -551,6 +552,7 @@ export default function FeedPage() {
           )}
         </div>
       </div>
+      <Footer />
     </>
   );
 }

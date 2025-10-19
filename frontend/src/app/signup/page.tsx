@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import Footer from '@/components/Footer';
 
 interface Topic {
   id: number;
@@ -259,6 +260,7 @@ export default function SignupPage() {
           </a>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

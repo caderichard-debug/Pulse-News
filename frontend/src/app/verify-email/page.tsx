@@ -52,6 +52,7 @@ function VerifyEmailContent() {
           <p className="text-yellow-600 font-medium">{message}</p>
         )}
       </div>
+      <Footer />
     </div>
   );
 }

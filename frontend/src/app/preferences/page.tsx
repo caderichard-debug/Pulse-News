@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
 import DarkModeToggle from '@/components/DarkModeToggle';
+import Footer from '@/components/Footer';
 
 interface TopicPreference {
   id: number;
@@ -731,6 +732,7 @@ function PreferencesContent() {
         </div>
       </div>
     </div>
+    <Footer />
     </>
   );
 }

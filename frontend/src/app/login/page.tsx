@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import Footer from '@/components/Footer';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -104,6 +105,7 @@ export default function LoginPage() {
           </a>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

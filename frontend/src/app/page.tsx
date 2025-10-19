@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import Image from 'next/image';
+import Footer from '@/components/Footer';
 
 export default function Home() {
   const router = useRouter();
@@ -193,6 +194,7 @@ export default function Home() {
           </a>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }
