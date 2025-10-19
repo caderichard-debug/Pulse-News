@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import Image from 'next/image';
 
 export default function Home() {
   const router = useRouter();
@@ -30,8 +31,15 @@ export default function Home() {
       <div className="max-w-6xl mx-auto px-4 py-16">
         {/* Hero Section */}
         <div className="text-center mb-16">
-          <h1 className="text-6xl font-bold text-foreground mb-4">
-            ⚡ <span className="text-primary">Pulse</span>
+          <h1 className="text-6xl font-bold text-foreground mb-4 flex items-center justify-center space-x-3">
+            <Image
+              src="/pulse-icon.png"
+              alt="Pulse Logo"
+              width={56}
+              height={56}
+              className="w-14 h-14"
+            />
+            <span className="text-primary">Pulse</span>
           </h1>
           <p className="text-2xl text-muted-foreground mb-8">
             News aggregation with ethical clarity
