@@ -86,7 +86,7 @@ async def delete_account(
 **2.1. Update Navbar component** (`/frontend/src/components/Navbar.tsx`)
 - Add logic to detect if user is authenticated
 - If authenticated, show "Contact us" link instead of "Sign up"
-- Link should go to email: `mailto:support@pulse-news.com` (or appropriate email)
+- Link should go to email: `mailto:support@pulsenews.app` (or appropriate email)
 
 **2.2. Update landing page footer** (`/frontend/src/app/page.tsx`)
 - Keep "Sign up" link on unauthenticated landing page

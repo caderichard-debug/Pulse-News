@@ -13,7 +13,7 @@ Add an unobtrusive footer section with links to key pages: Contact Us, Account S
 
 ## Footer Links
 
-1. **Contact Us** - mailto:support@pulse-news.com (already exists in Navbar)
+1. **Contact Us** - mailto:support@pulsenews.app (already exists in Navbar)
 2. **Account Settings** - `/preferences?tab=account`
 3. **Newsletter Preferences** - `/preferences?tab=topics` (or new dedicated page)
 4. **How It Works** - `/how-it-works` (already exists)
@@ -116,7 +116,7 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6 text-sm text-muted-foreground">
           <a
-            href="mailto:support@pulse-news.com"
+            href="mailto:support@pulsenews.app"
             className="hover:text-foreground transition-colors"
           >
             Contact Us
@@ -267,7 +267,7 @@ export default function PrivacyPolicyPage() {
 - Effective date
 
 ### 8. Contact Information
-- Email: support@pulse-news.com
+- Email: support@pulsenews.app
 - How to exercise your rights
 
 ---
