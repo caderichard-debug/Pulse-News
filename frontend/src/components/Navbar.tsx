@@ -70,9 +70,7 @@ export default function Navbar() {
 
   const navItems = [
     { name: 'Feed', path: '/feed', icon: '📰', adminOnly: false },
-    { name: 'Analyze', path: '/analyze', icon: '🔍', adminOnly: false },
-    { name: 'Sources', path: '/sources', icon: '📑', adminOnly: false },
-    { name: 'Analytics', path: '/analytics', icon: '📊', adminOnly: false },
+    { name: 'Insights', path: '/insights', icon: '🔍', adminOnly: false },
     { name: 'Preferences', path: '/preferences', icon: '⚙️', adminOnly: false },
     { name: 'How It Works', path: '/how-it-works', icon: '💡', adminOnly: false },
     { name: 'Admin', path: '/admin', icon: '⚡', adminOnly: true },
@@ -126,7 +124,9 @@ export default function Navbar() {
                     }
                   }}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex flex-col xl:flex-row xl:gap-1 items-center ${
-                    pathname === item.path || (item.path === '/admin' && pathname.startsWith('/admin'))
+                    pathname === item.path ||
+                    (item.path === '/admin' && pathname.startsWith('/admin')) ||
+                    (item.path === '/insights' && (pathname === '/analyze' || pathname === '/sources' || pathname === '/analytics'))
                       ? item.adminOnly
                         ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
                         : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
@@ -152,7 +152,7 @@ export default function Navbar() {
             )}
             </button>
             <a
-              href="mailto:support@pulse-news.com"
+              href="mailto:support@pulsenews.app"
               className="px-4 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground hidden sm:block"
             >
               Contact us
@@ -180,7 +180,9 @@ export default function Navbar() {
                     key={item.path}
                     onClick={() => router.push(item.path)}
                     className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors flex items-center gap-2 ${
-                      pathname === item.path || (item.path === '/admin' && pathname.startsWith('/admin'))
+                      pathname === item.path ||
+                      (item.path === '/admin' && pathname.startsWith('/admin')) ||
+                      (item.path === '/insights' && (pathname === '/analyze' || pathname === '/sources' || pathname === '/analytics'))
                         ? item.adminOnly
                           ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
                           : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
@@ -195,7 +197,7 @@ export default function Navbar() {
                 ))}
               {/* Contact us link in mobile menu */}
               <a
-                href="mailto:support@pulse-news.com"
+                href="mailto:support@pulsenews.app"
                 className="w-full text-left px-4 py-3 text-sm font-medium transition-colors flex items-center gap-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               >
                 <span>✉️</span>
