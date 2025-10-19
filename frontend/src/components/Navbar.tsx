@@ -12,6 +12,7 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const [userName, setUserName] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [insightsDropdownOpen, setInsightsDropdownOpen] = useState<boolean>(false);
@@ -24,6 +25,7 @@ export default function Navbar() {
       .then((user) => {
         if (mounted && user && typeof user.name === 'string') {
           setUserName(user.name);
+          setIsAdmin(user.is_admin || false);
         }
       })
       .catch(() => {})
@@ -97,11 +99,13 @@ export default function Navbar() {
   // Check if user is authenticated
   const isAuthenticated = !!userName;
 
-  // Simplified navigation - same for all users
+  // Navigation items - simplified for all users
   const navItems = [
-    { name: 'Feed', path: '/feed', icon: '📰', authRequired: true },
-    { name: 'Insights', path: '/insights', icon: '🔍', authRequired: false },
-    { name: 'How It Works', path: '/how-it-works', icon: '💡', authRequired: false },
+    { name: 'Feed', path: '/feed', icon: '📰', authRequired: true, adminOnly: false },
+    { name: 'Insights', path: '/insights', icon: '🔍', authRequired: false, adminOnly: false },
+    { name: 'Preferences', path: '/preferences', icon: '⚙️', authRequired: true, adminOnly: false },
+    { name: 'How It Works', path: '/how-it-works', icon: '💡', authRequired: false, adminOnly: false },
+    { name: 'Admin', path: '/admin', icon: '⚡', authRequired: true, adminOnly: true },
   ];
 
   return (
@@ -138,7 +142,7 @@ export default function Navbar() {
           {/* Desktop Navigation Links (hidden on mobile) */}
           <div className="hidden lg:flex items-center gap-1 absolute left-1/2 transform -translate-x-1/2">
             {navItems
-              .filter((item) => !item.authRequired || isAuthenticated)
+              .filter((item) => (!item.authRequired || isAuthenticated) && (!item.adminOnly || isAdmin))
               .map((item) => {
                 // Special handling for Insights dropdown
                 if (item.path === '/insights') {
@@ -210,8 +214,12 @@ export default function Navbar() {
                       }
                     }}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex flex-col xl:flex-row xl:gap-1 items-center ${
-                      pathname === item.path
-                        ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
+                      pathname === item.path || (item.path === '/admin' && pathname.startsWith('/admin'))
+                        ? item.adminOnly
+                          ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                          : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
+                        : item.adminOnly
+                        ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                     }`}
                   >
@@ -263,15 +271,20 @@ export default function Navbar() {
           >
             <div className="py-2 space-y-1">
               {navItems
-                .filter((item) => !item.authRequired || isAuthenticated)
+                .filter((item) => (!item.authRequired || isAuthenticated) && (!item.adminOnly || isAdmin))
                 .map((item) => (
                   <button
                     key={item.path}
                     onClick={() => router.push(item.path)}
                     className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors flex items-center gap-2 ${
                       pathname === item.path ||
+                      (item.path === '/admin' && pathname.startsWith('/admin')) ||
                       (item.path === '/insights' && (pathname === '/analyze' || pathname === '/sources' || pathname === '/analytics'))
-                        ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
+                        ? item.adminOnly
+                          ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                          : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
+                        : item.adminOnly
+                        ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                     }`}
                   >
