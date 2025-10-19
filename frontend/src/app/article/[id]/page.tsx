@@ -8,6 +8,7 @@ import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
 import FavoriteButton from '@/components/FavoriteButton';
+import Footer from '@/components/Footer';
 
 interface ArticleDetail {
   id: number;
@@ -562,6 +563,7 @@ export default function ArticleDetailPage() {
       )}
         </div>
       </div>
+      <Footer />
     </>
   );
 }

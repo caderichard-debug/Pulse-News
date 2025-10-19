@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
 import DarkModeToggle from '@/components/DarkModeToggle';
+import Footer from '@/components/Footer';
 
 interface TopicPreference {
   id: number;
@@ -19,6 +20,7 @@ interface Source {
   source_id: number;
   name: string;
   url: string;
+  description?: string | null;
   trust_score: number;
   organizational_bias: string | null;
   subscribed: boolean;
@@ -28,6 +30,115 @@ interface Settings {
   source_discovery_mode: string;
   article_order_preference: string;
   articles_per_topic_default: number;
+}
+
+// Delete Account Button Component
+function DeleteAccountButton() {
+  const router = useRouter();
+  const [showDialog, setShowDialog] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleDeleteAccount = async () => {
+    if (confirmText !== 'DELETE') {
+      setError('Please type DELETE to confirm');
+      return;
+    }
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      await api.deleteAccount();
+      // Clear local storage
+      localStorage.clear();
+      sessionStorage.clear();
+      // Redirect to landing page
+      router.push('/');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete account');
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => setShowDialog(true)}
+        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+      >
+        Delete Account
+      </button>
+
+      {/* Confirmation Dialog */}
+      {showDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-red-600 dark:text-red-400 mb-4">
+              Delete Account
+            </h3>
+            <p className="text-foreground mb-4">
+              Are you sure you want to delete your account? This will permanently delete:
+            </p>
+            <ul className="list-disc list-inside text-muted-foreground mb-4 space-y-1">
+              <li>Your profile information</li>
+              <li>All preferences and settings</li>
+              <li>Your saved articles and favorites</li>
+              <li>Newsletter history</li>
+            </ul>
+            <p className="text-red-600 dark:text-red-400 font-semibold mb-4">
+              This action cannot be undone!
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Type <span className="font-mono font-bold">DELETE</span> to confirm:
+              </label>
+              <input
+                type="text"
+                value={confirmText}
+                onChange={(e) => {
+                  setConfirmText(e.target.value);
+                  setError(null);
+                }}
+                className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-foreground bg-background"
+                placeholder="DELETE"
+                disabled={deleting}
+              />
+            </div>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowDialog(false);
+                  setConfirmText('');
+                  setError(null);
+                }}
+                disabled={deleting}
+                className="px-4 py-2 border border-border text-foreground rounded-lg hover:bg-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleting || confirmText !== 'DELETE'}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {deleting ? 'Deleting...' : 'Delete Account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 }
 
 function PreferencesContent() {
@@ -387,6 +498,11 @@ function PreferencesContent() {
                             </a>
                           </div>
                         </div>
+                        {source.description && (
+                          <p className="mt-2 ml-8 text-sm text-muted-foreground">
+                            {source.description}
+                          </p>
+                        )}
                         <div className="mt-2 flex items-center gap-2 ml-8">
                           <span className="text-sm text-muted-foreground">
                             Trust Score: {source.trust_score?.toFixed(1) || 'N/A'}
@@ -563,6 +679,17 @@ function PreferencesContent() {
                     Change Password
                   </button>
                 </div>
+
+                {/* Danger Zone - Delete Account */}
+                <div className="pt-6 border-t border-red-200 dark:border-red-900">
+                  <h3 className="text-lg font-medium text-red-600 dark:text-red-400 mb-2">
+                    Danger Zone
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Permanently delete your account and all associated data. This action cannot be undone.
+                  </p>
+                  <DeleteAccountButton />
+                </div>
               </div>
             </div>
 
@@ -605,6 +732,7 @@ function PreferencesContent() {
         </div>
       </div>
     </div>
+    <Footer />
     </>
   );
 }

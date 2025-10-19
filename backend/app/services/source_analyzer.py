@@ -4,10 +4,13 @@ Source Analyzer Service
 Analyzes news sources to determine organizational bias using AI.
 This service uses OpenAI to analyze the domain name, source name, and article content
 to infer the organizational bias of user-submitted sources.
+
+Also provides functionality to analyze and create sources from RSS feed URLs.
 """
 
 import logging
-from typing import Optional, Dict, Any
+import feedparser
+from typing import Optional, Dict, Any, List
 from urllib.parse import urlparse
 from sqlmodel import Session, select
 
@@ -196,3 +199,232 @@ Guidelines:
         }
 
         return bias_mapping.get(bias_str.lower(), OrganizationalBias.CENTER)
+
+    def analyze_rss_feed(self, rss_url: str) -> Dict[str, Any]:
+        """
+        Analyze a source by its RSS feed URL and generate complete metadata.
+
+        Args:
+            rss_url: RSS feed URL to analyze
+
+        Returns:
+            Dict containing:
+                - name: Source name
+                - url: Source website URL
+                - description: AI-generated description
+                - organizational_bias: Political lean (OrganizationalBias enum)
+                - bias_description: Explanation of bias
+                - trust_score: Credibility rating (0.0-1.0)
+
+        Raises:
+            ValueError: If RSS feed cannot be fetched or parsed
+        """
+        logger.info(f"Analyzing source from RSS URL: {rss_url}")
+
+        # Step 1: Fetch RSS feed
+        feed_data = self._fetch_feed(rss_url)
+
+        # Step 2: Extract basic metadata
+        metadata = self._extract_feed_metadata(feed_data)
+
+        # Step 3: Sample recent articles
+        article_samples = self._sample_feed_articles(feed_data, max_articles=5)
+
+        # Step 4: Generate AI analysis
+        ai_analysis = self._generate_comprehensive_analysis(metadata, article_samples)
+
+        # Combine results
+        result = {
+            "name": metadata["name"],
+            "url": metadata["url"],
+            "rss_feed_url": rss_url,
+            "description": ai_analysis["description"],
+            "organizational_bias": ai_analysis["organizational_bias"],
+            "bias_description": ai_analysis["bias_description"],
+            "trust_score": ai_analysis["trust_score"],
+        }
+
+        logger.info(f"Source analysis complete: {result['name']}")
+        return result
+
+    def _fetch_feed(self, rss_url: str) -> feedparser.FeedParserDict:
+        """
+        Fetch and parse RSS feed.
+
+        Args:
+            rss_url: RSS feed URL
+
+        Returns:
+            Parsed feed data
+
+        Raises:
+            ValueError: If feed cannot be fetched or parsed
+        """
+        try:
+            feed = feedparser.parse(rss_url)
+
+            if feed.bozo and not feed.entries:
+                logger.error(f"RSS feed has critical parsing errors: {rss_url}")
+                raise ValueError("RSS feed has critical parsing errors")
+
+            if not feed.entries:
+                raise ValueError("RSS feed contains no entries")
+
+            return feed
+
+        except Exception as e:
+            logger.error(f"Error fetching RSS feed {rss_url}: {str(e)}")
+            raise ValueError(f"Failed to fetch RSS feed: {str(e)}")
+
+    def _extract_feed_metadata(self, feed: feedparser.FeedParserDict) -> Dict[str, str]:
+        """
+        Extract basic metadata from RSS feed.
+
+        Args:
+            feed: Parsed feed data
+
+        Returns:
+            Dict with name and url
+        """
+        feed_info = feed.get("feed", {})
+
+        # Extract source name (prefer title, fallback to link domain)
+        name = feed_info.get("title", "Unknown Source")
+
+        # Extract source URL (prefer link, fallback to entries)
+        url = feed_info.get("link", "")
+        if not url and feed.entries:
+            # Try to extract domain from first entry link
+            first_entry_link = feed.entries[0].get("link", "")
+            if first_entry_link:
+                parsed = urlparse(first_entry_link)
+                url = f"{parsed.scheme}://{parsed.netloc}"
+
+        return {
+            "name": name,
+            "url": url
+        }
+
+    def _sample_feed_articles(self, feed: feedparser.FeedParserDict, max_articles: int = 5) -> List[Dict]:
+        """
+        Sample recent articles from feed for analysis.
+
+        Args:
+            feed: Parsed feed data
+            max_articles: Maximum number of articles to sample
+
+        Returns:
+            List of article samples with title and summary
+        """
+        samples = []
+
+        for entry in feed.entries[:max_articles]:
+            title = entry.get("title", "")
+            summary = entry.get("summary", "") or entry.get("description", "")
+
+            # Clean HTML tags from summary
+            import re
+            summary = re.sub(r'<[^>]+>', '', summary)
+
+            samples.append({
+                "title": title,
+                "summary": summary[:300]  # Limit summary length
+            })
+
+        return samples
+
+    def _generate_comprehensive_analysis(self, metadata: Dict, article_samples: List[Dict]) -> Dict[str, Any]:
+        """
+        Use AI to analyze source characteristics comprehensively.
+
+        Args:
+            metadata: Basic source metadata (name, url)
+            article_samples: Sample articles for analysis
+
+        Returns:
+            Dict with AI-generated analysis:
+                - description: Source description
+                - organizational_bias: Political lean (OrganizationalBias enum)
+                - bias_description: Explanation of bias
+                - trust_score: Credibility rating
+        """
+        if not openai_client.is_available():
+            logger.warning("OpenAI API not available, using defaults")
+            return self._get_default_analysis(metadata)
+
+        # Build prompt with metadata and samples
+        articles_text = "\n".join([
+            f"- {sample['title']}\n  {sample['summary']}"
+            for sample in article_samples
+        ])
+
+        prompt = f"""Analyze this news source and provide comprehensive information:
+
+Source Name: {metadata['name']}
+Source URL: {metadata['url']}
+
+Recent Articles:
+{articles_text}
+
+Please provide:
+1. A concise description (1-2 sentences) of this news source, highlighting its focus, reputation, and editorial stance.
+2. The organizational bias on a political spectrum: "left", "center-left", "center", "center-right", or "right"
+3. A brief explanation (1 sentence) of why this bias rating was assigned
+4. A trust score from 0.0 to 1.0, where 1.0 is highly credible and 0.0 is not credible (based on journalistic standards, fact-checking record, and reputation)
+
+Format your response as JSON:
+{{
+    "description": "source description here",
+    "organizational_bias": "center",
+    "bias_description": "explanation here",
+    "trust_score": 0.85
+}}
+"""
+
+        try:
+            response = openai_client.client.chat.completions.create(
+                model=settings.ai_model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a media analyst specializing in news source credibility and bias assessment. Provide objective, evidence-based analysis."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.3,
+                response_format={"type": "json_object"}
+            )
+
+            import json
+            result = json.loads(response.choices[0].message.content)
+
+            # Map bias string to enum
+            bias_str = result.get("organizational_bias", "center")
+            organizational_bias = self._map_bias_string_to_enum(bias_str)
+
+            # Validate trust score
+            trust_score = float(result.get("trust_score", 0.8))
+            trust_score = max(0.0, min(1.0, trust_score))  # Clamp to [0, 1]
+
+            return {
+                "description": result.get("description", f"News source: {metadata['name']}"),
+                "organizational_bias": organizational_bias,
+                "bias_description": result.get("bias_description", ""),
+                "trust_score": trust_score
+            }
+
+        except Exception as e:
+            logger.error(f"Error generating comprehensive AI analysis: {str(e)}")
+            return self._get_default_analysis(metadata)
+
+    def _get_default_analysis(self, metadata: Dict) -> Dict[str, Any]:
+        """Return default analysis when AI is unavailable."""
+        return {
+            "description": f"News source providing coverage from {metadata['name']}",
+            "organizational_bias": OrganizationalBias.CENTER,
+            "bias_description": "Unable to determine bias",
+            "trust_score": 0.7
+        }
