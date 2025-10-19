@@ -2,8 +2,9 @@
 
 export default function Footer() {
   return (
-    <footer className="border-t border-border bg-card mt-auto">
+    <footer className="mt-auto w-full border-t border-border bg-card">
       <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Links Row */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6 text-sm text-muted-foreground">
           <a
             href="mailto:support@pulsenews.app"
@@ -40,6 +41,8 @@ export default function Footer() {
             Privacy Policy
           </a>
         </div>
+
+        {/* Copyright Row */}
         <div className="text-center text-xs text-muted-foreground mt-4">
           © {new Date().getFullYear()} Pulse News. All rights reserved.
         </div>

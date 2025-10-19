@@ -12,15 +12,21 @@ export default function WelcomePage() {
       {/* Simple Header */}
       <header className="border-b border-border bg-card/50 dark:bg-card/30 backdrop-blur transition-colors">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Image
-              src="/pulse-icon.png"
-              alt="Pulse Logo"
-              width={32}
-              height={32}
-              className="w-8 h-8 object-contain"
-            />
-            <span className="text-2xl font-bold text-primary">Pulse</span>
+          {/* Logo/Brand */}
+          <div className="flex items-center">
+            <button
+              onClick={() => router.push('/feed')}
+              className="flex items-center gap-2 text-2xl font-bold text-primary hover:text-primary-hover transition-colors"
+            >
+              <Image
+                src="/pulse-icon.png"
+                alt="Pulse Logo"
+                width={32}
+                height={32}
+                className="w-8 h-8 object-contain"
+              />
+              <span className="hidden sm:inline">Pulse</span>
+            </button>
           </div>
           <div className="flex gap-3">
             <a
