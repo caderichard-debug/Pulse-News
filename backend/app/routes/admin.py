@@ -3,7 +3,7 @@ Admin routes for monitoring and manual job triggers.
 """
 
 import logging
-from fastapi import APIRouter, Depends, BackgroundTasks
+from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, status
 from sqlmodel import Session, select, func
 from ..models import Article, Source, Framework, User, ProcessingStatus
 from ..database import get_session
@@ -15,10 +15,17 @@ from ..jobs.tasks import (
 from ..jobs.scheduler import get_job_status
 from datetime import datetime, timedelta
 from typing import Dict, Any
+from pydantic import BaseModel, HttpUrl
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+# Request models
+class CreateSourceRequest(BaseModel):
+    """Request model for creating a source from RSS URL."""
+    rss_url: str
 
 
 @router.get("/config/check")
@@ -363,3 +370,90 @@ def get_sources_status(session: Session = Depends(get_session)):
         })
 
     return source_stats
+
+
+@router.post("/sources/from-url", status_code=status.HTTP_201_CREATED)
+def create_source_from_url(
+    request: CreateSourceRequest,
+    session: Session = Depends(get_session)
+) -> Dict[str, Any]:
+    """
+    Create a new source by analyzing an RSS feed URL.
+
+    This endpoint:
+    1. Fetches the RSS feed from the URL
+    2. Extracts source metadata (name, URL)
+    3. Uses AI to analyze source characteristics (bias, credibility, description)
+    4. Creates source entry in database
+
+    Args:
+        request: CreateSourceRequest with rss_url
+
+    Returns:
+        Created source object with full metadata
+
+    Raises:
+        400: If RSS feed already exists or is invalid
+        500: If analysis or creation fails
+    """
+    from ..services.source_analyzer import SourceAnalyzer
+
+    # Check if source with this RSS URL already exists
+    existing_source = session.exec(
+        select(Source).where(Source.rss_feed_url == request.rss_url)
+    ).first()
+
+    if existing_source:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Source with this RSS feed URL already exists: {existing_source.name}"
+        )
+
+    try:
+        # Analyze RSS feed
+        analyzer = SourceAnalyzer(db=session)
+        analysis = analyzer.analyze_rss_feed(request.rss_url)
+
+        # Create new source
+        new_source = Source(
+            name=analysis["name"],
+            url=analysis["url"],
+            rss_feed_url=request.rss_url,
+            description=analysis["description"],
+            organizational_bias=analysis["organizational_bias"],
+            bias_description=analysis["bias_description"],
+            trust_score=analysis["trust_score"],
+            is_active=True
+        )
+
+        session.add(new_source)
+        session.commit()
+        session.refresh(new_source)
+
+        logger.info(f"Created new source from URL: {new_source.name} ({request.rss_url})")
+
+        return {
+            "id": new_source.id,
+            "name": new_source.name,
+            "url": new_source.url,
+            "rss_feed_url": new_source.rss_feed_url,
+            "description": new_source.description,
+            "organizational_bias": new_source.organizational_bias.value if new_source.organizational_bias else None,
+            "bias_description": new_source.bias_description,
+            "trust_score": new_source.trust_score,
+            "is_active": new_source.is_active,
+            "created_at": new_source.created_at.isoformat()
+        }
+
+    except ValueError as e:
+        logger.error(f"Invalid RSS feed URL: {request.rss_url} - {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid RSS feed: {str(e)}"
+        )
+    except Exception as e:
+        logger.error(f"Error creating source from URL: {request.rss_url} - {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create source: {str(e)}"
+        )
