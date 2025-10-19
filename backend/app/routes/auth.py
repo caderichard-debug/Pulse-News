@@ -392,3 +392,65 @@ def logout():
     by deleting the token. This endpoint is provided for consistency.
     """
     return {"message": "Logged out successfully"}
+
+
+@router.delete("/account", status_code=status.HTTP_204_NO_CONTENT)
+def delete_account(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Delete the authenticated user's account and all associated data.
+
+    This is a permanent, destructive operation that:
+    - Deletes user topic preferences
+    - Deletes user source subscriptions
+    - Deletes newsletters associated with the user
+    - Deletes user favorites
+    - Deletes the user account itself
+
+    Requires: Authorization header with Bearer token
+    Returns: 204 No Content on success
+    """
+    from ..models import Newsletter, UserSourceSubscription, ArticleFavorite
+
+    try:
+        # Delete user topic preferences
+        for pref in session.exec(
+            select(UserTopicPreference).where(UserTopicPreference.user_id == current_user.id)
+        ):
+            session.delete(pref)
+
+        # Delete user source subscriptions
+        for subscription in session.exec(
+            select(UserSourceSubscription).where(UserSourceSubscription.user_id == current_user.id)
+        ):
+            session.delete(subscription)
+
+        # Delete user favorites
+        for favorite in session.exec(
+            select(ArticleFavorite).where(ArticleFavorite.user_id == current_user.id)
+        ):
+            session.delete(favorite)
+
+        # Delete newsletters
+        for newsletter in session.exec(
+            select(Newsletter).where(Newsletter.user_id == current_user.id)
+        ):
+            session.delete(newsletter)
+
+        # Finally, delete the user
+        session.delete(current_user)
+        session.commit()
+
+        logger.info(f"Account deleted for user: {current_user.email}")
+
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Error deleting account for user {current_user.email}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete account. Please try again later."
+        )
+
+    return None
