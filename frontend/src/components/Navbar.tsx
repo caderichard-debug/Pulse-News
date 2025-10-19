@@ -141,7 +141,7 @@ export default function Navbar() {
               ))}
           </div>
 
-          {/* User name and Logout Button */}
+          {/* User name, Contact us, and Logout Button */}
           <div className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground">
             <button
               onClick={() => router.push('/preferences')}
@@ -151,6 +151,12 @@ export default function Navbar() {
               <span>{userName}</span>
             )}
             </button>
+            <a
+              href="mailto:support@pulse-news.com"
+              className="px-4 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground hidden sm:block"
+            >
+              Contact us
+            </a>
             <button
               onClick={handleLogout}
               className="px-4 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -187,6 +193,14 @@ export default function Navbar() {
                     <span>{item.name}</span>
                   </button>
                 ))}
+              {/* Contact us link in mobile menu */}
+              <a
+                href="mailto:support@pulse-news.com"
+                className="w-full text-left px-4 py-3 text-sm font-medium transition-colors flex items-center gap-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              >
+                <span>✉️</span>
+                <span>Contact us</span>
+              </a>
             </div>
           </div>
         )}
