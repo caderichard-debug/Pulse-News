@@ -10,7 +10,7 @@ from ..database import get_session
 from ..models import (
     User, Article, ArticleAnalysis, ArticleFrameworkLink,
     Framework, Source, StatisticVerification, ArticleClusterMember,
-    ArticleCluster, ArticleContext
+    ArticleCluster, ArticleContext, ArticleFavorite
 )
 from ..routes.auth import get_current_user
 from pydantic import BaseModel
@@ -92,6 +92,9 @@ class ArticleDetailResponse(BaseModel):
 
     # Context
     context: Optional[ArticleContextData]
+
+    # Favorites
+    is_favorited: bool = False
 
 
 @router.get("/analyzed")
@@ -270,6 +273,16 @@ async def get_article_detail(
             significance=context_data.significance
         )
 
+    # Check if favorited by current user
+    is_favorited = False
+    favorite = session.exec(
+        select(ArticleFavorite).where(
+            ArticleFavorite.user_id == current_user.id,
+            ArticleFavorite.article_id == article_id
+        )
+    ).first()
+    is_favorited = favorite is not None
+
     # Build response
     content_preview = article.content_text[:500] if article.content_text else ""
 
@@ -290,5 +303,6 @@ async def get_article_detail(
         statistics=statistics,
         frameworks=frameworks,
         related_articles=related_articles,
-        context=context
+        context=context,
+        is_favorited=is_favorited
     )

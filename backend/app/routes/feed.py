@@ -8,7 +8,8 @@ from ..database import get_session
 from ..models import (
     User, Article, ArticleAnalysis, ArticleFrameworkLink,
     Framework, Source, Topic, UserTopicPreference,
-    UserSourceSubscription, PoliticalLean, ProcessingStatus, StatisticVerification
+    UserSourceSubscription, PoliticalLean, ProcessingStatus, StatisticVerification,
+    ArticleFavorite
 )
 from ..routes.auth import get_optional_user
 from pydantic import BaseModel
@@ -46,6 +47,9 @@ class ArticleFeedItem(BaseModel):
     has_stats: bool
     read_time_minutes: Optional[int]
 
+    # Favorites
+    is_favorited: bool = False
+
 
 class FeedResponse(BaseModel):
     articles: List[ArticleFeedItem]
@@ -68,6 +72,7 @@ async def get_feed_articles(
     sort_by: str = Query(default="newest", description="Sort order: newest, oldest, sentiment_high, sentiment_low"),
     only_analyzed: bool = Query(default=False, description="Show only articles with analysis"),
     only_verified_stats: bool = Query(default=False, description="Show only articles with verified statistics"),
+    favorites_only: bool = Query(default=False, description="Show only favorited articles (requires authentication)"),
     session: Session = Depends(get_session)
 ):
     """
@@ -125,6 +130,24 @@ async def get_feed_articles(
         )
         query = query.where(Article.id.in_(verified_articles_subquery))
 
+    if favorites_only:
+        # Filter for only favorited articles (requires authentication)
+        if not current_user:
+            # Return empty result if not authenticated
+            return FeedResponse(
+                articles=[],
+                total_count=0,
+                page=page,
+                page_size=page_size
+            )
+
+        favorited_articles_subquery = (
+            select(ArticleFavorite.article_id)
+            .where(ArticleFavorite.user_id == current_user.id)
+            .distinct()
+        )
+        query = query.where(Article.id.in_(favorited_articles_subquery))
+
     # Get total count before pagination
     count_query = select(func.count()).select_from(query.subquery())
     total_count = session.exec(count_query).one()
@@ -176,6 +199,17 @@ async def get_feed_articles(
     for article_id, total, verified in stats_data:
         article_stats[article_id] = (total, verified or 0)
 
+    # Get favorites for current user (if logged in)
+    article_favorites: set = set()
+    if current_user:
+        favorites = session.exec(
+            select(ArticleFavorite.article_id).where(
+                ArticleFavorite.user_id == current_user.id,
+                ArticleFavorite.article_id.in_(article_ids)
+            )
+        ).all()
+        article_favorites = set(favorites)
+
     # Build response
     articles = []
     for article, analysis, source in results:
@@ -199,7 +233,8 @@ async def get_feed_articles(
             stats_count=stats[0],
             stats_verified_count=stats[1],
             has_stats=stats[0] > 0,
-            read_time_minutes=article.word_count // 200 if article.word_count else None
+            read_time_minutes=article.word_count // 200 if article.word_count else None,
+            is_favorited=article.id in article_favorites
         ))
 
     return FeedResponse(

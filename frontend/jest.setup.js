@@ -1,5 +1,16 @@
 import '@testing-library/jest-dom'
 
+// Mock global fetch
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    json: async () => ({}),
+    text: async () => '',
+    status: 200,
+    statusText: 'OK',
+  })
+)
+
 // Mock next/navigation
 jest.mock('next/navigation', () => ({
   useRouter() {

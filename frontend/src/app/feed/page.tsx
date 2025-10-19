@@ -7,6 +7,7 @@ import { formatTimeAgo } from '@/lib/dateUtils';
 import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
+import FavoriteButton from '@/components/FavoriteButton';
 
 interface Article {
   id: number;
@@ -26,6 +27,7 @@ interface Article {
   stats_count: number;
   stats_verified_count: number;
   has_stats: boolean;
+  is_favorited: boolean;
 }
 
 interface FeedResponse {
@@ -43,16 +45,44 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Load filters from localStorage or use defaults
+  const getStoredFilters = () => {
+    if (typeof window === 'undefined') return null;
+    const stored = localStorage.getItem('feedFilters');
+    return stored ? JSON.parse(stored) : null;
+  };
+
+  const storedFilters = getStoredFilters();
+
   // Filters
-  const [selectedTopic, setSelectedTopic] = useState<string>('');
-  const [selectedSource, setSelectedSource] = useState<number | null>(null);
-  const [selectedLean, setSelectedLean] = useState<string>('');
-  const [dateRange, setDateRange] = useState<string>('');
-  const [sortBy, setSortBy] = useState('newest');
-  const [onlyAnalyzed, setOnlyAnalyzed] = useState(true); // Default to true
-  const [onlyVerifiedStats, setOnlyVerifiedStats] = useState(false);
-  const [page, setPage] = useState(1);
-  const [pageInput, setPageInput] = useState('1');
+  const [selectedTopic, setSelectedTopic] = useState<string>(storedFilters?.selectedTopic || '');
+  const [selectedSource, setSelectedSource] = useState<number | null>(storedFilters?.selectedSource || null);
+  const [selectedLean, setSelectedLean] = useState<string>(storedFilters?.selectedLean || '');
+  const [dateRange, setDateRange] = useState<string>(storedFilters?.dateRange || '');
+  const [sortBy, setSortBy] = useState(storedFilters?.sortBy || 'newest');
+  const [onlyAnalyzed, setOnlyAnalyzed] = useState(storedFilters?.onlyAnalyzed ?? true);
+  const [onlyVerifiedStats, setOnlyVerifiedStats] = useState(storedFilters?.onlyVerifiedStats ?? false);
+  const [favoritesOnly, setFavoritesOnly] = useState(storedFilters?.favoritesOnly ?? false);
+  const [page, setPage] = useState(storedFilters?.page || 1);
+  const [pageInput, setPageInput] = useState((storedFilters?.page || 1).toString());
+
+  // Save filters AND pagination to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const filters = {
+        selectedTopic,
+        selectedSource,
+        selectedLean,
+        dateRange,
+        sortBy,
+        onlyAnalyzed,
+        onlyVerifiedStats,
+        favoritesOnly,
+        page
+      };
+      localStorage.setItem('feedFilters', JSON.stringify(filters));
+    }
+  }, [selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, page]);
 
   const loadFeedData = useCallback(async () => {
     try {
@@ -67,6 +97,7 @@ export default function FeedPage() {
         sort_by: sortBy,
         only_analyzed: onlyAnalyzed,
         only_verified_stats: onlyVerifiedStats,
+        favorites_only: favoritesOnly,
       });
       setFeedData(data);
       setPageInput(page.toString());
@@ -77,12 +108,12 @@ export default function FeedPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats]);
+  }, [page, selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly]);
 
   useEffect(() => {
     loadFeedData();
     loadFilters();
-  }, [selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, page, loadFeedData]);
+  }, [selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, page, loadFeedData]);
 
   async function loadFilters() {
     try {
@@ -267,6 +298,19 @@ export default function FeedPage() {
                   Show only articles with verified statistics
                 </label>
               </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="favorites-only"
+                  checked={favoritesOnly}
+                  onChange={(e) => { setFavoritesOnly(e.target.checked); setPage(1); }}
+                  className="w-4 h-4 text-primary border-border rounded focus:ring-indigo-500"
+                />
+                <label htmlFor="favorites-only" className="ml-2 text-sm font-medium text-card-foreground">
+                  ⭐ Show only favorite articles
+                </label>
+              </div>
             </div>
 
             {/* Pagination in filter card */}
@@ -281,7 +325,7 @@ export default function FeedPage() {
                     First
                   </button>
                   <button
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    onClick={() => setPage((p: number) => Math.max(1, p - 1))}
                     disabled={page === 1}
                     className="px-3 py-1.5 bg-card border border-border rounded-md hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-card-foreground transition-colors"
                   >
@@ -304,7 +348,7 @@ export default function FeedPage() {
                     </span>
                   </div>
                   <button
-                    onClick={() => setPage(p => p + 1)}
+                    onClick={() => setPage((p: number) => p + 1)}
                     disabled={page >= Math.ceil(feedData.total_count / feedData.page_size)}
                     className="px-3 py-1.5 bg-card border border-border rounded-md hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-card-foreground transition-colors"
                   >
@@ -340,11 +384,15 @@ export default function FeedPage() {
               {feedData.articles.map((article) => (
                 <div
                   key={article.id}
-                  className="bg-card rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer border-l-4 border-indigo-500"
-                  onClick={() => router.push(`/article/${article.id}`)}
+                  className="bg-card rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow border-l-4 border-indigo-500"
                 >
-                  {/* Header */}
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2 flex-wrap">
+                  <div className="flex items-start gap-4">
+                    <div
+                      className="flex-1 cursor-pointer"
+                      onClick={() => router.push(`/article/${article.id}`)}
+                    >
+                      {/* Header */}
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2 flex-wrap">
                     <span className="font-medium text-primary">{article.source_name}</span>
                     {article.source_bias && (
                       <SourceBiasBadge bias={article.source_bias} size="sm" />
@@ -434,6 +482,14 @@ export default function FeedPage() {
                       </div>
                     </div>
                   )}
+                    </div>
+
+                    <FavoriteButton
+                      articleId={article.id}
+                      initialFavorited={article.is_favorited}
+                      size="sm"
+                    />
+                  </div>
                 </div>
               ))}
             </div>
@@ -455,7 +511,7 @@ export default function FeedPage() {
                 First
               </button>
               <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
+                onClick={() => setPage((p: number) => Math.max(1, p - 1))}
                 disabled={page === 1}
                 className="px-4 py-2 bg-card border border-border rounded-md hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed font-medium text-card-foreground transition-colors"
               >
@@ -478,7 +534,7 @@ export default function FeedPage() {
                 </span>
               </div>
               <button
-                onClick={() => setPage(p => p + 1)}
+                onClick={() => setPage((p: number) => p + 1)}
                 disabled={page >= Math.ceil(feedData.total_count / feedData.page_size)}
                 className="px-4 py-2 bg-card border border-border rounded-md hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed font-medium text-card-foreground transition-colors"
               >
