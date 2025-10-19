@@ -456,6 +456,24 @@ def delete_account(
         ):
             session.delete(token)
 
+        # Anonymize user-submitted articles (keep articles but remove user reference)
+        from ..models import Article
+        session.exec(
+            select(Article).where(Article.submitted_by_user_id == current_user.id)
+        )
+        # Set submitted_by_user_id to NULL for any articles they submitted
+        for article in session.exec(
+            select(Article).where(Article.submitted_by_user_id == current_user.id)
+        ):
+            article.submitted_by_user_id = None
+
+        # Anonymize admin audit logs (keep logs for accountability but remove user reference)
+        from ..models import AdminAuditLog
+        for log in session.exec(
+            select(AdminAuditLog).where(AdminAuditLog.user_id == current_user.id)
+        ):
+            log.user_id = None
+
         # Finally, delete the user
         session.delete(current_user)
         session.commit()
