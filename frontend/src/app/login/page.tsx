@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import Image from 'next/image';
-import Footer from '@/components/Footer';
+import BrandCard from '@/components/BrandCard';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -39,21 +38,7 @@ export default function LoginPage() {
       <div className="max-w-md w-full bg-card rounded-lg shadow-xl flex-grow p-8">
         <div className="flex flex-col items-center mb-8">
           {/* Logo/Brand */}
-          <div className="flex items-center">
-            <button
-              onClick={() => router.push('/')}
-              className="flex items-center gap-2 text-2xl font-bold text-primary hover:text-primary-hover transition-colors"
-            >
-              <Image
-                src="/pulse-icon.png"
-                alt="Pulse Logo"
-                width={56}
-                height={56}
-                className="w-14 h-14 object-contain"
-              />
-              <span className="hidden sm:inline text-4xl">Pulse</span>
-            </button>
-          </div>
+          <BrandCard size="large" />
           <h2 className="text-muted-foreground mt-2 text-xl">Welcome back</h2>
         </div>
         <div className="text-center mb-8">
@@ -123,7 +108,6 @@ export default function LoginPage() {
           </a>
         </div>
       </div>
-      <Footer />
     </div>
   );
 }

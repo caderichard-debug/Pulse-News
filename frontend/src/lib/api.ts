@@ -131,12 +131,14 @@ class ApiClient {
     });
 
     if (!response.ok) {
+      // Try to parse JSON error, but handle cases where response has no body
       const error: ApiError = await response.json().catch(() => ({
         detail: 'Failed to delete account',
       }));
       throw new Error(error.detail);
     }
 
+    // 204 No Content - successful deletion, no response body
     // Clear token after successful deletion
     this.clearToken();
     return;

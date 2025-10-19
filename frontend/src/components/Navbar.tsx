@@ -12,7 +12,6 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const [userName, setUserName] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [insightsDropdownOpen, setInsightsDropdownOpen] = useState<boolean>(false);
@@ -25,7 +24,6 @@ export default function Navbar() {
       .then((user) => {
         if (mounted && user && typeof user.name === 'string') {
           setUserName(user.name);
-          setIsAdmin(user.is_admin || false);
         }
       })
       .catch(() => {})
@@ -96,12 +94,14 @@ export default function Navbar() {
     router.push('/');
   };
 
+  // Check if user is authenticated
+  const isAuthenticated = !!userName;
+
+  // Simplified navigation - same for all users
   const navItems = [
-    { name: 'Feed', path: '/feed', icon: '📰', adminOnly: false },
-    { name: 'Insights', path: '/insights', icon: '🔍', adminOnly: false },
-    { name: 'Preferences', path: '/preferences', icon: '⚙️', adminOnly: false },
-    { name: 'How It Works', path: '/how-it-works', icon: '💡', adminOnly: false },
-    { name: 'Admin', path: '/admin', icon: '⚡', adminOnly: true },
+    { name: 'Feed', path: '/feed', icon: '📰', authRequired: true },
+    { name: 'Insights', path: '/insights', icon: '🔍', authRequired: false },
+    { name: 'How It Works', path: '/how-it-works', icon: '💡', authRequired: false },
   ];
 
   return (
@@ -121,7 +121,7 @@ export default function Navbar() {
           {/* Logo/Brand */}
           <div className="flex items-center">
             <button
-              onClick={() => router.push('/feed')}
+              onClick={() => router.push('/')}
               className="flex items-center gap-2 text-2xl font-bold text-primary hover:text-primary-hover transition-colors"
             >
               <Image
@@ -138,7 +138,7 @@ export default function Navbar() {
           {/* Desktop Navigation Links (hidden on mobile) */}
           <div className="hidden lg:flex items-center gap-1 absolute left-1/2 transform -translate-x-1/2">
             {navItems
-              .filter((item) => !item.adminOnly || isAdmin)
+              .filter((item) => !item.authRequired || isAuthenticated)
               .map((item) => {
                 // Special handling for Insights dropdown
                 if (item.path === '/insights') {
@@ -210,13 +210,8 @@ export default function Navbar() {
                       }
                     }}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex flex-col xl:flex-row xl:gap-1 items-center ${
-                      pathname === item.path ||
-                      (item.path === '/admin' && pathname.startsWith('/admin'))
-                        ? item.adminOnly
-                          ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                          : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
-                        : item.adminOnly
-                        ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                      pathname === item.path
+                        ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                     }`}
                   >
@@ -227,28 +222,36 @@ export default function Navbar() {
               })}
           </div>
 
-          {/* User name, Contact us, and Logout Button */}
-          <div className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground">
-            <button
-              onClick={() => router.push('/preferences')}
-              className="ml-1 pl-1 hover:text-foreground transition-colors hidden sm:block"
-            >
-            {loading ? null : userName && (
-              <span>{userName}</span>
+          {/* Right side - Auth buttons or user menu */}
+          <div className="flex items-center gap-2">
+            {loading ? (
+              // Loading state
+              <div className="w-20 h-8"></div>
+            ) : isAuthenticated ? (
+              // Authenticated user
+              <>
+                <button
+                  onClick={() => router.push('/preferences')}
+                  className="px-4 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground hidden sm:block"
+                >
+                  {userName}
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              // Unauthenticated user
+              <button
+                onClick={() => router.push('/login')}
+                className="px-4 py-2 rounded-md text-sm font-medium transition-colors bg-primary text-white hover:bg-primary-hover"
+              >
+                Log In
+              </button>
             )}
-            </button>
-            <a
-              href="mailto:support@pulsenews.app"
-              className="px-4 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground hidden sm:block"
-            >
-              Contact us
-            </a>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-            >
-              Logout
-            </button>
           </div>
         </div>
 
@@ -260,20 +263,15 @@ export default function Navbar() {
           >
             <div className="py-2 space-y-1">
               {navItems
-                .filter((item) => !item.adminOnly || isAdmin)
+                .filter((item) => !item.authRequired || isAuthenticated)
                 .map((item) => (
                   <button
                     key={item.path}
                     onClick={() => router.push(item.path)}
                     className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors flex items-center gap-2 ${
                       pathname === item.path ||
-                      (item.path === '/admin' && pathname.startsWith('/admin')) ||
                       (item.path === '/insights' && (pathname === '/analyze' || pathname === '/sources' || pathname === '/analytics'))
-                        ? item.adminOnly
-                          ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                          : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
-                        : item.adminOnly
-                        ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                        ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                     }`}
                   >

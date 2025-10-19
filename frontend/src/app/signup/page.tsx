@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import Footer from '@/components/Footer';
+import BrandCard from '@/components/BrandCard';
 
 interface Topic {
   id: number;
@@ -84,8 +84,8 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 dark:from-gray-900 to-indigo-100 dark:to-gray-800 transition-colors flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-card rounded-lg shadow-xl p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary">⚡ Pulse</h1>
+        <div className="flex flex-col items-center mb-8">
+          <BrandCard size="large" />
           <h2 className="text-muted-foreground mt-2 text-xl">Create your account</h2>
         </div>
 
@@ -260,7 +260,6 @@ export default function SignupPage() {
           </a>
         </div>
       </div>
-      <Footer />
     </div>
   );
 }
