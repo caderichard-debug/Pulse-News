@@ -413,7 +413,7 @@ def delete_account(
     Requires: Authorization header with Bearer token
     Returns: 204 No Content on success
     """
-    from ..models import Newsletter, UserSourceSubscription, ArticleFavorite, PasswordResetToken
+    from ..models import Newsletter, UserSourceSubscription, ArticleFavorite, PasswordResetToken, NewsletterArticle
 
     try:
         # Delete user topic preferences
@@ -434,10 +434,20 @@ def delete_account(
         ):
             session.delete(favorite)
 
-        # Delete newsletters
-        for newsletter in session.exec(
+        # Delete newsletter articles first (foreign key constraint)
+        user_newsletters = session.exec(
             select(Newsletter).where(Newsletter.user_id == current_user.id)
-        ):
+        ).all()
+
+        for newsletter in user_newsletters:
+            # Delete articles associated with this newsletter
+            for newsletter_article in session.exec(
+                select(NewsletterArticle).where(NewsletterArticle.newsletter_id == newsletter.id)
+            ):
+                session.delete(newsletter_article)
+
+        # Now delete newsletters
+        for newsletter in user_newsletters:
             session.delete(newsletter)
 
         # Delete password reset tokens
