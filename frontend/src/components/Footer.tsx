@@ -1,6 +1,45 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { api } from '@/lib/api';
+
 export default function Footer() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    api.getCurrentUser()
+      .then((user) => {
+        if (mounted && user) {
+          setIsAuthenticated(true);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setIsAuthenticated(false);
+        }
+      })
+      .finally(() => {
+        if (mounted) {
+          setLoading(false);
+        }
+      });
+    return () => { mounted = false; };
+  }, []);
+
+  if (loading) {
+    return (
+      <footer className="mt-auto w-full border-t border-border bg-card">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="text-center text-xs text-muted-foreground">
+            © {new Date().getFullYear()} Pulse News. All rights reserved.
+          </div>
+        </div>
+      </footer>
+    );
+  }
+
   return (
     <footer className="mt-auto w-full border-t border-border bg-card">
       <div className="max-w-7xl mx-auto px-4 py-6">
@@ -12,20 +51,26 @@ export default function Footer() {
           >
             Contact Us
           </a>
-          <span className="hidden sm:inline">•</span>
-          <a
-            href="/preferences?tab=account"
-            className="hover:text-foreground transition-colors"
-          >
-            Account Settings
-          </a>
-          <span className="hidden sm:inline">•</span>
-          <a
-            href="/preferences?tab=topics"
-            className="hover:text-foreground transition-colors"
-          >
-            Newsletter Preferences
-          </a>
+
+          {isAuthenticated && (
+            <>
+              <span className="hidden sm:inline">•</span>
+              <a
+                href="/preferences?tab=account"
+                className="hover:text-foreground transition-colors"
+              >
+                Account Settings
+              </a>
+              <span className="hidden sm:inline">•</span>
+              <a
+                href="/preferences?tab=topics"
+                className="hover:text-foreground transition-colors"
+              >
+                Newsletter Preferences
+              </a>
+            </>
+          )}
+
           <span className="hidden sm:inline">•</span>
           <a
             href="/how-it-works"
