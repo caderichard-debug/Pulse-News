@@ -31,6 +31,7 @@ class ArticleFeedItem(BaseModel):
     source_id: int
     source_bias: Optional[str]  # Organizational bias of the source
     topic_category: Optional[str]
+    read_time_minutes: Optional[int]
 
     # Analysis data
     summary: Optional[str]
@@ -216,6 +217,11 @@ async def get_feed_articles(
         framework_data = article_frameworks.get(article.id)
         stats = article_stats.get(article.id, (0, 0))
 
+        # Calculate read time from word count (assuming 200 words per minute)
+        read_time = None
+        if article.word_count:
+            read_time = max(1, article.word_count // 200)
+
         articles.append(ArticleFeedItem(
             id=article.id,
             title=article.title,
@@ -225,6 +231,7 @@ async def get_feed_articles(
             source_id=source.id,
             source_bias=source.organizational_bias.value if source.organizational_bias else None,
             topic_category=article.topic_category,
+            read_time_minutes=read_time,
             summary=analysis.summary if analysis else None,
             sentiment_score=analysis.sentiment_score if analysis else None,
             political_lean=analysis.political_lean.value if analysis and analysis.political_lean else None,

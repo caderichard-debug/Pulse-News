@@ -181,8 +181,8 @@ class TestFeedEndpoints:
         assert data["total_count"] == 4  # Now includes article without analysis
         assert len(data["articles"]) == 4
 
-    def test_feed_allows_public_access(self, client):
-        """Test that feed endpoints allow public access (no auth required)."""
+    def test_feed_allows_unauthenticated_access(self, client, test_data):
+        """Test that feed endpoints allow unauthenticated access."""
         response = client.get("/feed/articles")
         assert response.status_code == 200
         data = response.json()

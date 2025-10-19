@@ -143,21 +143,26 @@ export default function FeedPage() {
     return 'text-red-600';
   }
 
-  function handlePageInputChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setPageInput(e.target.value);
-  }
+  function formatTimeAgo(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
 
-  function handlePageInputSubmit(e: React.KeyboardEvent<HTMLInputElement> | React.FocusEvent<HTMLInputElement>) {
-    if ('key' in e && e.key !== 'Enter') return;
+    if (diffMinutes < 1) return 'Just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
 
-    const totalPages = feedData ? Math.ceil(feedData.total_count / feedData.page_size) : 1;
-    const newPage = parseInt(pageInput);
-
-    if (!isNaN(newPage) && newPage >= 1 && newPage <= totalPages) {
-      setPage(newPage);
-    } else {
-      setPageInput(page.toString());
-    }
+    // For older articles, show the actual date
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    });
   }
 
   if (error && !feedData) {
