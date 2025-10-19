@@ -75,7 +75,7 @@ export default function WelcomePage() {
                   <span>🎯</span> Framework Mapping
                 </h4>
                 <p className="text-sm text-muted-foreground">
-                  Articles mapped to underlying ethical debates like "Privacy vs. Security" to reveal the bigger picture.
+                  Articles mapped to underlying ethical debates like &quot;Privacy vs. Security&quot; to reveal the bigger picture.
                 </p>
               </div>
               <div className="bg-background border border-border rounded-lg p-6">
@@ -120,7 +120,7 @@ export default function WelcomePage() {
               Get in Touch
             </h2>
             <p className="text-lg text-muted-foreground mb-6">
-              Have questions or feedback? We'd love to hear from you.
+              Have questions or feedback? We&apos;d love to hear from you.
             </p>
             <a
               href="mailto:support@pulsenews.app"

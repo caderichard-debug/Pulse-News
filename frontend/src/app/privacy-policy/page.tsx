@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import Link from 'next/link'
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import BrandCard from '@/components/BrandCard';
 
 export default function PrivacyPolicyPage() {
-  const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -35,9 +35,8 @@ export default function PrivacyPolicyPage() {
       {!isAuthenticated && (
         <header className="border-b border-border bg-card">
           <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-            <a href="/" className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-primary">⚡ Pulse</span>
-            </a>
+            {/* Logo/Brand */}
+            <BrandCard size="large" />
             <div className="flex gap-3">
               <a
                 href="/login"
@@ -192,7 +191,7 @@ export default function PrivacyPolicyPage() {
 
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-foreground mb-4">
-              8. Children's Privacy
+              8. Children&apos;s Privacy
             </h2>
             <p className="text-card-foreground">
               Our services are not directed to children under 13 years of age. We do not knowingly collect personal
@@ -207,7 +206,7 @@ export default function PrivacyPolicyPage() {
             </h2>
             <p className="text-card-foreground">
               We may update this privacy policy from time to time. We will notify you of any changes by posting the
-              new privacy policy on this page and updating the "Last updated" date. We encourage you to review this
+              new privacy policy on this page and updating the &quot;Last updated&quot; date. We encourage you to review this
               privacy policy periodically for any changes.
             </p>
           </section>

@@ -184,7 +184,7 @@ export default function Home() {
             Questions? Get in Touch
           </h2>
           <p className="text-xl mb-8 text-indigo-100 dark:text-indigo-200">
-            We'd love to hear from you
+            We&apos;d love to hear from you
           </p>
           <a
             href="mailto:support@pulsenews.app"

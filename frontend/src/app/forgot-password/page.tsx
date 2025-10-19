@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import Footer from '@/components/Footer';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');

@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import Footer from '@/components/Footer';
 
 function ResetPasswordForm() {
   const router = useRouter();
