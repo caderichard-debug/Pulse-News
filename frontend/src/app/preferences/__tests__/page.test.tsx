@@ -274,19 +274,16 @@ describe('PreferencesPage', () => {
     });
   });
 
-  it('should handle logout', async () => {
-    const user = userEvent.setup();
+  // Logout functionality is tested in Navbar tests
+  it('should render navbar with logout functionality', async () => {
     render(<PreferencesPage />);
 
     await waitFor(() => {
       expect(screen.getByText('Politics')).toBeInTheDocument();
     });
 
-    const logoutButton = screen.getByRole('button', { name: /logout/i });
-    await user.click(logoutButton);
-
-    expect(api.clearToken).toHaveBeenCalled();
-    expect(mockPush).toHaveBeenCalledWith('/');
+    // Navbar should be rendered (logout tested in Navbar.test.tsx)
+    expect(screen.getByText('Pulse')).toBeInTheDocument();
   });
 
   describe('Tab Persistence', () => {
