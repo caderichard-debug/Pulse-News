@@ -15,7 +15,9 @@ export default function Navbar() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+  const [insightsDropdownOpen, setInsightsDropdownOpen] = useState<boolean>(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const insightsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -58,9 +60,35 @@ export default function Navbar() {
     };
   }, [isMenuOpen]);
 
+  // Close insights dropdown when clicking outside
+  useEffect(() => {
+    if (!insightsDropdownOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (insightsRef.current && !insightsRef.current.contains(event.target as Node)) {
+        setInsightsDropdownOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setInsightsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [insightsDropdownOpen]);
+
   // Close menu when pathname changes (user navigates)
   useEffect(() => {
     setIsMenuOpen(false);
+    setInsightsDropdownOpen(false);
   }, [pathname]);
 
   const handleLogout = () => {
@@ -111,34 +139,92 @@ export default function Navbar() {
           <div className="hidden lg:flex items-center gap-1 absolute left-1/2 transform -translate-x-1/2">
             {navItems
               .filter((item) => !item.adminOnly || isAdmin)
-              .map((item) => (
-                <button
-                  key={item.path}
-                  onClick={() => {
-                    if (item.path === '/analyze' && pathname === '/analyze') {
-                      // Reset the analyze page by navigating to clean URL
-                      router.push('/analyze');
-                      window.location.href = '/analyze';
-                    } else {
-                      router.push(item.path);
-                    }
-                  }}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex flex-col xl:flex-row xl:gap-1 items-center ${
-                    pathname === item.path ||
-                    (item.path === '/admin' && pathname.startsWith('/admin')) ||
-                    (item.path === '/insights' && (pathname === '/analyze' || pathname === '/sources' || pathname === '/analytics'))
-                      ? item.adminOnly
-                        ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                        : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
-                      : item.adminOnly
-                      ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
-                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                  }`}
-                >
-                  <span className="text-lg xl:text-base">{item.icon}</span>
-                  <span className="text-xs xl:text-sm whitespace-nowrap">{item.name}</span>
-                </button>
-              ))}
+              .map((item) => {
+                // Special handling for Insights dropdown
+                if (item.path === '/insights') {
+                  const isActive = pathname === '/insights' || pathname === '/analyze' || pathname === '/sources' || pathname === '/analytics';
+                  return (
+                    <div key={item.path} className="relative" ref={insightsRef}>
+                      <button
+                        onClick={() => setInsightsDropdownOpen(!insightsDropdownOpen)}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex flex-col xl:flex-row xl:gap-1 items-center ${
+                          isActive
+                            ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
+                            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                        }`}
+                      >
+                        <span className="text-lg xl:text-base">{item.icon}</span>
+                        <span className="text-xs xl:text-sm whitespace-nowrap">{item.name}</span>
+                        <span className="text-xs">▼</span>
+                      </button>
+
+                      {/* Dropdown Menu */}
+                      {insightsDropdownOpen && (
+                        <div className="absolute top-full left-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-lg py-2 z-50">
+                          <button
+                            onClick={() => router.push('/analyze')}
+                            className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-accent transition-colors flex items-center gap-2"
+                          >
+                            <span>🔍</span>
+                            <span>Analyze</span>
+                          </button>
+                          <button
+                            onClick={() => router.push('/sources')}
+                            className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-accent transition-colors flex items-center gap-2"
+                          >
+                            <span>📑</span>
+                            <span>Sources</span>
+                          </button>
+                          <button
+                            onClick={() => router.push('/analytics')}
+                            className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-accent transition-colors flex items-center gap-2"
+                          >
+                            <span>📊</span>
+                            <span>Analytics</span>
+                          </button>
+                          <div className="border-t border-border my-1"></div>
+                          <button
+                            onClick={() => router.push('/insights')}
+                            className="w-full text-left px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors flex items-center gap-2"
+                          >
+                            <span>🏠</span>
+                            <span>Insights Home</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                // Regular nav items
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => {
+                      if (item.path === '/analyze' && pathname === '/analyze') {
+                        // Reset the analyze page by navigating to clean URL
+                        router.push('/analyze');
+                        window.location.href = '/analyze';
+                      } else {
+                        router.push(item.path);
+                      }
+                    }}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex flex-col xl:flex-row xl:gap-1 items-center ${
+                      pathname === item.path ||
+                      (item.path === '/admin' && pathname.startsWith('/admin'))
+                        ? item.adminOnly
+                          ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                          : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
+                        : item.adminOnly
+                        ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                    }`}
+                  >
+                    <span className="text-lg xl:text-base">{item.icon}</span>
+                    <span className="text-xs xl:text-sm whitespace-nowrap">{item.name}</span>
+                  </button>
+                );
+              })}
           </div>
 
           {/* User name, Contact us, and Logout Button */}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function WelcomePage() {
   const router = useRouter();
@@ -8,21 +9,28 @@ export default function WelcomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 dark:from-gray-900 via-indigo-50 dark:via-gray-800 to-purple-50 dark:to-gray-900 transition-colors">
       {/* Simple Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur">
+      <header className="border-b border-border bg-card/50 dark:bg-card/30 backdrop-blur transition-colors">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-primary">⚡ Pulse</span>
+            <Image
+              src="/pulse-icon.png"
+              alt="Pulse Logo"
+              width={32}
+              height={32}
+              className="w-8 h-8 object-contain"
+            />
+            <span className="text-2xl font-bold text-primary">Pulse</span>
           </div>
           <div className="flex gap-3">
             <a
               href="/login"
-              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="px-6 py-2 text-sm font-medium bg-card dark:bg-card text-primary border-2 border-primary rounded-lg hover:bg-accent dark:hover:bg-accent transition-colors"
             >
               Log In
             </a>
             <a
               href="/signup"
-              className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
+              className="px-6 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors shadow-md"
             >
               Sign Up
             </a>
@@ -122,7 +130,7 @@ export default function WelcomePage() {
               Pulse is built in the open. Our code is public, our methods are transparent, and our AI analysis is explainable.
             </p>
             <a
-              href="https://github.com/caderichard-debug/Pulse"
+              href="https://github.com/caderichard-debug/Pulse-News"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-6 py-3 bg-gray-800 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors font-medium"
@@ -164,13 +172,13 @@ export default function WelcomePage() {
           <div className="flex gap-4 justify-center">
             <a
               href="/signup"
-              className="px-8 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-semibold text-lg"
+              className="px-8 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-semibold text-lg shadow-md"
             >
               Sign Up Free
             </a>
             <a
               href="/login"
-              className="px-8 py-3 bg-card text-primary border-2 border-primary rounded-lg hover:bg-accent transition-colors font-semibold text-lg"
+              className="px-8 py-3 bg-card dark:bg-card text-primary border-2 border-primary rounded-lg hover:bg-accent dark:hover:bg-accent transition-colors font-semibold text-lg"
             >
               Log In
             </a>
