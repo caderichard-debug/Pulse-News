@@ -1,3 +1,66 @@
+## 2025-10-19 10:30
+
+**Insights Dropdown Menu and Welcome Page Styling** ✅
+
+### What Changed
+
+Enhanced the Insights navigation experience with a dropdown menu and improved the Welcome page with logo and consistent button styling.
+
+#### 1. Insights Dropdown Menu
+
+**Frontend:**
+- **Navbar component** [Navbar.tsx](frontend/src/components/Navbar.tsx:147-195):
+  - Added dropdown functionality to Insights button
+  - Dropdown shows 4 options: Analyze, Sources, Analytics, Insights Home
+  - Click-outside detection using refs and event listeners
+  - Escape key handler for keyboard accessibility
+  - Auto-closes on navigation to prevent stale state
+  - Full dark mode support with semantic color tokens (bg-card, border-border, text-foreground)
+  - Positioned with `absolute top-full left-0` for proper alignment
+  - z-index 50 ensures dropdown appears above other content
+
+**Implementation Details:**
+- Added state management: `insightsDropdownOpen` and `insightsRef`
+- Click-outside handler cleans up event listeners properly
+- Desktop-only feature (hidden on mobile, mobile menu unchanged)
+- Active state highlights Insights button when on any insights sub-page
+
+#### 2. Welcome Page Enhancements
+
+**Frontend:**
+- **Welcome page** [welcome/page.tsx](frontend/src/app/welcome/page.tsx):
+  - Added Image import from 'next/image'
+  - Replaced emoji logo with actual Pulse logo (pulse-icon.png, 32x32)
+  - Improved header styling with enhanced dark mode support
+  - Standardized button styles for consistency:
+    - Login: Outlined style (border-2 border-primary, bg-card)
+    - Sign Up: Filled style (bg-primary, shadow-md)
+  - Updated buttons in both header and CTA section
+  - All buttons now use semantic colors with dark: variants
+
+#### 3. Theme System Verification
+
+**Confirmed:**
+- Default theme is already 'auto' in [ThemeContext.tsx](frontend/src/contexts/ThemeContext.tsx:36)
+- Works for both authenticated and unauthenticated users
+- System preference detection properly configured
+- Auto mode listens for system theme changes in real-time
+
+### Test Results
+- All features tested manually for dark/light mode compatibility
+- Dropdown opens/closes correctly with click and keyboard
+- Welcome page buttons consistent across all instances
+- Logo displays properly in header
+- Theme system defaults to 'auto' as expected
+
+**Code References:**
+- Main files:
+  - [Navbar.tsx](frontend/src/components/Navbar.tsx)
+  - [welcome/page.tsx](frontend/src/app/welcome/page.tsx)
+- Theme context: [ThemeContext.tsx](frontend/src/contexts/ThemeContext.tsx)
+
+---
+
 ## 2025-10-18 23:45
 
 **Navbar Reorganization, Footer Links, and Welcome Page** ✅
