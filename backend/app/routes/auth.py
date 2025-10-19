@@ -407,12 +407,13 @@ def delete_account(
     - Deletes user source subscriptions
     - Deletes newsletters associated with the user
     - Deletes user favorites
+    - Deletes password reset tokens
     - Deletes the user account itself
 
     Requires: Authorization header with Bearer token
     Returns: 204 No Content on success
     """
-    from ..models import Newsletter, UserSourceSubscription, ArticleFavorite
+    from ..models import Newsletter, UserSourceSubscription, ArticleFavorite, PasswordResetToken
 
     try:
         # Delete user topic preferences
@@ -438,6 +439,12 @@ def delete_account(
             select(Newsletter).where(Newsletter.user_id == current_user.id)
         ):
             session.delete(newsletter)
+
+        # Delete password reset tokens
+        for token in session.exec(
+            select(PasswordResetToken).where(PasswordResetToken.user_id == current_user.id)
+        ):
+            session.delete(token)
 
         # Finally, delete the user
         session.delete(current_user)
