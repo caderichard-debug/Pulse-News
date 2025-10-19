@@ -185,6 +185,32 @@ body {
     @apply text-green-700 dark:text-green-400;
   }
 
+  /* Purple Card (General theme) - Dark mode aware */
+  .bg-purple-card {
+    @apply bg-purple-50 dark:bg-purple-950;
+  }
+  .bg-purple-card-muted {
+    @apply bg-purple-100/50 dark:bg-purple-900/20;
+  }
+  .border-purple-card {
+    @apply border-purple-200 dark:border-purple-800;
+  }
+  .border-purple-card-accent {
+    @apply border-purple-400 dark:border-purple-600;
+  }
+  .text-purple-card-heading {
+    @apply text-purple-900 dark:text-purple-100;
+  }
+  .text-purple-card-body {
+    @apply text-purple-800 dark:text-purple-200;
+  }
+  .bg-purple-card-highlight {
+    @apply bg-purple-500 dark:bg-purple-400;
+  }
+  .hover\:bg-purple-card:hover {
+    @apply hover:bg-purple-100 dark:hover:bg-purple-900;
+  }
+
   .text-foreground {
     color: var(--foreground);
   }
