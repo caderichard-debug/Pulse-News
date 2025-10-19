@@ -209,10 +209,10 @@ function PreferencesContent() {
         {/* Tabs */}
         <div className="bg-card rounded-lg shadow-sm mb-6 border border-border">
           <div className="border-b border-border">
-            <nav className="-mb-px flex">
+            <nav className="-mb-px flex overflow-x-auto no-scrollbar whitespace-nowrap">
               <button
                 onClick={() => handleTabChange('topics')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors flex-shrink-0 ${
                   activeTab === 'topics'
                     ? 'border-indigo-500 text-indigo-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -222,7 +222,7 @@ function PreferencesContent() {
               </button>
               <button
                 onClick={() => handleTabChange('sources')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors flex-shrink-0 ${
                   activeTab === 'sources'
                     ? 'border-indigo-500 text-indigo-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -232,7 +232,7 @@ function PreferencesContent() {
               </button>
               <button
                 onClick={() => handleTabChange('settings')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors flex-shrink-0 ${
                   activeTab === 'settings'
                     ? 'border-indigo-500 text-indigo-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -242,7 +242,7 @@ function PreferencesContent() {
               </button>
               <button
                 onClick={() => handleTabChange('account')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors flex-shrink-0 ${
                   activeTab === 'account'
                     ? 'border-indigo-500 text-indigo-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
