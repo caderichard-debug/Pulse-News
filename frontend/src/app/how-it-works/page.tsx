@@ -3,6 +3,7 @@
 
 import Navbar from '@/components/Navbar';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
+import Footer from '@/components/Footer';
 
 export default function HowItWorksPage() {
   return (
@@ -360,20 +361,21 @@ export default function HowItWorksPage() {
           </section>
 
           {/* Footer CTA */}
-          <div className="text-center bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg shadow-xl p-8 text-white">
-            <h2 className="text-2xl font-bold mb-3">Ready to Get Started?</h2>
-            <p className="text-indigo-100 mb-6">
-              Experience news with clarity, context, and critical thinking.
+          <div className="text-center bg-gradient-to-r from-indigo-500 to-purple-600 dark:from-indigo-600 dark:to-purple-700 rounded-lg shadow-xl p-8 text-white">
+            <h2 className="text-2xl font-bold mb-3">Have Questions?</h2>
+            <p className="text-indigo-100 dark:text-indigo-200 mb-6">
+              We're here to help. Reach out with any questions or feedback.
             </p>
             <a
-              href="/signup"
-              className="inline-block px-6 py-3 bg-card text-primary rounded-lg hover:bg-indigo-50 transition-colors font-semibold"
+              href="mailto:support@pulsenews.app"
+              className="inline-block px-6 py-3 bg-white text-primary rounded-lg hover:bg-indigo-50 transition-colors font-semibold"
             >
-              Sign Up Now
+              Contact Us
             </a>
           </div>
         </div>
       </div>
+      <Footer />
     </>
   );
 }

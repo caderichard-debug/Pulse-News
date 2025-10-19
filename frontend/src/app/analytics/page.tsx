@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
+import Footer from '@/components/Footer';
 import {
   LineChart,
   Line,
@@ -210,6 +211,7 @@ export default function AnalyticsPage() {
 
         </div>
       </div>
+      <Footer />
     </>
   );
 }

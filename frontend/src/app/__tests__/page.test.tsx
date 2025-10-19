@@ -46,7 +46,7 @@ describe('Landing Page', () => {
 
     const getStartedButton = screen.getByRole('link', { name: /get started/i });
     expect(getStartedButton).toBeInTheDocument();
-    expect(getStartedButton).toHaveAttribute('href', '/signup');
+    expect(getStartedButton).toHaveAttribute('href', '/welcome');
   });
 
   it('renders Log In button with correct link', () => {
@@ -89,7 +89,7 @@ describe('Landing Page', () => {
   it('renders How It Works section', () => {
     render(<Home />);
 
-    expect(screen.getByText(/how it works/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/how it works/i).length).toBeGreaterThan(0);
   });
 
   it('displays step-by-step process', () => {
@@ -112,8 +112,8 @@ describe('Landing Page', () => {
   it('displays CTA section', () => {
     render(<Home />);
 
-    expect(screen.getByText(/start your free newsletter today/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /sign up now/i })).toBeInTheDocument();
+    expect(screen.getByText(/questions\? get in touch/i)).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /contact us/i }).length).toBeGreaterThan(0);
   });
 
   it('renders with gradient background', () => {
