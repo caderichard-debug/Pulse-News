@@ -63,7 +63,7 @@ export default function FeedPage() {
   const [sortBy, setSortBy] = useState(storedFilters?.sortBy || 'newest');
   const [onlyAnalyzed, setOnlyAnalyzed] = useState(storedFilters?.onlyAnalyzed ?? true);
   const [onlyVerifiedStats, setOnlyVerifiedStats] = useState(storedFilters?.onlyVerifiedStats ?? false);
-  const [favoritesOnly, setFavoritesOnly] = useState(storedFilters?.favoritesOnly ?? false);
+  const [favoritesOnly, setFavoritesOnly] = useState(false); // Always default to unchecked
   const [page, setPage] = useState(storedFilters?.page || 1);
   const [pageInput, setPageInput] = useState((storedFilters?.page || 1).toString());
 
