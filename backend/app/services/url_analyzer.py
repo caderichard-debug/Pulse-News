@@ -115,6 +115,8 @@ class URLAnalyzer:
             )
             if bias_analysis:
                 source = source_analyzer.update_source_with_bias(source, bias_analysis)
+                self.db.commit()
+                self.db.refresh(source)
                 logger.info(f"Source bias updated: {source.organizational_bias.value}")
 
         # Step 5: Create article record
@@ -228,28 +230,20 @@ class URLAnalyzer:
         self.db.commit()
 
     async def _validate_url(self, url: str) -> None:
-        """Validate URL format and accessibility."""
-        # Parse URL
+        """Validate URL format."""
+        # Parse URL to ensure it's valid
         try:
             parsed = urlparse(url)
             if not parsed.scheme or not parsed.netloc:
                 raise ValueError("Invalid URL format. Please provide a complete URL (e.g., https://example.com/article)")
+            if parsed.scheme not in ['http', 'https']:
+                raise ValueError("URL must use HTTP or HTTPS protocol")
         except Exception as e:
             raise ValueError(f"Invalid URL: {str(e)}")
 
-        # Check accessibility (HEAD request with timeout)
-        try:
-            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
-                response = await client.head(url)
-                if response.status_code >= 400:
-                    # Try GET request as some servers don't support HEAD
-                    response = await client.get(url)
-                    if response.status_code >= 400:
-                        raise ValueError(f"URL returned status code {response.status_code}")
-        except httpx.TimeoutException:
-            raise ValueError("URL request timed out. Please check the URL and try again.")
-        except httpx.RequestError as e:
-            raise ValueError(f"Failed to access URL: {str(e)}")
+        # Note: We skip accessibility checks here to avoid bot detection issues.
+        # The article_extractor.py will handle the actual HTTP request with proper
+        # User-Agent headers and will return appropriate errors if the URL is inaccessible.
 
     def _get_or_create_source(
         self,

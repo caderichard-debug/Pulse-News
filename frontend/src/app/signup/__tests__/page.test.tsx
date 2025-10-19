@@ -35,28 +35,41 @@ describe('SignupPage', () => {
 
   it('renders signup form with step 1 (details)', async () => {
     render(<SignupPage />);
-    
+
+    // Wait for topics to load to avoid act warnings
     await waitFor(() => {
-      expect(screen.getByText(/Pulse/)).toBeInTheDocument();
-      expect(screen.getByText('Create your account')).toBeInTheDocument();
-      expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/^password/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument();
+      expect(api.getTopics).toHaveBeenCalled();
     });
+
+    expect(screen.getByText(/Pulse/)).toBeInTheDocument();
+    expect(screen.getByText('Create your account')).toBeInTheDocument();
+    expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^password/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument();
   });
 
-  it('shows login link', () => {
+  it('shows login link', async () => {
     render(<SignupPage />);
+
+    // Wait for topics to load to avoid act warnings
+    await waitFor(() => {
+      expect(api.getTopics).toHaveBeenCalled();
+    });
 
     const loginLink = screen.getByText(/log in/i);
     expect(loginLink).toBeInTheDocument();
     expect(loginLink.closest('a')).toHaveAttribute('href', '/login');
   });
 
-  it('updates form fields on input', () => {
+  it('updates form fields on input', async () => {
     render(<SignupPage />);
+
+    // Wait for topics to load to avoid act warnings
+    await waitFor(() => {
+      expect(api.getTopics).toHaveBeenCalled();
+    });
 
     const nameInput = screen.getByLabelText(/name/i) as HTMLInputElement;
     const emailInput = screen.getByLabelText(/email/i) as HTMLInputElement;
@@ -302,8 +315,13 @@ describe('SignupPage', () => {
     });
   });
 
-  it('requires all fields to be filled', () => {
+  it('requires all fields to be filled', async () => {
     render(<SignupPage />);
+
+    // Wait for topics to load to avoid act warnings
+    await waitFor(() => {
+      expect(api.getTopics).toHaveBeenCalled();
+    });
 
     expect(screen.getByLabelText(/name/i)).toHaveAttribute('required');
     expect(screen.getByLabelText(/email/i)).toHaveAttribute('required');
@@ -311,8 +329,13 @@ describe('SignupPage', () => {
     expect(screen.getByLabelText(/confirm password/i)).toHaveAttribute('required');
   });
 
-  it('uses correct input types', () => {
+  it('uses correct input types', async () => {
     render(<SignupPage />);
+
+    // Wait for topics to load to avoid act warnings
+    await waitFor(() => {
+      expect(api.getTopics).toHaveBeenCalled();
+    });
 
     expect(screen.getByLabelText(/email/i)).toHaveAttribute('type', 'email');
     expect(screen.getByLabelText(/^password/i)).toHaveAttribute('type', 'password');

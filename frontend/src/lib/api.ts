@@ -208,6 +208,22 @@ class ApiClient {
     }>>('/preferences/sources');
   }
 
+  async getSourceById(sourceId: number) {
+    return this.request<{
+      id: number;
+      name: string;
+      url: string;
+      rss_feed_url: string;
+      description: string | null;
+      trust_score: number;
+      organizational_bias: string | null;
+      bias_description: string | null;
+      is_active: boolean;
+      created_at: string;
+      article_count: number;
+    }>(`/sources/${sourceId}`);
+  }
+
   async updateSourcePreferences(sourceIds: number[]) {
     return this.request('/preferences/sources', {
       method: 'PUT',
