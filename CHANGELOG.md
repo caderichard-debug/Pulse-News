@@ -1,3 +1,119 @@
+## 2025-10-18 22:25
+
+**Account Deletion, Contact Us Link, and Source Management Improvements** ✅
+
+### What Changed
+
+Implemented three major user-facing features: account deletion, contact us link for authenticated users, and enhanced source management with descriptions.
+
+#### 1. Account Deletion Feature
+
+**Backend:**
+- **DELETE /auth/account endpoint** [auth.py:397]:
+  - Requires authentication via JWT token
+  - Atomically deletes all user data in transaction:
+    - Topic preferences (UserTopicPreference)
+    - Source subscriptions (UserSourceSubscription)
+    - Article favorites (ArticleFavorite)
+    - Newsletters
+    - User account
+  - Returns 204 No Content on success
+  - Rolls back on error to ensure data integrity
+  - Logs deletion events for audit trail
+
+**Frontend:**
+- **DeleteAccountButton component** [preferences/page.tsx:34]:
+  - Added to Account tab in Preferences
+  - Confirmation dialog requiring user to type "DELETE"
+  - Warns about permanent data loss
+  - Clears local/session storage after deletion
+  - Redirects to landing page
+  - Full dark mode support
+- **API client method** [api.ts:125]:
+  - deleteAccount() method calls DELETE /auth/account
+  - Clears authentication token on success
+
+#### 2. Contact Us Link
+
+**Frontend:**
+- **Navbar component** [Navbar.tsx:154]:
+  - Replaced "Sign up" with "Contact us" link for authenticated users
+  - Uses mailto:support@pulse-news.com
+  - Visible on desktop and in mobile menu [Navbar.tsx:197]
+  - Follows consistent navigation styling
+
+#### 3. Source Descriptions and Management
+
+**Backend:**
+- **Enhanced SourcePreferenceInfo model** [preferences.py:273]:
+  - Added description field to API response
+  - Now returns source descriptions from database
+- **GET /sources endpoint** [preferences.py:320]:
+  - Includes source.description in response
+- **POST /admin/sources/from-url endpoint** [admin.py:375]:
+  - Creates new sources by analyzing RSS feed URLs
+  - Uses SourceAnalyzer for AI-powered analysis
+  - Extracts metadata and generates descriptions
+  - Determines organizational bias and trust scores
+  - Validates against duplicate RSS URLs
+- **Enhanced SourceAnalyzer service** [source_analyzer.py:203]:
+  - New analyze_rss_feed() method
+  - Fetches and parses RSS feeds
+  - Samples recent articles for AI analysis
+  - Generates comprehensive source metadata
+  - Returns description, bias, and credibility ratings
+
+**Frontend:**
+- **Source cards in Preferences** [preferences/page.tsx:500]:
+  - Now display source descriptions from API
+  - Shows full source metadata:
+    - Name and URL
+    - Description (when available)
+    - Trust score
+    - Organizational bias badge
+  - Updated Source interface to include description field
+
+### Documentation
+
+- **Implementation Plan**: Created [ACCOUNT_AND_SOURCE_IMPROVEMENTS_PLAN.md](docs/ACCOUNT_AND_SOURCE_IMPROVEMENTS_PLAN.md)
+  - Complete feature specification
+  - Database schema changes
+  - API endpoint documentation
+  - Testing checklist
+  - Security considerations
+
+### Code References
+
+**Backend Files:**
+- [backend/app/routes/auth.py](backend/app/routes/auth.py:397) - Account deletion endpoint
+- [backend/app/routes/admin.py](backend/app/routes/admin.py:375) - Source creation endpoint
+- [backend/app/routes/preferences.py](backend/app/routes/preferences.py:273) - Source descriptions API
+- [backend/app/services/source_analyzer.py](backend/app/services/source_analyzer.py:203) - RSS feed analysis
+
+**Frontend Files:**
+- [frontend/src/app/preferences/page.tsx](frontend/src/app/preferences/page.tsx:34) - DeleteAccountButton component
+- [frontend/src/app/preferences/page.tsx](frontend/src/app/preferences/page.tsx:500) - Source card descriptions
+- [frontend/src/components/Navbar.tsx](frontend/src/components/Navbar.tsx:154) - Contact us link
+- [frontend/src/lib/api.ts](frontend/src/lib/api.ts:125) - Account deletion API method
+
+### Testing Status
+
+- ✅ Backend endpoints manually tested
+- ✅ Source descriptions verified in API response
+- ✅ All code changes organized into 7 logical commits
+- ⏳ Frontend UI testing pending (requires npm build)
+- ⏳ End-to-end account deletion flow testing pending
+
+### Impact
+
+- Users can now permanently delete their accounts with full data removal
+- Authenticated users have clear path to contact support
+- Source cards show meaningful descriptions from database
+- Admin can add new sources via RSS URL with automatic AI analysis
+- All source metadata is now fully database-driven (no hardcoded values)
+
+---
+
 ## 2025-10-18 17:15
 
 **Source Organizational Bias Analysis for Analyze Endpoint** ✅
