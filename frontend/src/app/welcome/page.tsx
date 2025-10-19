@@ -1,49 +1,12 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
 export default function WelcomePage() {
-  const router = useRouter();
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 dark:from-gray-900 via-indigo-50 dark:via-gray-800 to-purple-50 dark:to-gray-900 transition-colors">
-      {/* Simple Header */}
-      <header className="border-b border-border bg-card/50 dark:bg-card/30 backdrop-blur transition-colors">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          {/* Logo/Brand */}
-          <div className="flex items-center">
-            <button
-              onClick={() => router.push('/feed')}
-              className="flex items-center gap-2 text-2xl font-bold text-primary hover:text-primary-hover transition-colors"
-            >
-              <Image
-                src="/pulse-icon.png"
-                alt="Pulse Logo"
-                width={32}
-                height={32}
-                className="w-8 h-8 object-contain"
-              />
-              <span className="hidden sm:inline">Pulse</span>
-            </button>
-          </div>
-          <div className="flex gap-3">
-            <a
-              href="/login"
-              className="px-6 py-2 text-sm font-medium bg-card dark:bg-card text-primary border-2 border-primary rounded-lg hover:bg-accent dark:hover:bg-accent transition-colors"
-            >
-              Log In
-            </a>
-            <a
-              href="/signup"
-              className="px-6 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors shadow-md"
-            >
-              Sign Up
-            </a>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       <div className="max-w-6xl mx-auto px-4 py-16">
         {/* Hero Section */}
