@@ -10,9 +10,10 @@ from ..database import get_session
 from ..models import (
     User, Article, ArticleAnalysis, ArticleFrameworkLink,
     Framework, Source, StatisticVerification, ArticleClusterMember,
-    ArticleCluster, ArticleContext, ArticleFavorite
+    ArticleCluster, ArticleContext, ArticleFavorite, ViewpointRelationship
 )
 from ..routes.auth import get_current_user
+from ..services.viewpoint_analyzer import ViewpointAnalyzer
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
@@ -61,6 +62,35 @@ class ArticleContextData(BaseModel):
     key_players: Optional[str]
     timeline: Optional[str]
     significance: Optional[str]
+
+
+class OpposingViewpoint(BaseModel):
+    article_id: int
+    title: str
+    url: str
+    source_name: str
+    source_bias: Optional[str]
+    published_at: datetime
+    sentiment_score: Optional[float]
+    political_lean: Optional[str]
+    summary: Optional[str]
+
+    # Relationship details
+    relationship_type: str
+    opposition_strength: float
+    reasoning: str
+    ai_explanation: Optional[str]
+    quality_score: Optional[float]
+    framework_name: Optional[str] = None  # For framework opposition type
+    primary_position: Optional[int] = None  # For framework opposition type
+    opposing_position: Optional[int] = None  # For framework opposition type
+
+
+class OpposingViewpointsResponse(BaseModel):
+    primary_article_id: int
+    opposing_viewpoints: List[OpposingViewpoint]
+    total_found: int
+    relationship_types_available: List[str]
 
 
 class ArticleDetailResponse(BaseModel):
@@ -306,3 +336,133 @@ async def get_article_detail(
         context=context,
         is_favorited=is_favorited
     )
+
+
+@router.get("/{article_id}/opposing-viewpoints", response_model=OpposingViewpointsResponse)
+async def get_opposing_viewpoints(
+    article_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+    max_results: int = 5,
+    relationship_types: str = None  # Comma-separated list of relationship types
+):
+    """
+    Get articles that represent opposing viewpoints to the given article.
+
+    Currently supported relationship types:
+    - framework_opposition: Articles with opposite positions on ethical frameworks (MVP)
+
+    Future relationship types (not yet implemented):
+    - source_bias: Same story from sources with different organizational biases
+    - sentiment_contrast: Articles with contrasting emotional tones on same topic
+    - temporal_evolution: How coverage of the story evolved over time
+
+    Returns:
+        - Opposing viewpoints ranked by opposition strength and quality
+        - AI-generated explanations for framework oppositions
+        - Caching to avoid repeated expensive AI analysis
+    """
+    try:
+        # Verify primary article exists and has analysis
+        primary_article = session.exec(select(Article).where(Article.id == article_id)).first()
+        if not primary_article:
+            raise HTTPException(status_code=404, detail="Article not found")
+
+        # Parse relationship types
+        available_types = ["framework_opposition"]  # Only framework_opposition is implemented in MVP
+        requested_types = available_types  # Default to available types
+
+        if relationship_types:
+            requested = [t.strip() for t in relationship_types.split(",")]
+            # Filter to only implemented types
+            requested_types = [t for t in requested if t in available_types]
+
+        if not requested_types:
+            requested_types = available_types
+
+        # Get opposing viewpoints using the analyzer
+        start_time = datetime.utcnow()
+        oppositions = ViewpointAnalyzer.find_opposing_viewpoints(
+            article_id=article_id,
+            session=session,
+            max_results=max_results,
+            relationship_types=requested_types
+        )
+        processing_time = (datetime.utcnow() - start_time).total_seconds() * 1000  # milliseconds
+
+        # Handle rate limiting and API availability issues
+        if not oppositions:
+            # Check if this is due to API unavailability
+            from ..utils.openai_client import openai_client
+            if not openai_client.is_available():
+                logger.error("OpenAI API unavailable for viewpoint generation")
+                raise HTTPException(
+                    status_code=503,
+                    detail="Cannot complete this request right now. OpenAI API is unavailable."
+                )
+            else:
+                # No viewpoints found, which is normal for some articles
+                logger.info(f"No opposing viewpoints found for article {article_id}")
+
+        # Build response
+        opposing_viewpoints = []
+        for opposition in oppositions:
+            opp_article = opposition["article"]
+            opp_analysis = opposition["analysis"]
+            opp_source = opposition["source"]
+
+            viewpoint = OpposingViewpoint(
+                article_id=opp_article.id,
+                title=opp_article.title,
+                url=opp_article.url,
+                source_name=opp_source.name,
+                source_bias=opp_source.organizational_bias.value if opp_source.organizational_bias else None,
+                published_at=opp_article.published_at,
+                sentiment_score=opp_analysis.sentiment_score if opp_analysis else None,
+                political_lean=opp_analysis.political_lean.value if opp_analysis and opp_analysis.political_lean else None,
+                summary=opp_analysis.summary if opp_analysis else None,
+                relationship_type=opposition["relationship_type"],
+                opposition_strength=opposition["opposition_strength"],
+                reasoning=opposition["reasoning"],
+                ai_explanation=opposition.get("ai_explanation"),
+                quality_score=opposition.get("quality_score")
+            )
+
+            # Add framework-specific fields
+            if opposition["relationship_type"] == "framework_opposition":
+                framework = opposition.get("framework")
+                if framework:
+                    viewpoint.framework_name = framework.name
+                    viewpoint.primary_position = opposition.get("primary_position")
+                    viewpoint.opposing_position = opposition.get("opposing_position")
+
+            opposing_viewpoints.append(viewpoint)
+
+        logger.info(
+            f"Generated {len(opposing_viewpoints)} opposing viewpoints for article {article_id} "
+            f"in {processing_time:.0f}ms"
+        )
+
+        return OpposingViewpointsResponse(
+            primary_article_id=article_id,
+            opposing_viewpoints=opposing_viewpoints,
+            total_found=len(opposing_viewpoints),
+            relationship_types_available=available_types
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating opposing viewpoints for article {article_id}: {e}", exc_info=True)
+
+        # Check for rate limiting specifically
+        if "rate limit" in str(e).lower():
+            raise HTTPException(
+                status_code=429,
+                detail="We are being rate limited by OpenAI. Contact support."
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="Internal server error while generating opposing viewpoints"
+            )
