@@ -884,8 +884,11 @@ class ApiClient {
     }>(`/favorites/check/${articleId}`);
   }
 
-  async getOpposingViewpoints(articleId: number, params?: { relationship_types?: string; max_results?: number }) {
-    const queryString = params ? `?${new URLSearchParams(params as any).toString()}` : '';
+  async getOpposingViewpoints(articleId: number, params?: { relationshipTypes?: string[]; maxResults?: number }) {
+    const queryParams: Record<string, string> = {};
+    if (params?.maxResults) queryParams.max_results = params.maxResults.toString();
+    if (params?.relationshipTypes) queryParams.relationship_types = params.relationshipTypes.join(',');
+    const queryString = Object.keys(queryParams).length > 0 ? `?${new URLSearchParams(queryParams).toString()}` : '';
     return this.request<{
       primary_article_id: number;
       opposing_viewpoints: Array<{
