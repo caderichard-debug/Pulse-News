@@ -9,22 +9,25 @@ export default function Footer() {
 
   useEffect(() => {
     let mounted = true;
-    api.getCurrentUser()
-      .then((user) => {
+
+    const checkAuth = async () => {
+      try {
+        const user = await api.getCurrentUser();
         if (mounted && user) {
           setIsAuthenticated(true);
         }
-      })
-      .catch(() => {
+      } catch {
         if (mounted) {
           setIsAuthenticated(false);
         }
-      })
-      .finally(() => {
+      } finally {
         if (mounted) {
           setLoading(false);
         }
-      });
+      }
+    };
+
+    checkAuth();
     return () => { mounted = false; };
   }, []);
 

@@ -37,25 +37,31 @@ export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState(30);
 
   useEffect(() => {
+    let mounted = true;
+
+    const loadAnalyticsData = async () => {
+      try {
+        const [sentiment, bias] = await Promise.all([
+          api.getSentimentOverTime(timeRange),
+          api.getBiasDistribution(4),
+        ]);
+
+        if (mounted) {
+          setSentimentData(sentiment);
+          setBiasData(bias);
+        }
+      } catch (err) {
+        console.error('Failed to load analytics data:', err);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
     loadAnalyticsData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => { mounted = false; };
   }, [timeRange]);
-
-  const loadAnalyticsData = async () => {
-    try {
-      const [sentiment, bias] = await Promise.all([
-        api.getSentimentOverTime(timeRange),
-        api.getBiasDistribution(4),
-      ]);
-
-      setSentimentData(sentiment);
-      setBiasData(bias);
-    } catch (err) {
-      console.error('Failed to load analytics data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
 
   // Transform sentiment data for Recharts
