@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = True
     frontend_url: str = "http://localhost:3000"
+    frontend_custom_url: str = "https://pulsenews.app"
     backend_url: str = "http://localhost:8000"
 
     # Scraping Configuration
