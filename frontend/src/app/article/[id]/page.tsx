@@ -8,6 +8,7 @@ import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
 import FavoriteButton from '@/components/FavoriteButton';
+import { OpposingViewpoints } from '@/components/OpposingViewpoints';
 import Footer from '@/components/Footer';
 
 interface ArticleDetail {
@@ -561,6 +562,10 @@ export default function ArticleDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Opposing Viewpoints */}
+      <OpposingViewpoints articleId={article.id} />
+
         </div>
       </div>
       <Footer />
