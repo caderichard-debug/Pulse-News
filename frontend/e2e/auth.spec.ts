@@ -17,10 +17,17 @@ test.describe('Authentication Flow', () => {
   });
 
   test('should navigate to signup page', async ({ page }) => {
-    // Click "Get Started" button
+    // Click "Get Started" link (goes to welcome page first)
     await page.getByRole('link', { name: /get started/i }).first().click();
 
-    // Wait for navigation and hydration
+    // Wait for welcome page
+    await page.waitForURL(/\/welcome/, { timeout: 10000 });
+    await page.waitForLoadState('domcontentloaded');
+
+    // Then click "Sign Up Free" link on welcome page
+    await page.getByRole('link', { name: /sign up free/i }).click();
+
+    // Wait for signup page and hydration
     await page.waitForURL(/\/signup/, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
 
@@ -33,7 +40,7 @@ test.describe('Authentication Flow', () => {
   });
 
   test('should navigate to login page', async ({ page }) => {
-    // Click "Log In" button
+    // Click "Log In" link from landing page
     await page.getByRole('link', { name: /log in/i }).first().click();
 
     // Wait for navigation and hydration
