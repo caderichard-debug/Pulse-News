@@ -16,7 +16,7 @@ services:
     healthCheckPath: /health
     # Enable PR previews
     previews:
-      generation: automatic
+      generation: manual
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -78,7 +78,7 @@ services:
     plan: free
     # Enable PR previews
     previews:
-      generation: automatic
+      generation: manual
     envVars:
       - key: NODE_ENV
         value: production
