@@ -88,7 +88,7 @@ describe('AnalyticsPage', () => {
     render(<AnalyticsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('📊 Data Analysis')).toBeInTheDocument();
+      expect(screen.getByText('Data Analysis')).toBeInTheDocument();
     });
 
     expect(api.getSentimentOverTime).toHaveBeenCalledWith(30);
@@ -121,7 +121,7 @@ describe('AnalyticsPage', () => {
     render(<AnalyticsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('📊 Data Analysis')).toBeInTheDocument();
+      expect(screen.getByText('Data Analysis')).toBeInTheDocument();
     });
 
     const thirtyDayButton = screen.getByRole('button', { name: '30d' });
@@ -133,7 +133,7 @@ describe('AnalyticsPage', () => {
     render(<AnalyticsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('📊 Data Analysis')).toBeInTheDocument();
+      expect(screen.getByText('Data Analysis')).toBeInTheDocument();
     });
 
     const sevenDayButton = screen.getByRole('button', { name: '7d' });
@@ -179,7 +179,7 @@ describe('AnalyticsPage', () => {
     render(<AnalyticsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('📊 Data Analysis')).toBeInTheDocument();
+      expect(screen.getByText('Data Analysis')).toBeInTheDocument();
     });
 
     expect(screen.getByRole('button', { name: '7d' })).toBeInTheDocument();

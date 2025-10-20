@@ -88,7 +88,10 @@ class TestCompleteUserJourney:
             }
         )
         assert register_response.status_code == 201
-        user_data = register_response.json()
+        register_data = register_response.json()
+        assert "access_token" in register_data
+        assert register_data["token_type"] == "bearer"
+        user_data = register_data["user"]
         assert user_data["email"] == "newuser@example.com"
         assert user_data["name"] == "Test User"
         assert "id" in user_data
@@ -129,8 +132,10 @@ class TestCompleteUserJourney:
         prefs_response = e2e_client.get("/preferences", headers=headers)
         assert prefs_response.status_code == 200
         prefs_data = prefs_response.json()
-        assert len(prefs_data["topics"]) == 1
-        assert prefs_data["topics"][0]["topic_id"] == topic_id
+        # Check that at least one topic is active (subscribed)
+        active_topics = [t for t in prefs_data["topics"] if t["is_active"]]
+        assert len(active_topics) >= 1
+        assert any(t["id"] == topic_id for t in active_topics)
 
         # Step 4: User Updates Settings
         settings_response = e2e_client.put(
@@ -149,7 +154,7 @@ class TestCompleteUserJourney:
         assert feed_response.status_code == 200
         feed_data = feed_response.json()
         assert "articles" in feed_data
-        assert "total" in feed_data
+        assert "total_count" in feed_data
 
         # Step 6: Verify User Stats
         stats_response = e2e_client.get("/analytics/user-stats", headers=headers)
@@ -267,7 +272,8 @@ class TestCompleteUserJourney:
                 "name": "Newsletter User"
             }
         )
-        user_id = register_response.json()["id"]
+        assert register_response.status_code == 201
+        user_id = register_response.json()["user"]["id"]
 
         login_response = e2e_client.post(
             "/auth/login",

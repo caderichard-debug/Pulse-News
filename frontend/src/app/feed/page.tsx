@@ -144,6 +144,24 @@ export default function FeedPage() {
     return 'text-red-600';
   }
 
+  function handlePageInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setPageInput(e.target.value);
+  }
+
+  function handlePageInputSubmit(e: React.KeyboardEvent<HTMLInputElement> | React.FocusEvent<HTMLInputElement>) {
+    if ('key' in e && e.key !== 'Enter') return;
+
+    const newPage = parseInt(pageInput);
+    const maxPage = Math.ceil((feedData?.total_count || 0) / (feedData?.page_size || 20));
+
+    if (!isNaN(newPage) && newPage >= 1 && newPage <= maxPage) {
+      setPage(newPage);
+    } else {
+      // Reset to current page if invalid
+      setPageInput(page.toString());
+    }
+  }
+
   function formatTimeAgo(dateString: string): string {
     const date = new Date(dateString);
     const now = new Date();

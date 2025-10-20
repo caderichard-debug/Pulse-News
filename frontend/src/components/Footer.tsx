@@ -11,17 +11,14 @@ export default function Footer() {
     let mounted = true;
     api.getCurrentUser()
       .then((user) => {
-        if (mounted && user) {
-          setIsAuthenticated(true);
+        if (mounted) {
+          setIsAuthenticated(!!user);
+          setLoading(false);
         }
       })
       .catch(() => {
         if (mounted) {
           setIsAuthenticated(false);
-        }
-      })
-      .finally(() => {
-        if (mounted) {
           setLoading(false);
         }
       });

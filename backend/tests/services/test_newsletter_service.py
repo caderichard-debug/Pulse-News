@@ -157,7 +157,8 @@ class TestNewsletterServiceBasics:
                     "political_lean": "CENTER",
                     "published_at": "Jan 01",
                     "summary": "Test summary",
-                    "key_stats": '["stat1"]'
+                    "key_stats": '["stat1"]',
+                    "sentiment_score": 0.5
                 }
             ],
             "preferences_url": "https://pulse.news/preferences",

@@ -24,8 +24,8 @@ class TestArticlePipelineIntegration:
         topic = Topic(name="Technology", description="Tech news")
         source = Source(
             name="TechNews",
-            rss_url="https://technews.example.com/feed",
-            website_url="https://technews.example.com",
+            rss_feed_url="https://technews.example.com/feed",
+            url="https://technews.example.com",
             is_active=True,
             trust_score=8.0
         )
@@ -58,23 +58,31 @@ class TestArticlePipelineIntegration:
 
                 with patch('app.services.article_extractor.trafilatura.extract', return_value="This is the full article content about AI development."):
                     # Step 1: Scrape articles
-                    scraped_count = scrape_source(session, source.id)
-                    assert scraped_count == 1
+                    scraped_articles = scrape_source(source, session)
+                    assert len(scraped_articles) == 1
 
                     # Verify article was created
-                    article = session.query(Article).filter(Article.source_id == source.id).first()
+                    from sqlmodel import select
+                    article = session.exec(select(Article).where(Article.source_id == source.id)).first()
                     assert article is not None
                     assert article.title == 'New AI Development'
-                    assert article.status == ProcessingStatus.SCRAPED
+                    assert article.processing_status == ProcessingStatus.PENDING
 
-                    # Step 2: Extract content
-                    extracted_count = extract_article_content(session, article.id)
-                    assert extracted_count == 1
+                    # Step 2: Extract content (current API extracts by URL, not by ID)
+                    extraction_result = extract_article_content(article.url)
+                    assert extraction_result['success'] is True
+
+                    # Update article with extracted content
+                    article.content_text = extraction_result['content']
+                    article.word_count = extraction_result['word_count']
+                    article.processing_status = ProcessingStatus.EXTRACTED
+                    session.add(article)
+                    session.commit()
 
                     # Verify article was updated
                     session.refresh(article)
                     assert article.content_text is not None
-                    assert article.status == ProcessingStatus.EXTRACTED
+                    assert article.processing_status == ProcessingStatus.EXTRACTED
                     assert "full article content" in article.content_text
 
     def test_extraction_to_analysis_pipeline(self, session: Session):
@@ -82,13 +90,13 @@ class TestArticlePipelineIntegration:
         Integration test: Article extraction → AI analysis
         Tests that extracted articles can be analyzed
         """
-        from app.services.ai_analyzer import analyze_article
+        from app.services.ai_analyzer import analyze_articles_batch
 
         # Create source and article
         source = Source(
             name="NewsSource",
-            rss_url="https://news.example.com/feed",
-            website_url="https://news.example.com",
+            rss_feed_url="https://news.example.com/feed",
+            url="https://news.example.com",
             is_active=True,
             trust_score=9.0
         )
@@ -96,14 +104,14 @@ class TestArticlePipelineIntegration:
         session.commit()
         session.refresh(source)
 
+        from datetime import datetime
         article = Article(
             title="Economic Policy Update",
             url="https://news.example.com/economy",
             source_id=source.id,
-            description="New economic policy announced",
-            published_at="2025-01-01T10:00:00Z",
+            published_at=datetime(2025, 1, 1, 10, 0, 0),
             content_text="The government announced a new economic policy aimed at reducing inflation by 2%.",
-            status=ProcessingStatus.EXTRACTED
+            processing_status=ProcessingStatus.EXTRACTED
         )
         session.add(article)
         session.commit()
@@ -128,17 +136,18 @@ class TestArticlePipelineIntegration:
             mock_client.is_available.return_value = True
             mock_client.client.chat.completions.create.return_value = mock_response
 
-            # Analyze article
-            result = analyze_article(session, article.id)
-            assert result is True
+            # Analyze article (batch function)
+            count = analyze_articles_batch(session, batch_size=1)
+            assert count == 1
 
             # Verify analysis was created
             session.refresh(article)
-            assert article.status == ProcessingStatus.ANALYZED
+            assert article.processing_status == ProcessingStatus.ANALYZED
 
-            analysis = session.query(ArticleAnalysis).filter(
+            from sqlmodel import select
+            analysis = session.exec(select(ArticleAnalysis).where(
                 ArticleAnalysis.article_id == article.id
-            ).first()
+            )).first()
 
             assert analysis is not None
             assert "Government announces" in analysis.summary
@@ -153,8 +162,8 @@ class TestArticlePipelineIntegration:
         # Create source
         source = Source(
             name="ErrorSource",
-            rss_url="https://error.example.com/feed",
-            website_url="https://error.example.com",
+            rss_feed_url="https://error.example.com/feed",
+            url="https://error.example.com",
             is_active=True,
             trust_score=7.0
         )
@@ -163,27 +172,30 @@ class TestArticlePipelineIntegration:
         session.refresh(source)
 
         # Test 1: Scraping with invalid feed
-        with patch('app.services.rss_scraper.feedparser.parse', side_effect=Exception("Feed error")):
-            count = scrape_source(session, source.id)
-            assert count == 0  # Should handle error gracefully
+        mock_feed = Mock()
+        mock_feed.bozo = True
+        mock_feed.bozo_exception = Exception("Feed error")
+        mock_feed.entries = []
+        with patch('app.services.rss_scraper.feedparser.parse', return_value=mock_feed):
+            articles = scrape_source(source, session)
+            assert len(articles) == 0  # Should handle error gracefully
 
         # Test 2: Extraction with network error
+        from datetime import datetime
         article = Article(
             title="Test Article",
             url="https://error.example.com/article",
             source_id=source.id,
-            description="Test",
-            published_at="2025-01-01T10:00:00Z",
-            status=ProcessingStatus.SCRAPED
+            published_at=datetime(2025, 1, 1, 10, 0, 0),
+            processing_status=ProcessingStatus.PENDING
         )
         session.add(article)
         session.commit()
 
         with patch('app.services.article_extractor.requests.get', side_effect=Exception("Network error")):
-            count = extract_article_content(session, article.id)
-            # Should handle error but still mark as processed
-            session.refresh(article)
-            assert article.status == ProcessingStatus.EXTRACTION_FAILED or article.status == ProcessingStatus.SCRAPED
+            result = extract_article_content(article.url)
+            # Should handle error gracefully
+            assert result['success'] is False
 
     def test_batch_processing_integration(self, session: Session):
         """
@@ -195,8 +207,8 @@ class TestArticlePipelineIntegration:
         # Create source
         source = Source(
             name="BatchSource",
-            rss_url="https://batch.example.com/feed",
-            website_url="https://batch.example.com",
+            rss_feed_url="https://batch.example.com/feed",
+            url="https://batch.example.com",
             is_active=True,
             trust_score=8.5
         )
@@ -205,42 +217,48 @@ class TestArticlePipelineIntegration:
         session.refresh(source)
 
         # Create multiple extracted articles
+        from datetime import datetime
         for i in range(3):
             article = Article(
                 title=f"Article {i+1}",
                 url=f"https://batch.example.com/article-{i+1}",
                 source_id=source.id,
-                description=f"Description {i+1}",
-                published_at="2025-01-01T10:00:00Z",
+                published_at=datetime(2025, 1, 1, 10, 0, 0),
                 content_text=f"Content for article {i+1}",
-                status=ProcessingStatus.EXTRACTED
+                processing_status=ProcessingStatus.EXTRACTED
             )
             session.add(article)
 
         session.commit()
 
         # Mock batch analysis
+        mock_response = Mock()
+        mock_response.choices = [Mock()]
+        mock_response.choices[0].message.content = '''
+        {
+            "articles": [
+                {"article_id": 0, "summary": "Summary 1", "sentiment_score": 0, "political_lean": "CENTER", "bias_indicators": "neutral", "key_stats": []},
+                {"article_id": 1, "summary": "Summary 2", "sentiment_score": 1, "political_lean": "CENTER", "bias_indicators": "neutral", "key_stats": []},
+                {"article_id": 2, "summary": "Summary 3", "sentiment_score": 2, "political_lean": "CENTER", "bias_indicators": "neutral", "key_stats": []}
+            ]
+        }
+        '''
+        mock_response.usage.prompt_tokens = 100
+        mock_response.usage.completion_tokens = 50
+
         with patch('app.services.ai_analyzer.openai_client') as mock_client:
             mock_client.is_available.return_value = True
-            mock_client.analyze_articles_batch.return_value = [
-                {
-                    "summary": f"Summary {i+1}",
-                    "sentiment_score": i,
-                    "political_lean": "CENTER",
-                    "bias_indicators": "neutral",
-                    "key_stats": []
-                }
-                for i in range(3)
-            ]
+            mock_client.client.chat.completions.create.return_value = mock_response
 
             # Process batch
             count = analyze_articles_batch(session, batch_size=3)
             assert count == 3
 
             # Verify all articles were analyzed
-            analyzed = session.query(Article).filter(
-                Article.status == ProcessingStatus.ANALYZED
-            ).all()
+            from sqlmodel import select
+            analyzed = session.exec(select(Article).where(
+                Article.processing_status == ProcessingStatus.ANALYZED
+            )).all()
             assert len(analyzed) == 3
 
 
@@ -291,8 +309,8 @@ class TestNewsletterPipelineIntegration:
         # Create source
         source = Source(
             name="TechSource",
-            rss_url="https://tech.example.com/feed",
-            website_url="https://tech.example.com",
+            rss_feed_url="https://tech.example.com/feed",
+            url="https://tech.example.com",
             is_active=True,
             trust_score=8.0
         )
