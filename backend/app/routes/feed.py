@@ -63,6 +63,7 @@ async def get_feed_articles(
     current_user: Optional[User] = Depends(get_optional_user),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    search: Optional[str] = Query(default=None, description="Search articles by title"),
     topic: Optional[str] = Query(default=None, description="Filter by topic name"),
     source_id: Optional[int] = Query(default=None, description="Filter by source ID"),
     political_lean: Optional[str] = Query(default=None, description="Filter by political lean: left, center, right"),
@@ -101,6 +102,10 @@ async def get_feed_articles(
             date_from = now - timedelta(days=365)
 
     # Apply filters
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.where(Article.title.ilike(search_pattern))
+
     if topic:
         query = query.where(Article.topic_category == topic)
 

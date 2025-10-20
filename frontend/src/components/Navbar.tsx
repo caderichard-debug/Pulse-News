@@ -21,17 +21,22 @@ export default function Navbar() {
 
   useEffect(() => {
     let mounted = true;
-    api.getCurrentUser()
-      .then((user) => {
+
+    const checkAuth = async () => {
+      try {
+        const user = await api.getCurrentUser();
         if (mounted && user && typeof user.name === 'string') {
           setUserName(user.name);
           setIsAdmin(user.is_admin || false);
         }
-      })
-      .catch(() => {})
-      .finally(() => {
+      } catch {
+        // Silently handle auth errors
+      } finally {
         if (mounted) setLoading(false);
-      });
+      }
+    };
+
+    checkAuth();
     return () => { mounted = false; };
   }, []);
 

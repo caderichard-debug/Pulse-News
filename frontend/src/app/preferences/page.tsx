@@ -23,6 +23,7 @@ interface Source {
   description?: string | null;
   trust_score: number;
   organizational_bias: string | null;
+  is_recommended: boolean;
   subscribed: boolean;
 }
 
@@ -168,12 +169,56 @@ function PreferencesContent() {
   };
 
   const [activeTab, setActiveTab] = useState<'topics' | 'sources' | 'settings' | 'account'>(getInitialTab());
+  const [sourcesSubTab, setSourcesSubTab] = useState<'recommended' | 'community' | 'add'>('recommended');
+  const [articleUrl, setArticleUrl] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
-    loadPreferences();
+    let mounted = true;
+    const load = async () => {
+      try {
+        const [prefsResponse, sourcesResponse, settingsResponse, userResponse] = await Promise.all([
+          api.getPreferences(),
+          api.getSources(),
+          api.getSettings(),
+          api.getCurrentUser(),
+        ]);
+
+        if (mounted) {
+          setPreferences(prefsResponse.topics);
+          setSources(sourcesResponse);
+          setSettings(settingsResponse);
+          if (userResponse) {
+            setUserInfo({
+              name: userResponse.name || '',
+              email: userResponse.email || '',
+            });
+          } else {
+            setUserInfo({ name: '', email: '', })
+          }
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : '';
+        if (mounted) {
+          if (errorMessage.includes('401')) {
+            // Not authenticated, redirect to login
+            router.push('/login');
+          } else {
+            setMessage({ type: 'error', text: 'Failed to load preferences' });
+          }
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    load();
+    return () => { mounted = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -191,38 +236,7 @@ function PreferencesContent() {
     router.push(`/preferences?tab=${tab}`, { scroll: false });
   };
 
-  const loadPreferences = async () => {
-    try {
-      const [prefsResponse, sourcesResponse, settingsResponse, userResponse] = await Promise.all([
-        api.getPreferences(),
-        api.getSources(),
-        api.getSettings(),
-        api.getCurrentUser(),
-      ]);
-      setPreferences(prefsResponse.topics);
-      setSources(sourcesResponse);
-      setSettings(settingsResponse);
-      if (userResponse) {
-        setUserInfo({
-          name: userResponse.name || '',
-          email: userResponse.email || '',
-        });
-      } else {
-        setUserInfo({ name: '', email: '', })
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '';
-      if (errorMessage.includes('401')) {
-        // Not authenticated, redirect to login
-        router.push('/login');
-      } else {
-        setMessage({ type: 'error', text: 'Failed to load preferences' });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  
   const toggleActive = (topicId: number) => {
     setPreferences(
       preferences.map((pref) =>
@@ -270,6 +284,49 @@ function PreferencesContent() {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save sources' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSubmitSource = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!articleUrl.trim()) {
+      setMessage({ type: 'error', text: 'Please enter an article URL' });
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setMessage(null);
+
+      const result = await api.createSourceFromURL(articleUrl);
+
+      setMessage({
+        type: 'success',
+        text: result.message || 'Source added successfully!'
+      });
+
+      setArticleUrl('');
+
+      // Reload sources
+      try {
+        const sourcesResponse = await api.getSources();
+        setSources(sourcesResponse);
+      } catch (err) {
+        console.error('Failed to reload sources:', err);
+      }
+
+      // Switch to community tab to see the new source
+      if (!result.already_existed) {
+        setSourcesSubTab('community');
+      }
+    } catch (err) {
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to add source'
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -367,13 +424,42 @@ function PreferencesContent() {
           </div>
         </div>
 
-        {/* Summary Card */}
+        {/* Summary Card - Dynamic based on active tab */}
         <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg shadow-lg p-6 mb-6 text-white">
-          <h2 className="text-xl font-semibold mb-2">Your Newsletter</h2>
-          <p className="text-indigo-100">
-            You&apos;re subscribed to <strong>{activeTopics.length}</strong> topics.
-            Your daily digest will include articles from these topics.
-          </p>
+          {activeTab === 'topics' && (
+            <>
+              <h2 className="text-xl font-semibold mb-2">📚 Your Newsletter Topics</h2>
+              <p className="text-indigo-100">
+                You&apos;re subscribed to <strong>{activeTopics.length}</strong> topic{activeTopics.length !== 1 ? 's' : ''}.
+                Your daily digest will include articles from these topics.
+              </p>
+            </>
+          )}
+          {activeTab === 'sources' && (
+            <>
+              <h2 className="text-xl font-semibold mb-2">📰 Your Newsletter Sources</h2>
+              <p className="text-indigo-100">
+                You&apos;re subscribed to <strong>{subscribedSources.length}</strong> source{subscribedSources.length !== 1 ? 's' : ''}.
+                Your newsletter will only include articles from these sources.
+              </p>
+            </>
+          )}
+          {activeTab === 'settings' && (
+            <>
+              <h2 className="text-xl font-semibold mb-2">⚙️ Newsletter Settings</h2>
+              <p className="text-indigo-100">
+                Customize how your daily newsletter is delivered and organized to match your reading preferences.
+              </p>
+            </>
+          )}
+          {activeTab === 'account' && (
+            <>
+              <h2 className="text-xl font-semibold mb-2">👤 Account Settings</h2>
+              <p className="text-indigo-100">
+                Manage your profile, email preferences, and account security settings.
+              </p>
+            </>
+          )}
         </div>
 
         {/* Message */}
@@ -459,77 +545,265 @@ function PreferencesContent() {
 
         {activeTab === 'sources' && (
           <>
-            <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
-              <h2 className="text-xl font-semibold text-foreground mb-4">
-                Source Preferences
-              </h2>
-              <p className="text-sm text-muted-foreground mb-6">
-                Select which news sources you want to receive articles from. Only articles from selected sources will appear in your newsletter.
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {sources.map((source) => (
-                  <div
-                    key={source.source_id}
-                    className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                      source.subscribed
-                        ? 'border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20'
-                        : 'border-border bg-card hover:border-primary/50 dark:hover:border-primary/50'
+            {/* Sub-tabs for sources */}
+            <div className="bg-card rounded-lg shadow-sm mb-6 border border-border">
+              <div className="border-b border-border">
+                <nav className="-mb-px flex">
+                  <button
+                    onClick={() => setSourcesSubTab('recommended')}
+                    className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                      sourcesSubTab === 'recommended'
+                        ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
                     }`}
-                    onClick={() => toggleSource(source.source_id)}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={source.subscribed}
-                            onChange={() => toggleSource(source.source_id)}
-                            className="mr-3 w-5 h-5 text-primary rounded focus:ring-primary accent-primary"
-                          />
-                          <div>
-                            <h3 className="font-semibold text-foreground">{source.name}</h3>
-                            <a
-                              href={source.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {source.url}
-                            </a>
-                          </div>
-                        </div>
-                        {source.description && (
-                          <p className="mt-2 ml-8 text-sm text-muted-foreground">
-                            {source.description}
-                          </p>
-                        )}
-                        <div className="mt-2 flex items-center gap-2 ml-8">
-                          <span className="text-sm text-muted-foreground">
-                            Trust Score: {source.trust_score?.toFixed(1) || 'N/A'}
-                          </span>
-                          {source.organizational_bias && (
-                            <SourceBiasBadge bias={source.organizational_bias} size="sm" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                    ✅ Recommended ({sources.filter(s => s.is_recommended).length})
+                  </button>
+                  <button
+                    onClick={() => setSourcesSubTab('community')}
+                    className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                      sourcesSubTab === 'community'
+                        ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                    }`}
+                  >
+                    🌐 Community ({sources.filter(s => !s.is_recommended).length})
+                  </button>
+                  <button
+                    onClick={() => setSourcesSubTab('add')}
+                    className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                      sourcesSubTab === 'add'
+                        ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                    }`}
+                  >
+                    ➕ Add Source
+                  </button>
+                </nav>
               </div>
             </div>
 
-            {/* Save Button */}
-            <div className="flex justify-end">
-              <button
-                onClick={handleSaveSources}
-                disabled={saving}
-                className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
-              >
-                {saving ? 'Saving...' : 'Save Sources'}
-              </button>
-            </div>
+            {/* Recommended tab */}
+            {sourcesSubTab === 'recommended' && (
+              <>
+                <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
+                  <h2 className="text-xl font-semibold text-foreground mb-4">
+                    Recommended Sources
+                  </h2>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Select which recommended sources you want to receive articles from. Only articles from selected sources will appear in your newsletter.
+                  </p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {sources.filter(s => s.is_recommended).map((source) => (
+                      <div
+                        key={source.source_id}
+                        className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                          source.subscribed
+                            ? 'border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20'
+                            : 'border-border bg-card hover:border-primary/50 dark:hover:border-primary/50'
+                        }`}
+                        onClick={() => toggleSource(source.source_id)}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={source.subscribed}
+                                onChange={() => toggleSource(source.source_id)}
+                                className="w-5 h-5 text-primary rounded focus:ring-primary accent-primary"
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-semibold text-foreground">{source.name}</h3>
+                                  <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 px-2 py-1 rounded-full">
+                                    ✅ Recommended
+                                  </span>
+                                </div>
+                                <a
+                                  href={source.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {source.url}
+                                </a>
+                              </div>
+                            </div>
+                            {source.description && (
+                              <p className="mt-2 ml-7 text-sm text-muted-foreground line-clamp-2">
+                                {source.description}
+                              </p>
+                            )}
+                            <div className="mt-2 flex items-center gap-2 ml-7 flex-wrap">
+                              <span className="text-sm text-muted-foreground">
+                                Trust: {(source.trust_score * 100).toFixed(0)}%
+                              </span>
+                              {source.organizational_bias && (
+                                <SourceBiasBadge bias={source.organizational_bias} size="sm" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Save Button */}
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleSaveSources}
+                    disabled={saving}
+                    className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
+                  >
+                    {saving ? 'Saving...' : 'Save Sources'}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Community tab */}
+            {sourcesSubTab === 'community' && (
+              <>
+                <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
+                  <h2 className="text-xl font-semibold text-foreground mb-4">
+                    Community Sources
+                  </h2>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Community-submitted sources. Select which ones you want to receive articles from.
+                  </p>
+
+                  {sources.filter(s => !s.is_recommended).length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">
+                      No community sources found. Be the first to add one!
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {sources.filter(s => !s.is_recommended).map((source) => (
+                        <div
+                          key={source.source_id}
+                          className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                            source.subscribed
+                              ? 'border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20'
+                              : 'border-border bg-card hover:border-primary/50 dark:hover:border-primary/50'
+                          }`}
+                          onClick={() => toggleSource(source.source_id)}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={source.subscribed}
+                                  onChange={() => toggleSource(source.source_id)}
+                                  className="w-5 h-5 text-primary rounded focus:ring-primary accent-primary"
+                                />
+                                <div className="flex-1">
+                                  <h3 className="font-semibold text-foreground">{source.name}</h3>
+                                  <a
+                                    href={source.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {source.url}
+                                  </a>
+                                </div>
+                              </div>
+                              {source.description && (
+                                <p className="mt-2 ml-7 text-sm text-muted-foreground line-clamp-2">
+                                  {source.description}
+                                </p>
+                              )}
+                              <div className="mt-2 flex items-center gap-2 ml-7 flex-wrap">
+                                <span className="text-sm text-muted-foreground">
+                                  Trust: {(source.trust_score * 100).toFixed(0)}%
+                                </span>
+                                {source.organizational_bias && (
+                                  <SourceBiasBadge bias={source.organizational_bias} size="sm" />
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Save Button */}
+                {sources.filter(s => !s.is_recommended).length > 0 && (
+                  <div className="flex justify-end">
+                    <button
+                      onClick={handleSaveSources}
+                      disabled={saving}
+                      className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
+                    >
+                      {saving ? 'Saving...' : 'Save Sources'}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Add Source tab */}
+            {sourcesSubTab === 'add' && (
+              <div className="bg-card rounded-lg shadow-sm p-6 border border-border">
+                <h2 className="text-xl font-semibold text-foreground mb-4">
+                  Add a News Source
+                </h2>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Paste any article URL from a news source you&apos;d like to add. We&apos;ll automatically discover
+                  the source&apos;s RSS feed and analyze its credibility and bias.
+                </p>
+
+                <form onSubmit={handleSubmitSource}>
+                  <div className="mb-4">
+                    <label htmlFor="article-url-prefs" className="block text-sm font-medium text-foreground mb-2">
+                      Article URL
+                    </label>
+                    <input
+                      type="url"
+                      id="article-url-prefs"
+                      value={articleUrl}
+                      onChange={(e) => setArticleUrl(e.target.value)}
+                      placeholder="https://example.com/article/some-news-article"
+                      className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground placeholder-muted-foreground"
+                      disabled={submitting}
+                      required
+                    />
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      💡 Tip: Use any article URL from the source you want to add
+                    </p>
+                  </div>
+
+                  <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <h3 className="font-semibold text-blue-900 dark:text-blue-200 mb-2">
+                      What happens next?
+                    </h3>
+                    <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
+                      <li>We extract the source domain from your URL</li>
+                      <li>We automatically discover the source&apos;s RSS feed</li>
+                      <li>AI analyzes the source&apos;s bias, credibility, and description</li>
+                      <li>The source appears in the &quot;Community&quot; tab for all users</li>
+                      <li>Moderators may promote it to &quot;Recommended&quot; after review</li>
+                    </ul>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
+                  >
+                    {submitting ? 'Adding Source...' : 'Add Source'}
+                  </button>
+                </form>
+              </div>
+            )}
           </>
         )}
 

@@ -29,6 +29,7 @@ class SourceResponse:
         self.trust_score = source.trust_score
         self.organizational_bias = source.organizational_bias.value if source.organizational_bias else None
         self.bias_description = source.bias_description
+        self.is_recommended = source.is_recommended
         self.is_active = source.is_active
         self.created_at = source.created_at.isoformat()
         self.article_count = article_count
@@ -41,7 +42,9 @@ class CreateSourceRequest:
 
 @router.get("")
 async def list_sources(
+    search: Optional[str] = Query(None, description="Search sources by name, URL, or description"),
     bias: Optional[str] = Query(None, description="Filter by organizational bias"),
+    recommended_only: bool = Query(False, description="Show only recommended sources"),
     active_only: bool = Query(True, description="Show only active sources"),
     sort_by: str = Query("name", description="Sort by: name, trust_score, article_count"),
     session: Session = Depends(get_session),
@@ -52,12 +55,27 @@ async def list_sources(
 
     Returns source information including bias ratings and article counts.
     """
+    from sqlalchemy import or_
+
     # Build base query
     query = select(Source)
 
     # Apply filters
     if active_only:
         query = query.where(Source.is_active == True)
+
+    if recommended_only:
+        query = query.where(Source.is_recommended == True)
+
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.where(
+            or_(
+                Source.name.ilike(search_pattern),
+                Source.url.ilike(search_pattern),
+                Source.description.ilike(search_pattern)
+            )
+        )
 
     if bias:
         try:
@@ -337,3 +355,95 @@ async def fetch_bias_for_source(
             }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch bias data: {str(e)}")
+
+
+@router.post("/from-url")
+async def create_source_from_article_url(
+    article_url: str,
+    session: Session = Depends(get_session),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Create a new source by providing an article URL.
+
+    This endpoint:
+    1. Extracts the source domain from the article URL
+    2. Discovers the RSS feed for the source
+    3. Validates it's a news source
+    4. Uses AI to analyze source characteristics (bias, credibility, description)
+    5. Creates source entry in database (marked as NOT recommended by default)
+
+    Returns:
+        Created source object with full metadata
+
+    Raises:
+        400: If URL is invalid, not a news source, or source already exists
+        500: If analysis or creation fails
+    """
+    import logging
+    from app.services.url_source_extractor import URLSourceExtractor
+    from app.services.source_analyzer import SourceAnalyzer
+
+    logger = logging.getLogger(__name__)
+    logger.info(f"User {current_user.get('email')} attempting to add source from URL: {article_url}")
+
+    try:
+        # Step 1: Extract source information from article URL
+        extractor = URLSourceExtractor()
+        source_info = extractor.extract_source_from_article_url(article_url)
+
+        # Check if source with this RSS feed already exists
+        existing_source = session.exec(
+            select(Source).where(Source.rss_feed_url == source_info['rss_feed_url'])
+        ).first()
+
+        if existing_source:
+            return {
+                "message": "Source already exists",
+                "already_existed": True,
+                "source": SourceResponse(existing_source, 0).__dict__
+            }
+
+        # Step 2: Analyze RSS feed using SourceAnalyzer
+        analyzer = SourceAnalyzer(db=session)
+        analysis = analyzer.analyze_rss_feed(source_info['rss_feed_url'])
+
+        # Step 3: Create new source (NOT recommended by default)
+        new_source = Source(
+            name=analysis["name"],
+            url=analysis["url"],
+            rss_feed_url=source_info['rss_feed_url'],
+            description=analysis["description"],
+            organizational_bias=analysis["organizational_bias"],
+            bias_description=analysis["bias_description"],
+            trust_score=analysis["trust_score"],
+            is_recommended=False,  # User-submitted sources are NOT recommended by default
+            is_active=True,
+            created_at=datetime.utcnow()
+        )
+
+        session.add(new_source)
+        session.commit()
+        session.refresh(new_source)
+
+        logger.info(f"Created new source from article URL: {new_source.name} ({article_url})")
+
+        return {
+            "message": "Source created successfully",
+            "already_existed": False,
+            "source": SourceResponse(new_source, 0).__dict__
+        }
+
+    except ValueError as e:
+        # User-friendly error for invalid URLs or non-news sources
+        logger.warning(f"Invalid source submission: {article_url} - {str(e)}")
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Error creating source from article URL: {article_url} - {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create source: {str(e)}"
+        )

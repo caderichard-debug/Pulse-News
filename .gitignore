@@ -68,6 +68,9 @@ logs/
 postgres_data/
 .pulse_token
 
+# Claude environment files
+claude_code_zai_env.sh
+
 # React Component Preview
 previewConfig.json
 frontend/smoke-test-landing.png

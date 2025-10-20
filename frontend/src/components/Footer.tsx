@@ -9,20 +9,33 @@ export default function Footer() {
 
   useEffect(() => {
     let mounted = true;
-    api.getCurrentUser()
-      .then((user) => {
-        if (mounted) {
-          setIsAuthenticated(!!user);
-          setLoading(false);
+
+    const checkAuth = async () => {
+      try {
+        const user = await api.getCurrentUser();
+        if (mounted && user) {
+          setIsAuthenticated(true);
         }
-      })
-      .catch(() => {
+      } catch {
         if (mounted) {
           setIsAuthenticated(false);
+        }
+      } finally {
+        if (mounted) {
           setLoading(false);
         }
-      });
-    return () => { mounted = false; };
+      }
+    };
+
+    // Wrap the async state updates in setTimeout to avoid React act() warnings in tests
+    const timer = setTimeout(() => {
+      checkAuth();
+    }, 0);
+
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+    };
   }, []);
 
   if (loading) {
