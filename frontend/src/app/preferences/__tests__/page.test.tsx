@@ -358,3 +358,275 @@ describe('PreferencesPage', () => {
     });
   });
 });
+
+// Tests for Sources sub-tabs and dynamic newsletter card
+describe('PreferencesPage - Sources Sub-tabs', () => {
+  const mockPreferences = {
+    user_id: 1,
+    topics: [
+      { id: 1, name: 'Politics', description: 'Political news', is_active: true },
+    ],
+  };
+
+  const mockSourcesWithRecommended = [
+    { 
+      source_id: 1, 
+      name: 'Recommended Source', 
+      url: 'https://recommended.com', 
+      trust_score: 0.95, 
+      organizational_bias: 'center', 
+      is_recommended: true,
+      subscribed: true 
+    },
+    { 
+      source_id: 2, 
+      name: 'Community Source', 
+      url: 'https://community.com', 
+      trust_score: 0.8, 
+      organizational_bias: 'left',
+      is_recommended: false, 
+      subscribed: false 
+    },
+  ];
+
+  const mockSettings = {
+    source_discovery_mode: 'some',
+    article_order_preference: 'mixed',
+    articles_per_topic_default: 5,
+  };
+
+  const mockUser = {
+    name: 'Test User',
+    email: 'test@example.com',
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (api.getPreferences as jest.Mock).mockResolvedValue(mockPreferences);
+    (api.getSources as jest.Mock).mockResolvedValue(mockSourcesWithRecommended);
+    (api.getSettings as jest.Mock).mockResolvedValue(mockSettings);
+    (api.getCurrentUser as jest.Mock).mockResolvedValue(mockUser);
+    (api.updateSourcePreferences as jest.Mock).mockResolvedValue({});
+    (api.createSourceFromURL as jest.Mock).mockResolvedValue({
+      message: 'Source created successfully',
+      already_existed: false,
+      source: { id: 3, name: 'New Source', is_recommended: false },
+    });
+  });
+
+  it('displays sources sub-tabs when on sources tab', async () => {
+    render(<PreferencesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Politics/)).toBeInTheDocument();
+    });
+
+    const sourcesTab = screen.getByRole('button', { name: /Sources/ });
+    await userEvent.click(sourcesTab);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /✅ Recommended/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /🌐 Community/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /➕ Add Source/ })).toBeInTheDocument();
+    });
+  });
+
+  it('shows recommended sources in recommended sub-tab', async () => {
+    render(<PreferencesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Politics/)).toBeInTheDocument();
+    });
+
+    const sourcesTab = screen.getByRole('button', { name: /Sources/ });
+    await userEvent.click(sourcesTab);
+
+    await waitFor(() => {
+      expect(screen.getByText('Recommended Source')).toBeInTheDocument();
+      expect(screen.queryByText('Community Source')).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows community sources in community sub-tab', async () => {
+    render(<PreferencesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Politics/)).toBeInTheDocument();
+    });
+
+    const sourcesTab = screen.getByRole('button', { name: /Sources/ });
+    await userEvent.click(sourcesTab);
+
+    const communitySubTab = screen.getByRole('button', { name: /🌐 Community/ });
+    await userEvent.click(communitySubTab);
+
+    await waitFor(() => {
+      expect(screen.getByText('Community Source')).toBeInTheDocument();
+      expect(screen.queryByText('Recommended Source')).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows add source form in add sub-tab', async () => {
+    render(<PreferencesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Politics/)).toBeInTheDocument();
+    });
+
+    const sourcesTab = screen.getByRole('button', { name: /Sources/ });
+    await userEvent.click(sourcesTab);
+
+    const addSubTab = screen.getByRole('button', { name: /➕ Add Source/ });
+    await userEvent.click(addSubTab);
+
+    await waitFor(() => {
+      expect(screen.getByText('Add a News Source')).toBeInTheDocument();
+      expect(screen.getByLabelText(/Article URL/)).toBeInTheDocument();
+    });
+  });
+
+  it('allows subscribing/unsubscribing to sources', async () => {
+    render(<PreferencesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Politics/)).toBeInTheDocument();
+    });
+
+    const sourcesTab = screen.getByRole('button', { name: /Sources/ });
+    await userEvent.click(sourcesTab);
+
+    await waitFor(() => {
+      expect(screen.getByText('Recommended Source')).toBeInTheDocument();
+    });
+
+    const checkbox = screen.getByRole('checkbox', { name: /Recommended Source/ });
+    await userEvent.click(checkbox);
+
+    const saveButton = screen.getByRole('button', { name: /Save Sources/ });
+    await userEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(api.updateSourcePreferences).toHaveBeenCalled();
+    });
+  });
+
+  it('submits new source from add sub-tab', async () => {
+    render(<PreferencesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Politics/)).toBeInTheDocument();
+    });
+
+    const sourcesTab = screen.getByRole('button', { name: /Sources/ });
+    await userEvent.click(sourcesTab);
+
+    const addSubTab = screen.getByRole('button', { name: /➕ Add Source/ });
+    await userEvent.click(addSubTab);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Article URL/)).toBeInTheDocument();
+    });
+
+    const urlInput = screen.getByLabelText(/Article URL/);
+    await userEvent.type(urlInput, 'https://example.com/article');
+
+    const addButton = screen.getByRole('button', { name: /Add Source/ });
+    await userEvent.click(addButton);
+
+    await waitFor(() => {
+      expect(api.createSourceFromURL).toHaveBeenCalledWith('https://example.com/article');
+    });
+  });
+});
+
+describe('PreferencesPage - Dynamic Newsletter Card', () => {
+  const mockPreferences = {
+    user_id: 1,
+    topics: [
+      { id: 1, name: 'Politics', description: 'Political news', is_active: true },
+      { id: 2, name: 'Technology', description: 'Tech news', is_active: true },
+    ],
+  };
+
+  const mockSources = [
+    { source_id: 1, name: 'Reuters', url: 'https://reuters.com', trust_score: 0.95, organizational_bias: null, is_recommended: true, subscribed: true },
+    { source_id: 2, name: 'BBC', url: 'https://bbc.com', trust_score: 0.92, organizational_bias: 'center', is_recommended: true, subscribed: true },
+  ];
+
+  const mockSettings = {
+    source_discovery_mode: 'some',
+    article_order_preference: 'mixed',
+    articles_per_topic_default: 5,
+  };
+
+  const mockUser = {
+    name: 'Test User',
+    email: 'test@example.com',
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (api.getPreferences as jest.Mock).mockResolvedValue(mockPreferences);
+    (api.getSources as jest.Mock).mockResolvedValue(mockSources);
+    (api.getSettings as jest.Mock).mockResolvedValue(mockSettings);
+    (api.getCurrentUser as jest.Mock).mockResolvedValue(mockUser);
+  });
+
+  it('shows topics card content on topics tab', async () => {
+    render(<PreferencesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/📚 Your Newsletter Topics/)).toBeInTheDocument();
+      expect(screen.getByText(/You're subscribed to/)).toBeInTheDocument();
+      expect(screen.getByText(/2/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows sources card content on sources tab', async () => {
+    render(<PreferencesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Politics/)).toBeInTheDocument();
+    });
+
+    const sourcesTab = screen.getByRole('button', { name: /Sources/ });
+    await userEvent.click(sourcesTab);
+
+    await waitFor(() => {
+      expect(screen.getByText(/📰 Your Newsletter Sources/)).toBeInTheDocument();
+      expect(screen.getByText(/You're subscribed to/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows settings card content on settings tab', async () => {
+    render(<PreferencesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Politics/)).toBeInTheDocument();
+    });
+
+    const settingsTab = screen.getByRole('button', { name: /Settings/ });
+    await userEvent.click(settingsTab);
+
+    await waitFor(() => {
+      expect(screen.getByText(/⚙️ Newsletter Settings/)).toBeInTheDocument();
+      expect(screen.getByText(/Customize how your daily newsletter/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows account card content on account tab', async () => {
+    render(<PreferencesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Politics/)).toBeInTheDocument();
+    });
+
+    const accountTab = screen.getByRole('button', { name: /Account/ });
+    await userEvent.click(accountTab);
+
+    await waitFor(() => {
+      expect(screen.getByText(/👤 Account Settings/)).toBeInTheDocument();
+      expect(screen.getByText(/Manage your profile/)).toBeInTheDocument();
+    });
+  });
+});
