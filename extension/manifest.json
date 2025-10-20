@@ -3,7 +3,7 @@
   "name": "Pulse News Analyzer",
   "version": "1.0",
   "description": "Analyze news articles with AI-powered insights from Pulse",
-  "permissions": ["tabs", "storage", "activeTab", "scripting", "sidePanel"],
+  "permissions": ["tabs", "activeTab", "sidePanel"],
   "host_permissions": ["https://pulsenews.app/*", "http://localhost:3000/*"],
   "background": {
     "service_worker": "background.js"
