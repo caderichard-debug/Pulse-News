@@ -85,7 +85,7 @@ export default function SourcesPage() {
         <div className="max-w-7xl mx-auto px-4 py-8">
           {/* Header */}
           <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
-            <h1 className="text-3xl font-bold text-foreground">📰 Supported News Sources</h1>
+            <h1 className="text-3xl font-bold text-foreground">Supported News Sources</h1>
             <p className="text-muted-foreground mt-1">
               Explore the news sources we monitor and their organizational bias ratings
             </p>

@@ -151,14 +151,37 @@ export default function FeedPage() {
   function handlePageInputSubmit(e: React.KeyboardEvent<HTMLInputElement> | React.FocusEvent<HTMLInputElement>) {
     if ('key' in e && e.key !== 'Enter') return;
 
-    const totalPages = feedData ? Math.ceil(feedData.total_count / feedData.page_size) : 1;
     const newPage = parseInt(pageInput);
+    const maxPage = Math.ceil((feedData?.total_count || 0) / (feedData?.page_size || 20));
 
-    if (!isNaN(newPage) && newPage >= 1 && newPage <= totalPages) {
+    if (!isNaN(newPage) && newPage >= 1 && newPage <= maxPage) {
       setPage(newPage);
     } else {
+      // Reset to current page if invalid
       setPageInput(page.toString());
     }
+  }
+
+  function formatTimeAgo(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMinutes < 1) return 'Just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+
+    // For older articles, show the actual date
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    });
   }
 
   if (error && !feedData) {
@@ -184,7 +207,7 @@ export default function FeedPage() {
         <div className="max-w-7xl mx-auto px-4 py-8">
           {/* Header */}
           <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
-            <h1 className="text-3xl font-bold text-foreground">📰 Article Feed</h1>
+            <h1 className="text-3xl font-bold text-foreground">Article Feed</h1>
             <p className="text-muted-foreground mt-1">Explore news with AI-powered analysis</p>
           </div>
 

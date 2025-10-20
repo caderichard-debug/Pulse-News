@@ -101,7 +101,7 @@ export default function AnalyticsPage() {
           {/* Header */}
           <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">📊 Data Analysis</h1>
+              <h1 className="text-3xl font-bold text-foreground">Data Analysis</h1>
               <p className="text-muted-foreground mt-1">Explore sentiment trends and bias distribution across the news</p>
             </div>
           </div>
