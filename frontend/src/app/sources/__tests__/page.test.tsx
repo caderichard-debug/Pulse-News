@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import SourcesPage from '../page';
 import { api } from '@/lib/api';
 
@@ -176,7 +176,6 @@ describe('SourcesPage', () => {
     fireEvent.change(urlInput, { target: { value: 'invalid-url' } });
 
     const form = urlInput.closest('form')!;
-    const submitButton = form.querySelector('button[type="submit"]') as HTMLElement;
 
     // Submit the form by simulating form submission
     fireEvent.submit(form);

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
@@ -178,7 +179,13 @@ function AnalyzePageContent() {
                 onClick={() => window.open(window.location.origin, '_blank', 'noopener,noreferrer')}
                 className="flex items-center gap-3 hover:opacity-80 transition-opacity"
               >
-                <img src="/pulse-icon.png" alt="Pulse Logo" className="w-10 h-10" />
+                <Image
+                  src="/pulse-icon.png"
+                  alt="Pulse Logo"
+                  width={40}
+                  height={40}
+                  className="w-10 h-10"
+                />
                 <h1 className="text-2xl font-bold text-foreground">Pulse AI Analysis</h1>
               </button>
 

@@ -334,6 +334,7 @@ class ApiClient {
   async getFeedArticles(params?: {
     page?: number;
     page_size?: number;
+    search?: string;
     topic?: string;
     source_id?: number;
     political_lean?: string;
@@ -348,6 +349,7 @@ class ApiClient {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+    if (params?.search) queryParams.append('search', params.search);
     if (params?.topic) queryParams.append('topic', params.topic);
     if (params?.source_id) queryParams.append('source_id', params.source_id.toString());
     if (params?.political_lean) queryParams.append('political_lean', params.political_lean);

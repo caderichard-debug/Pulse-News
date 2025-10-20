@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { formatTimeAgo } from '@/lib/dateUtils';
 import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';

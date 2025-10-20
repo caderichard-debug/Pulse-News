@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import Link from 'next/link'
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import BrandCard from '@/components/BrandCard';

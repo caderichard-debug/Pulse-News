@@ -757,8 +757,8 @@ function PreferencesContent() {
                   Add a News Source
                 </h2>
                 <p className="text-sm text-muted-foreground mb-6">
-                  Paste any article URL from a news source you'd like to add. We'll automatically discover
-                  the source's RSS feed and analyze its credibility and bias.
+                  Paste any article URL from a news source you&apos;d like to add. We&apos;ll automatically discover
+                  the source&apos;s RSS feed and analyze its credibility and bias.
                 </p>
 
                 <form onSubmit={handleSubmitSource}>
@@ -787,10 +787,10 @@ function PreferencesContent() {
                     </h3>
                     <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
                       <li>We extract the source domain from your URL</li>
-                      <li>We automatically discover the source's RSS feed</li>
-                      <li>AI analyzes the source's bias, credibility, and description</li>
-                      <li>The source appears in the "Community" tab for all users</li>
-                      <li>Moderators may promote it to "Recommended" after review</li>
+                      <li>We automatically discover the source&apos;s RSS feed</li>
+                      <li>AI analyzes the source&apos;s bias, credibility, and description</li>
+                      <li>The source appears in the &quot;Community&quot; tab for all users</li>
+                      <li>Moderators may promote it to &quot;Recommended&quot; after review</li>
                     </ul>
                   </div>
 
