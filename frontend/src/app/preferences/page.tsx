@@ -492,25 +492,35 @@ function PreferencesContent() {
                 <div className="pt-6 border-t border-border">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <label className="block text-sm font-medium text-card-foreground mb-2">
+                      <label className="block text-sm font-medium text-foreground mb-2">
                         📬 Newsletter Subscription
                       </label>
                       <p className="text-sm text-muted-foreground mb-3">
                         Receive your personalized daily news digest via email. You can unsubscribe anytime.
                       </p>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer ml-4">
-                      <input
-                        type="checkbox"
-                        checked={settings.newsletter_enabled}
-                        onChange={(e) => setSettings({ ...settings, newsletter_enabled: e.target.checked })}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
-                      <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300">
+                    <div className="flex items-center ml-4">
+                      <span className="mr-3 text-sm font-medium text-foreground">
                         {settings.newsletter_enabled ? 'Enabled' : 'Disabled'}
                       </span>
-                    </label>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={settings.newsletter_enabled}
+                        onClick={() => setSettings({ ...settings, newsletter_enabled: !settings.newsletter_enabled })}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
+                          settings.newsletter_enabled
+                            ? 'bg-indigo-600'
+                            : 'bg-gray-300 dark:bg-gray-600'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            settings.newsletter_enabled ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
                   </div>
                   {!settings.newsletter_enabled && (
                     <div className="mt-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
