@@ -175,7 +175,48 @@ function PreferencesContent() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
-    loadPreferences();
+    let mounted = true;
+    const load = async () => {
+      try {
+        const [prefsResponse, sourcesResponse, settingsResponse, userResponse] = await Promise.all([
+          api.getPreferences(),
+          api.getSources(),
+          api.getSettings(),
+          api.getCurrentUser(),
+        ]);
+
+        if (mounted) {
+          setPreferences(prefsResponse.topics);
+          setSources(sourcesResponse);
+          setSettings(settingsResponse);
+          if (userResponse) {
+            setUserInfo({
+              name: userResponse.name || '',
+              email: userResponse.email || '',
+            });
+          } else {
+            setUserInfo({ name: '', email: '', })
+          }
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : '';
+        if (mounted) {
+          if (errorMessage.includes('401')) {
+            // Not authenticated, redirect to login
+            router.push('/login');
+          } else {
+            setMessage({ type: 'error', text: 'Failed to load preferences' });
+          }
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    load();
+    return () => { mounted = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -193,38 +234,7 @@ function PreferencesContent() {
     router.push(`/preferences?tab=${tab}`, { scroll: false });
   };
 
-  const loadPreferences = async () => {
-    try {
-      const [prefsResponse, sourcesResponse, settingsResponse, userResponse] = await Promise.all([
-        api.getPreferences(),
-        api.getSources(),
-        api.getSettings(),
-        api.getCurrentUser(),
-      ]);
-      setPreferences(prefsResponse.topics);
-      setSources(sourcesResponse);
-      setSettings(settingsResponse);
-      if (userResponse) {
-        setUserInfo({
-          name: userResponse.name || '',
-          email: userResponse.email || '',
-        });
-      } else {
-        setUserInfo({ name: '', email: '', })
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '';
-      if (errorMessage.includes('401')) {
-        // Not authenticated, redirect to login
-        router.push('/login');
-      } else {
-        setMessage({ type: 'error', text: 'Failed to load preferences' });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  
   const toggleActive = (topicId: number) => {
     setPreferences(
       preferences.map((pref) =>
@@ -297,7 +307,12 @@ function PreferencesContent() {
       setArticleUrl('');
 
       // Reload sources
-      await loadPreferences();
+      try {
+        const sourcesResponse = await api.getSources();
+        setSources(sourcesResponse);
+      } catch (err) {
+        console.error('Failed to reload sources:', err);
+      }
 
       // Switch to community tab to see the new source
       if (!result.already_existed) {
