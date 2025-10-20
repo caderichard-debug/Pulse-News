@@ -135,6 +135,9 @@ class Source(SQLModel, table=True):
     )
     bias_description: Optional[str] = Field(default=None, max_length=500)
 
+    # Curator recommendation flag
+    is_recommended: bool = Field(default=False, index=True)
+
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 

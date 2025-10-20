@@ -273,6 +273,7 @@ class SourcePreferenceInfo(BaseModel):
     description: Optional[str] = None
     trust_score: float
     organizational_bias: Optional[str]
+    is_recommended: bool
     subscribed: bool
 
 
@@ -320,6 +321,7 @@ def get_source_preferences(
             description=source.description,
             trust_score=source.trust_score,
             organizational_bias=source.organizational_bias.value if source.organizational_bias else None,
+            is_recommended=source.is_recommended,
             subscribed=subs_map.get(source.id, False)
         ))
 

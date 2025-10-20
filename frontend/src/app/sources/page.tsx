@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
@@ -13,67 +13,144 @@ interface Source {
   name: string;
   url: string;
   rss_feed_url: string;
-  description: string | null;
+  description?: string;
   trust_score: number;
   organizational_bias: string | null;
-  bias_description: string | null;
+  bias_description?: string;
+  is_recommended: boolean;
   is_active: boolean;
-  created_at: string;
   article_count: number;
 }
 
-export default function SourcesPage() {
+function SourcesContent() {
   const router = useRouter();
-  const [sources, setSources] = useState<Source[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
 
-  // Filters
-  const [selectedBias, setSelectedBias] = useState<string>('');
-  const [sortBy, setSortBy] = useState('name');
+  // Tab state
+  const getInitialTab = (): 'recommended' | 'community' | 'add' => {
+    const tab = searchParams.get('tab');
+    if (tab === 'recommended' || tab === 'community' || tab === 'add') {
+      return tab;
+    }
+    return 'recommended';
+  };
+
+  const [activeTab, setActiveTab] = useState<'recommended' | 'community' | 'add'>(getInitialTab());
+
+  // Data state
+  const [recommendedSources, setRecommendedSources] = useState<Source[]>([]);
+  const [communitySources, setCommunitySources] = useState<Source[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Add source state
+  const [articleUrl, setArticleUrl] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     loadSources();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBias, sortBy]);
+  }, []);
 
-  async function loadSources() {
+  // Update activeTab when URL changes
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'recommended' || tab === 'community' || tab === 'add') {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (tab: 'recommended' | 'community' | 'add') => {
+    setActiveTab(tab);
+    router.push(`/sources?tab=${tab}`, { scroll: false });
+  };
+
+  const loadSources = async () => {
     try {
       setLoading(true);
-      const data = await api.getAllSources({
-        bias: selectedBias || undefined,
-        active_only: true,
-        sort_by: sortBy,
-      });
-      setSources(data.sources);
-      setError(null);
+
+      // Fetch all sources
+      const data = await api.getAllSources({});
+      const allSources = data.sources || [];
+
+      setRecommendedSources(allSources.filter((s: Source) => s.is_recommended));
+      setCommunitySources(allSources.filter((s: Source) => !s.is_recommended));
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load sources';
-      setError(errorMessage);
+      const errorMessage = err instanceof Error ? err.message : '';
+      if (errorMessage.includes('401')) {
+        router.push('/login');
+      } else {
+        setMessage({ type: 'error', text: 'Failed to load sources' });
+      }
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  function getTrustScoreColor(score: number): string {
-    if (score >= 0.9) return 'text-green-600';
-    if (score >= 0.7) return 'text-blue-600';
-    if (score >= 0.5) return 'text-yellow-600';
-    return 'text-red-600';
-  }
+  const handleSubmitSource = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  if (error && !sources.length) {
+    if (!articleUrl.trim()) {
+      setMessage({ type: 'error', text: 'Please enter an article URL' });
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setMessage(null);
+
+      const result = await api.createSourceFromURL(articleUrl);
+
+      setMessage({
+        type: 'success',
+        text: result.message || 'Source added successfully!'
+      });
+
+      setArticleUrl('');
+
+      // Reload sources
+      await loadSources();
+
+      // Switch to community tab to see the new source
+      if (!result.already_existed) {
+        handleTabChange('community');
+      }
+    } catch (err) {
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to add source'
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Filter sources by search query
+  const filterSources = (sources: Source[]) => {
+    if (!searchQuery.trim()) return sources;
+
+    const query = searchQuery.toLowerCase();
+    return sources.filter(source =>
+      source.name.toLowerCase().includes(query) ||
+      source.url.toLowerCase().includes(query) ||
+      source.description?.toLowerCase().includes(query)
+    );
+  };
+
+  const filteredRecommended = filterSources(recommendedSources);
+  const filteredCommunity = filterSources(communitySources);
+
+  if (loading) {
     return (
-      <>
-        <Navbar />
-        <div className="min-h-screen bg-background">
-          <div className="max-w-7xl mx-auto px-4 py-8">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-              {error}
-            </div>
-          </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading sources...</p>
         </div>
-      </>
+      </div>
     );
   }
 
@@ -81,157 +158,239 @@ export default function SourcesPage() {
     <>
       <Navbar />
       <UnverifiedEmailAlert />
-      <div className="min-h-screen bg-background">
-        <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="min-h-screen bg-background transition-colors">
+        <div className="max-w-6xl mx-auto px-4 py-8">
           {/* Header */}
-          <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
-            <h1 className="text-3xl font-bold text-foreground">📰 Supported News Sources</h1>
+          <div className="bg-card rounded-lg shadow-sm p-6 mb-6 border border-border">
+            <h1 className="text-3xl font-bold text-foreground">📰 News Sources</h1>
             <p className="text-muted-foreground mt-1">
-              Explore the news sources we monitor and their organizational bias ratings
+              Browse official sources or add your own discoveries
             </p>
           </div>
 
-          {/* Filters */}
-          <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Bias filter */}
-              <div>
-                <label className="block text-sm font-medium text-card-foreground mb-1">
-                  Filter by Bias
-                </label>
-                <select
-                  value={selectedBias}
-                  onChange={(e) => setSelectedBias(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-md text-foreground"
+          {/* Tabs */}
+          <div className="bg-card rounded-lg shadow-sm mb-6 border border-border">
+            <div className="border-b border-border">
+              <nav className="-mb-px flex">
+                <button
+                  onClick={() => handleTabChange('recommended')}
+                  className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === 'recommended'
+                      ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                  }`}
                 >
-                  <option value="">All Biases</option>
-                  <option value="left">Left</option>
-                  <option value="center-left">Center-Left</option>
-                  <option value="center">Center</option>
-                  <option value="center-right">Center-Right</option>
-                  <option value="right">Right</option>
-                </select>
-              </div>
-
-              {/* Sort */}
-              <div>
-                <label className="block text-sm font-medium text-card-foreground mb-1">
-                  Sort By
-                </label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-md text-foreground"
+                  ✅ Recommended ({recommendedSources.length})
+                </button>
+                <button
+                  onClick={() => handleTabChange('community')}
+                  className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === 'community'
+                      ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                  }`}
                 >
-                  <option value="name">Name (A-Z)</option>
-                  <option value="trust_score">Trust Score</option>
-                  <option value="article_count">Article Count</option>
-                </select>
-              </div>
+                  🌐 Community ({communitySources.length})
+                </button>
+                <button
+                  onClick={() => handleTabChange('add')}
+                  className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === 'add'
+                      ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                  }`}
+                >
+                  ➕ Add Source
+                </button>
+              </nav>
             </div>
           </div>
 
-          {/* Results count */}
-          <div className="mb-4 text-sm font-medium text-muted-foreground">
-            {sources.length} {sources.length === 1 ? 'source' : 'sources'}
-          </div>
-
-          {/* Sources grid */}
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-              <p className="mt-4 text-muted-foreground">Loading sources...</p>
-            </div>
-          ) : sources.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sources.map((source) => (
-                <div
-                  key={source.id}
-                  className="bg-card rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow border border-border"
-                >
-                  {/* Source header */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-foreground mb-1">
-                        {source.name}
-                      </h3>
-                      {source.organizational_bias && (
-                        <SourceBiasBadge bias={source.organizational_bias} size="sm" />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Description */}
-                  {source.bias_description && (
-                    <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-                      {source.bias_description}
-                    </p>
-                  )}
-
-                  {/* Details */}
-                  <div className="space-y-2 text-sm mb-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Trust Score:</span>
-                      <span className={`font-semibold ${getTrustScoreColor(source.trust_score)}`}>
-                        {(source.trust_score * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Articles:</span>
-                      <span className="font-semibold text-foreground">
-                        {source.article_count}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Links */}
-                  <div className="pt-4 border-t border-border space-y-2">
-                    <a
-                      href={source.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block text-sm text-blue-600 hover:underline"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Visit website →
-                    </a>
-                    <button
-                      onClick={() => router.push(`/feed?source_id=${source.id}`)}
-                      className="block text-sm text-primary hover:underline"
-                    >
-                      View articles from this source →
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 bg-card rounded-lg shadow-sm">
-              <p className="text-muted-foreground text-lg">No sources found with these filters</p>
-              <p className="text-muted-foreground text-sm mt-2">
-                Try adjusting your filters to see more sources
-              </p>
+          {/* Message */}
+          {message && (
+            <div
+              className={`mb-6 p-4 rounded-lg ${
+                message.type === 'success'
+                  ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800'
+                  : 'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
+              }`}
+            >
+              {message.text}
             </div>
           )}
 
-          {/* Info box */}
-          <div className="mt-8 bg-blue-50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-lg p-6 transition-colors">
-            <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-200 mb-2">
-              About Source Bias Ratings
-            </h3>
-            <p className="text-blue-800 dark:text-blue-200 text-sm leading-relaxed mb-3">
-              Organizational bias ratings reflect the general editorial perspective of each news
-              source. These are separate from our article-level bias analysis, which examines
-              individual articles regardless of their source.
-            </p>
-            <p className="text-blue-800 dark:text-blue-200 text-sm leading-relaxed">
-              <strong>Note:</strong> A source&apos;s organizational bias doesn&apos;t mean individual articles
-              are biased. Many sources with clear editorial stances still produce objective news reporting.
-            </p>
-          </div>
+          {/* Search Bar (for Recommended and Community tabs) */}
+          {(activeTab === 'recommended' || activeTab === 'community') && (
+            <div className="mb-6">
+              <input
+                type="text"
+                placeholder="Search sources by name, URL, or description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground placeholder-muted-foreground"
+              />
+            </div>
+          )}
+
+          {/* Tab Content */}
+          {activeTab === 'recommended' && (
+            <SourceList
+              sources={filteredRecommended}
+              emptyMessage="No recommended sources found"
+              isRecommended={true}
+            />
+          )}
+
+          {activeTab === 'community' && (
+            <SourceList
+              sources={filteredCommunity}
+              emptyMessage="No community sources found. Be the first to add one!"
+              isRecommended={false}
+            />
+          )}
+
+          {activeTab === 'add' && (
+            <div className="bg-card rounded-lg shadow-sm p-6 border border-border">
+              <h2 className="text-xl font-semibold text-foreground mb-4">
+                Add a News Source
+              </h2>
+              <p className="text-sm text-muted-foreground mb-6">
+                Paste any article URL from a news source you'd like to add. We'll automatically discover
+                the source's RSS feed and analyze its credibility and bias.
+              </p>
+
+              <form onSubmit={handleSubmitSource}>
+                <div className="mb-4">
+                  <label htmlFor="article-url" className="block text-sm font-medium text-foreground mb-2">
+                    Article URL
+                  </label>
+                  <input
+                    type="url"
+                    id="article-url"
+                    value={articleUrl}
+                    onChange={(e) => setArticleUrl(e.target.value)}
+                    placeholder="https://example.com/article/some-news-article"
+                    className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground placeholder-muted-foreground"
+                    disabled={submitting}
+                    required
+                  />
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    💡 Tip: Use any article URL from the source you want to add
+                  </p>
+                </div>
+
+                <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <h3 className="font-semibold text-blue-900 dark:text-blue-200 mb-2">
+                    What happens next?
+                  </h3>
+                  <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
+                    <li>We extract the source domain from your URL</li>
+                    <li>We automatically discover the source's RSS feed</li>
+                    <li>AI analyzes the source's bias, credibility, and description</li>
+                    <li>The source appears in the "Community" tab for all users</li>
+                    <li>Moderators may promote it to "Recommended" after review</li>
+                  </ul>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
+                >
+                  {submitting ? 'Adding Source...' : 'Add Source'}
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       </div>
       <Footer />
     </>
+  );
+}
+
+// Source List Component
+function SourceList({
+  sources,
+  emptyMessage,
+  isRecommended
+}: {
+  sources: Source[];
+  emptyMessage: string;
+  isRecommended: boolean;
+}) {
+  if (sources.length === 0) {
+    return (
+      <div className="bg-card rounded-lg shadow-sm p-8 text-center border border-border">
+        <p className="text-muted-foreground">{emptyMessage}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {sources.map((source) => (
+        <div
+          key={source.id}
+          className="bg-card border border-border rounded-lg p-5 hover:shadow-md transition-shadow"
+        >
+          <div className="flex items-start justify-between mb-2">
+            <h3 className="font-semibold text-lg text-foreground">{source.name}</h3>
+            {isRecommended && (
+              <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 px-2 py-1 rounded-full">
+                ✅ Recommended
+              </span>
+            )}
+          </div>
+
+          <a
+            href={source.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-blue-600 dark:text-blue-400 hover:underline mb-3 block"
+          >
+            {source.url}
+          </a>
+
+          {source.description && (
+            <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+              {source.description}
+            </p>
+          )}
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="text-sm">
+              <span className="text-muted-foreground">Trust: </span>
+              <span className="font-semibold text-foreground">
+                {(source.trust_score * 100).toFixed(0)}%
+              </span>
+            </div>
+
+            {source.organizational_bias && (
+              <SourceBiasBadge bias={source.organizational_bias} size="sm" />
+            )}
+
+            <div className="text-sm text-muted-foreground ml-auto">
+              {source.article_count} articles
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function SourcesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading sources...</p>
+        </div>
+      </div>
+    }>
+      <SourcesContent />
+    </Suspense>
   );
 }

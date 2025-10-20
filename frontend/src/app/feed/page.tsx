@@ -56,6 +56,7 @@ export default function FeedPage() {
   const storedFilters = getStoredFilters();
 
   // Filters
+  const [searchQuery, setSearchQuery] = useState<string>(storedFilters?.searchQuery || '');
   const [selectedTopic, setSelectedTopic] = useState<string>(storedFilters?.selectedTopic || '');
   const [selectedSource, setSelectedSource] = useState<number | null>(storedFilters?.selectedSource || null);
   const [selectedLean, setSelectedLean] = useState<string>(storedFilters?.selectedLean || '');
@@ -71,6 +72,7 @@ export default function FeedPage() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const filters = {
+        searchQuery,
         selectedTopic,
         selectedSource,
         selectedLean,
@@ -83,7 +85,7 @@ export default function FeedPage() {
       };
       localStorage.setItem('feedFilters', JSON.stringify(filters));
     }
-  }, [selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, page]);
+  }, [searchQuery, selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, page]);
 
   const loadFeedData = useCallback(async () => {
     try {
@@ -91,6 +93,7 @@ export default function FeedPage() {
       const data = await api.getFeedArticles({
         page,
         page_size: 20,
+        search: searchQuery || undefined,
         topic: selectedTopic || undefined,
         source_id: selectedSource || undefined,
         political_lean: selectedLean || undefined,
@@ -109,12 +112,12 @@ export default function FeedPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly]);
+  }, [page, searchQuery, selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly]);
 
   useEffect(() => {
     loadFeedData();
     loadFilters();
-  }, [selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, page, loadFeedData]);
+  }, [searchQuery, selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, page, loadFeedData]);
 
   async function loadFilters() {
     try {
@@ -186,6 +189,17 @@ export default function FeedPage() {
           <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
             <h1 className="text-3xl font-bold text-foreground">📰 Article Feed</h1>
             <p className="text-muted-foreground mt-1">Explore news with AI-powered analysis</p>
+          </div>
+
+          {/* Search Bar */}
+          <div className="mb-6">
+            <input
+              type="text"
+              placeholder="Search articles by title..."
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+              className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground placeholder-muted-foreground"
+            />
           </div>
 
           {/* Filters */}

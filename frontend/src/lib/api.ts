@@ -228,8 +228,10 @@ class ApiClient {
       source_id: number;
       name: string;
       url: string;
+      description?: string | null;
       trust_score: number;
       organizational_bias: string | null;
+      is_recommended: boolean;
       subscribed: boolean;
     }>>('/preferences/sources');
   }
@@ -473,6 +475,7 @@ class ApiClient {
         trust_score: number;
         organizational_bias: string | null;
         bias_description: string | null;
+        is_recommended: boolean;
         is_active: boolean;
         created_at: string;
         article_count: number;
@@ -492,6 +495,29 @@ class ApiClient {
     return this.request('/sources', {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  }
+
+  async createSourceFromURL(articleUrl: string) {
+    return this.request<{
+      message: string;
+      already_existed: boolean;
+      source: {
+        id: number;
+        name: string;
+        url: string;
+        rss_feed_url: string;
+        description?: string;
+        organizational_bias: string | null;
+        bias_description?: string;
+        trust_score: number;
+        is_recommended: boolean;
+        is_active: boolean;
+        created_at: string;
+      };
+    }>('/sources/from-url', {
+      method: 'POST',
+      body: JSON.stringify({ article_url: articleUrl }),
     });
   }
 
