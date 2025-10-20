@@ -648,6 +648,7 @@ CLAIMBUSTER_API_KEY=...
 - **Backend**: Aim for 100% coverage on services
 - **Frontend**: Test user interactions, not implementation details
 - **Fixtures**: Reuse test data across files
+- **IMPORTANT**: Do NOT automatically run tests unless explicitly requested by the user. When writing tests, provide the commands to run them instead of executing them automatically.
 
 ---
 

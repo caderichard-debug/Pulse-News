@@ -319,6 +319,7 @@ class User(SQLModel, table=True):
     article_order_preference: str = Field(default="mixed", max_length=20)  # 'good_first', 'good_last', 'mixed'
     articles_per_topic_default: int = Field(default=5)
     theme_preference: str = Field(default="auto", max_length=10)  # 'light', 'dark', or 'auto'
+    newsletter_enabled: bool = Field(default=True)  # Whether user wants to receive newsletters
 
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)

@@ -161,8 +161,8 @@ function SourcesContent() {
       <div className="min-h-screen bg-background transition-colors">
         <div className="max-w-6xl mx-auto px-4 py-8">
           {/* Header */}
-          <div className="bg-card rounded-lg shadow-sm p-6 mb-6 border border-border">
-            <h1 className="text-3xl font-bold text-foreground">📰 News Sources</h1>
+          <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
+            <h1 className="text-3xl font-bold text-foreground">Supported News Sources</h1>
             <p className="text-muted-foreground mt-1">
               Browse official sources or add your own discoveries
             </p>
