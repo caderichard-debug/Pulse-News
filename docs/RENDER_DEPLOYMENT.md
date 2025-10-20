@@ -103,6 +103,31 @@ Once the backend service is deployed and healthy:
 
 This will create all the database tables and initial data.
 
+**Note**: The seed script runs automatically on backend startup via the Dockerfile. It will:
+- Create default topics (politics, technology, science, etc.)
+- Add news sources (AP, Reuters, NYT, BBC, etc.)
+- Generate seed ethical frameworks
+- **Create a test user** for immediate login
+
+### Test User Credentials
+
+The seed script automatically creates a test user you can use immediately:
+
+**Default credentials:**
+- Email: `test@pulse.com`
+- Password: `testpassword123`
+
+**Custom credentials (optional):**
+You can customize the test user by setting these environment variables in the backend service:
+- `TEST_USER_EMAIL` - Custom email (default: test@pulse.com)
+- `TEST_USER_PASSWORD` - Custom password (default: testpassword123)
+- `TEST_USER_NAME` - Custom name (default: Test User)
+
+⚠️ **Security Note**: For production deployments, either:
+1. Change the test user password via environment variables
+2. Delete the test user after creating your admin account
+3. Set `TEST_USER_EMAIL` to a non-obvious email address
+
 ---
 
 ## Step 5: Verify Deployment
@@ -121,10 +146,31 @@ This will create all the database tables and initial data.
 ### Test Backend Connection
 
 From the frontend, try to:
-1. Register a new account
-2. Log in
-3. View the dashboard
-4. Browse articles
+1. Log in with the test user (`test@pulse.com` / `testpassword123`)
+2. View the dashboard
+3. Browse articles
+4. Update preferences
+
+You can also test the API directly:
+```bash
+curl -X POST https://pulse-backend.onrender.com/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@pulse.com","password":"testpassword123"}'
+```
+
+Expected response:
+```json
+{
+  "access_token": "eyJ...",
+  "token_type": "bearer",
+  "user": {
+    "id": 1,
+    "email": "test@pulse.com",
+    "name": "Test User",
+    "email_verified": true
+  }
+}
+```
 
 ---
 
@@ -132,24 +178,27 @@ From the frontend, try to:
 
 To populate the database with articles:
 
-1. Get an authentication token:
+1. Get an authentication token using the test user:
    ```bash
-   curl -X POST https://pulse-backend.onrender.com/auth/login \
+   TOKEN=$(curl -s -X POST https://pulse-backend.onrender.com/auth/login \
      -H "Content-Type: application/json" \
-     -d '{"email":"test@example.com","password":"password"}'
+     -d '{"email":"test@pulse.com","password":"testpassword123"}' \
+     | jq -r '.access_token')
    ```
 
-2. Trigger article scraping (requires admin user):
+2. Trigger article scraping:
    ```bash
    curl -X POST https://pulse-backend.onrender.com/admin/jobs/scrape \
-     -H "Authorization: Bearer YOUR_TOKEN"
+     -H "Authorization: Bearer $TOKEN"
    ```
 
 3. Trigger analysis:
    ```bash
    curl -X POST https://pulse-backend.onrender.com/admin/jobs/analyze \
-     -H "Authorization: Bearer YOUR_TOKEN"
+     -H "Authorization: Bearer $TOKEN"
    ```
+
+**Note**: The scheduled jobs will automatically run every few hours, so manual triggering is optional.
 
 ---
 

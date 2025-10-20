@@ -14,16 +14,17 @@ export default function UnverifiedEmailAlert() {
 
     api.getCurrentUser()
       .then((user) => {
-        if (mounted && user) {
+        if (mounted) {
           // Show alert only if email is not verified
-          setShowAlert(user.email_verified === false);
+          setShowAlert(user ? user.email_verified === false : false);
+          setLoading(false);
         }
       })
       .catch(() => {
         // If there's an error fetching user, don't show the alert
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       });
 
     return () => { mounted = false; };

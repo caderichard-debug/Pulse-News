@@ -39,7 +39,7 @@ test.describe('Complete User Journey', () => {
     await expect(page).toHaveURL(/\/preferences/, { timeout: 10000 });
 
     // Step 2: Navigate to Analytics
-    await page.getByRole('button', { name: /📊.*analytics/i }).click();
+    await page.getByRole('button', { name: /analytics/i }).click();
     await expect(page).toHaveURL(/\/analytics/, { timeout: 10000 });
 
     // Wait for page to hydrate and render
@@ -250,7 +250,7 @@ test.describe('Navigation Flow', () => {
 
   test('should navigate between all main pages using navbar', async ({ page }) => {
     // Test Analytics button
-    await page.getByRole('button', { name: /📊.*analytics/i }).click();
+    await page.getByRole('button', { name: /analytics/i }).click();
     await expect(page).toHaveURL(/\/analytics/, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
     await page.waitForLoadState('networkidle');
@@ -300,7 +300,7 @@ test.describe('Navigation Flow', () => {
 
   test('should highlight active page in navbar', async ({ page }) => {
     // Go to analytics
-    await page.getByRole('button', { name: /📊.*analytics/i }).click();
+    await page.getByRole('button', { name: /analytics/i }).click();
     await expect(page).toHaveURL(/\/analytics/, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
     await page.waitForLoadState('networkidle');
@@ -338,7 +338,7 @@ test.describe('Error Handling', () => {
 
   test('should redirect to login when accessing protected route without auth', async ({ page }) => {
     // Try to access analytics without authentication
-    await gotoAndWait(page, '/analytics');
+    await gotoAndWait(page, '/preferences');
 
     // Should redirect to login
     await expect(page).toHaveURL(/\/login/, { timeout: 5000 });

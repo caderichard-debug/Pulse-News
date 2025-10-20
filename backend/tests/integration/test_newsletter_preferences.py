@@ -8,7 +8,7 @@ from sqlmodel import Session, create_engine, SQLModel
 from sqlmodel.pool import StaticPool
 from app.models import (
     User, Source, Article, ArticleAnalysis, Topic, UserTopicPreference,
-    UserSourceSubscription, PoliticalLean
+    UserSourceSubscription, PoliticalLean, ProcessingStatus
 )
 from app.services.newsletter_service import _generate_newsletter_for_user
 from app.utils.auth import hash_password

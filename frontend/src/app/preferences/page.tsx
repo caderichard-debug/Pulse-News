@@ -31,6 +31,7 @@ interface Settings {
   source_discovery_mode: string;
   article_order_preference: string;
   articles_per_topic_default: number;
+  newsletter_enabled: boolean;
 }
 
 // Delete Account Button Component
@@ -151,6 +152,7 @@ function PreferencesContent() {
     source_discovery_mode: 'some',
     article_order_preference: 'mixed',
     articles_per_topic_default: 5,
+    newsletter_enabled: true,
   });
   const [userInfo, setUserInfo] = useState<{ name: string; email: string }>({
     name: '',
@@ -352,7 +354,7 @@ function PreferencesContent() {
           <div className="bg-card rounded-lg shadow-sm p-6 mb-6 border border-border">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-foreground">⚙️ Preferences</h1>
+                <h1 className="text-3xl font-bold text-foreground">Preferences</h1>
                 <p className="text-muted-foreground mt-1">Customize your news experience</p>
               </div>
               <DarkModeToggle />
@@ -362,10 +364,10 @@ function PreferencesContent() {
         {/* Tabs */}
         <div className="bg-card rounded-lg shadow-sm mb-6 border border-border">
           <div className="border-b border-border">
-            <nav className="-mb-px flex">
+            <nav className="-mb-px flex overflow-x-auto no-scrollbar whitespace-nowrap">
               <button
                 onClick={() => handleTabChange('topics')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors flex-shrink-0 ${
                   activeTab === 'topics'
                     ? 'border-indigo-500 text-indigo-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -375,7 +377,7 @@ function PreferencesContent() {
               </button>
               <button
                 onClick={() => handleTabChange('sources')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors flex-shrink-0 ${
                   activeTab === 'sources'
                     ? 'border-indigo-500 text-indigo-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -385,7 +387,7 @@ function PreferencesContent() {
               </button>
               <button
                 onClick={() => handleTabChange('settings')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors flex-shrink-0 ${
                   activeTab === 'settings'
                     ? 'border-indigo-500 text-indigo-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -395,7 +397,7 @@ function PreferencesContent() {
               </button>
               <button
                 onClick={() => handleTabChange('account')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors flex-shrink-0 ${
                   activeTab === 'account'
                     ? 'border-indigo-500 text-indigo-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -859,6 +861,49 @@ function PreferencesContent() {
                     <span>1 article</span>
                     <span>10 articles</span>
                   </div>
+                </div>
+
+                {/* Newsletter Subscription Toggle */}
+                <div className="pt-6 border-t border-border">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        📬 Newsletter Subscription
+                      </label>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Receive your personalized daily news digest via email. You can unsubscribe anytime.
+                      </p>
+                    </div>
+                    <div className="flex items-center ml-4">
+                      <span className="mr-3 text-sm font-medium text-foreground">
+                        {settings.newsletter_enabled ? 'Enabled' : 'Disabled'}
+                      </span>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={settings.newsletter_enabled}
+                        onClick={() => setSettings({ ...settings, newsletter_enabled: !settings.newsletter_enabled })}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
+                          settings.newsletter_enabled
+                            ? 'bg-indigo-600'
+                            : 'bg-gray-300 dark:bg-gray-600'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            settings.newsletter_enabled ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                  {!settings.newsletter_enabled && (
+                    <div className="mt-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                      <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                        ⚠️ You won&apos;t receive daily newsletters while this is disabled. You can still access all articles in your feed.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

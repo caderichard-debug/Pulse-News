@@ -47,11 +47,12 @@ def generate_and_send_newsletters(session: Session = None) -> Dict[str, int]:
 
     def _generate(session: Session):
         """Inner function to generate newsletters with provided session"""
-        # Get all active users with email verified
+        # Get all active users with email verified and newsletter enabled
         active_users = session.exec(
             select(User)
             .where(User.is_active == True)
             .where(User.email_verified == True)
+            .where(User.newsletter_enabled == True)
         ).all()
 
         if not active_users:
