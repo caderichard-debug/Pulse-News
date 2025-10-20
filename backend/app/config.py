@@ -5,10 +5,8 @@ import os
 
 class Settings(BaseSettings):
     """Application configuration settings"""
-    
-    # Admin
-    admin_token: Optional[str] = None
 
+    
     # Database
     database_url: str = "postgresql://postgres:password@db:5432/news_db"
     pulse_access_token: Optional[str] = None
@@ -55,10 +53,12 @@ class Settings(BaseSettings):
     max_job_history_days: int = 30  # Keep job history for 30 days
     admin_token_rotation_days: int = 90  # Rotate admin token every 90 days
 
-    class Config:
+    model_config = {
         # Check for Render secret file first, then fall back to local .env
-        env_file = os.getenv("SECRETS_FILE", ".env")
-        case_sensitive = False
+        "env_file": os.getenv("SECRETS_FILE", ".env"),
+        "case_sensitive": False,
+        "extra": "ignore"  # Allow extra fields in environment variables
+    }
 
 
 # Create a global settings instance
