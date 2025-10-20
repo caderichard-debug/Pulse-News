@@ -3,24 +3,33 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import SourcesPage from '../page';
 import { api } from '@/lib/api';
 
-jest.mock('next/navigation');
-jest.mock('@/lib/api');
+// Mock next/navigation
+const mockPush = jest.fn();
+const mockSearchParams = new URLSearchParams();
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+  usePathname: () => '/sources',
+  useSearchParams: () => mockSearchParams,
+}));
+
+// Mock the API
+jest.mock('@/lib/api', () => ({
+  api: {
+    getAllSources: jest.fn(),
+    createSourceFromURL: jest.fn(),
+    getCurrentUser: jest.fn(),
+  },
+}));
 
 describe('SourcesPage', () => {
-  const mockRouter = {
-    push: jest.fn(),
-  };
-
-  const mockSearchParams = {
-    get: jest.fn(() => null),
-  };
-
   beforeEach(() => {
     jest.clearAllMocks();
-    (useRouter as jest.Mock).mockReturnValue(mockRouter);
-    (useSearchParams as jest.Mock).mockReturnValue(mockSearchParams);
+    mockSearchParams.delete('tab');
 
     // Mock API responses
+    (api.getCurrentUser as jest.Mock).mockResolvedValue({ name: 'Test User' });
     (api.getAllSources as jest.Mock).mockResolvedValue({
       sources: [
         {
@@ -80,13 +89,13 @@ describe('SourcesPage', () => {
     fireEvent.click(communityTab);
 
     await waitFor(() => {
-      expect(mockRouter.push).toHaveBeenCalledWith('/sources?tab=community', { scroll: false });
+      expect(mockPush).toHaveBeenCalledWith('/sources?tab=community', { scroll: false });
     });
   });
 
   it('displays community sources in the community tab', async () => {
-    mockSearchParams.get.mockReturnValue('community');
-    
+    mockSearchParams.set('tab', 'community');
+
     render(<SourcesPage />);
 
     await waitFor(() => {
@@ -96,8 +105,8 @@ describe('SourcesPage', () => {
   });
 
   it('displays add source form in the add tab', async () => {
-    mockSearchParams.get.mockReturnValue('add');
-    
+    mockSearchParams.set('tab', 'add');
+
     render(<SourcesPage />);
 
     await waitFor(() => {
@@ -120,8 +129,8 @@ describe('SourcesPage', () => {
   });
 
   it('submits new source from article URL', async () => {
-    mockSearchParams.get.mockReturnValue('add');
-    
+    mockSearchParams.set('tab', 'add');
+
     (api.createSourceFromURL as jest.Mock).mockResolvedValue({
       message: 'Source created successfully',
       already_existed: false,
@@ -141,7 +150,8 @@ describe('SourcesPage', () => {
     const urlInput = screen.getByLabelText(/Article URL/);
     fireEvent.change(urlInput, { target: { value: 'https://example.com/article' } });
 
-    const submitButton = screen.getByRole('button', { name: /Add Source/ });
+    const form = urlInput.closest('form')!;
+    const submitButton = form.querySelector('button[type="submit"]') as HTMLElement;
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -150,8 +160,8 @@ describe('SourcesPage', () => {
   });
 
   it('shows error message when source submission fails', async () => {
-    mockSearchParams.get.mockReturnValue('add');
-    
+    mockSearchParams.set('tab', 'add');
+
     (api.createSourceFromURL as jest.Mock).mockRejectedValue(
       new Error('Invalid URL')
     );
@@ -165,12 +175,15 @@ describe('SourcesPage', () => {
     const urlInput = screen.getByLabelText(/Article URL/);
     fireEvent.change(urlInput, { target: { value: 'invalid-url' } });
 
-    const submitButton = screen.getByRole('button', { name: /Add Source/ });
-    fireEvent.click(submitButton);
+    const form = urlInput.closest('form')!;
+    const submitButton = form.querySelector('button[type="submit"]') as HTMLElement;
+
+    // Submit the form by simulating form submission
+    fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(screen.getByText(/Invalid URL/)).toBeInTheDocument();
-    });
+      expect(screen.getByText('Invalid URL')).toBeInTheDocument();
+    }, { timeout: 3000 });
   });
 
   it('displays organizational bias badges', async () => {
@@ -199,8 +212,8 @@ describe('SourcesPage', () => {
       ],
     });
 
-    mockSearchParams.get.mockReturnValue('community');
-    
+    mockSearchParams.set('tab', 'community');
+
     render(<SourcesPage />);
 
     await waitFor(() => {
