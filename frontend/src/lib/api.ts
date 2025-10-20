@@ -237,6 +237,7 @@ class ApiClient {
       source_discovery_mode: string;
       article_order_preference: string;
       articles_per_topic_default: number;
+      newsletter_enabled: boolean;
     }>('/preferences/settings');
   }
 
@@ -245,6 +246,7 @@ class ApiClient {
     article_order_preference?: string;
     articles_per_topic_default?: number;
     theme_preference?: string;
+    newsletter_enabled?: boolean;
   }) {
     return this.request('/preferences/settings', {
       method: 'PUT',

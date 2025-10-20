@@ -46,7 +46,6 @@ class ArticleFeedItem(BaseModel):
     stats_count: int
     stats_verified_count: int
     has_stats: bool
-    read_time_minutes: Optional[int]
 
     # Favorites
     is_favorited: bool = False
@@ -240,7 +239,6 @@ async def get_feed_articles(
             stats_count=stats[0],
             stats_verified_count=stats[1],
             has_stats=stats[0] > 0,
-            read_time_minutes=article.word_count // 200 if article.word_count else None,
             is_favorited=article.id in article_favorites
         ))
 

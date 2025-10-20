@@ -28,6 +28,7 @@ interface Settings {
   source_discovery_mode: string;
   article_order_preference: string;
   articles_per_topic_default: number;
+  newsletter_enabled: boolean;
 }
 
 function PreferencesContent() {
@@ -39,6 +40,7 @@ function PreferencesContent() {
     source_discovery_mode: 'some',
     article_order_preference: 'mixed',
     articles_per_topic_default: 5,
+    newsletter_enabled: true,
   });
   const [userInfo, setUserInfo] = useState<{ name: string; email: string }>({
     name: '',
@@ -484,6 +486,39 @@ function PreferencesContent() {
                     <span>1 article</span>
                     <span>10 articles</span>
                   </div>
+                </div>
+
+                {/* Newsletter Subscription Toggle */}
+                <div className="pt-6 border-t border-border">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-card-foreground mb-2">
+                        📬 Newsletter Subscription
+                      </label>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Receive your personalized daily news digest via email. You can unsubscribe anytime.
+                      </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer ml-4">
+                      <input
+                        type="checkbox"
+                        checked={settings.newsletter_enabled}
+                        onChange={(e) => setSettings({ ...settings, newsletter_enabled: e.target.checked })}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                      <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300">
+                        {settings.newsletter_enabled ? 'Enabled' : 'Disabled'}
+                      </span>
+                    </label>
+                  </div>
+                  {!settings.newsletter_enabled && (
+                    <div className="mt-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                      <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                        ⚠️ You won&apos;t receive daily newsletters while this is disabled. You can still access all articles in your feed.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

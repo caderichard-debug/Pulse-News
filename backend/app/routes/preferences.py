@@ -284,6 +284,7 @@ class UpdateUserSettingsRequest(BaseModel):
     article_order_preference: Optional[str] = Field(None, description="'good_first', 'good_last', or 'mixed'")
     articles_per_topic_default: Optional[int] = Field(None, ge=1, le=10)
     theme_preference: Optional[str] = Field(None, description="'light', 'dark', or 'auto'")
+    newsletter_enabled: Optional[bool] = Field(None, description="Whether to receive newsletter emails")
 
 
 @router.get("/sources", response_model=List[SourcePreferenceInfo])
@@ -412,6 +413,10 @@ def update_user_settings(
         current_user.theme_preference = request.theme_preference
         updated_fields.append("theme_preference")
 
+    if request.newsletter_enabled is not None:
+        current_user.newsletter_enabled = request.newsletter_enabled
+        updated_fields.append("newsletter_enabled")
+
     session.add(current_user)
     session.commit()
     session.refresh(current_user)
@@ -425,7 +430,8 @@ def update_user_settings(
             "source_discovery_mode": current_user.source_discovery_mode,
             "article_order_preference": current_user.article_order_preference,
             "articles_per_topic_default": current_user.articles_per_topic_default,
-            "theme_preference": current_user.theme_preference
+            "theme_preference": current_user.theme_preference,
+            "newsletter_enabled": current_user.newsletter_enabled
         }
     }
 
@@ -441,5 +447,6 @@ def get_user_settings(
         "source_discovery_mode": current_user.source_discovery_mode,
         "article_order_preference": current_user.article_order_preference,
         "articles_per_topic_default": current_user.articles_per_topic_default,
-        "theme_preference": current_user.theme_preference
+        "theme_preference": current_user.theme_preference,
+        "newsletter_enabled": current_user.newsletter_enabled
     }
