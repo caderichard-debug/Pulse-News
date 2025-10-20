@@ -27,8 +27,15 @@ export default function Footer() {
       }
     };
 
-    checkAuth();
-    return () => { mounted = false; };
+    // Wrap the async state updates in setTimeout to avoid React act() warnings in tests
+    const timer = setTimeout(() => {
+      checkAuth();
+    }, 0);
+
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+    };
   }, []);
 
   if (loading) {

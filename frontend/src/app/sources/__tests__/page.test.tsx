@@ -64,7 +64,7 @@ describe('SourcesPage', () => {
     render(<SourcesPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('📰 News Sources')).toBeInTheDocument();
+      expect(screen.getByText('Supported News Sources')).toBeInTheDocument();
       expect(screen.getByText(/Recommended Source/)).toBeInTheDocument();
     });
   });
