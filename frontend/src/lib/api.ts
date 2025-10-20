@@ -883,6 +883,34 @@ class ApiClient {
       favorited_at: string | null;
     }>(`/favorites/check/${articleId}`);
   }
+
+  async getOpposingViewpoints(articleId: number, params?: { relationship_types?: string; max_results?: number }) {
+    const queryString = params ? `?${new URLSearchParams(params as any).toString()}` : '';
+    return this.request<{
+      primary_article_id: number;
+      opposing_viewpoints: Array<{
+        article_id: number;
+        title: string;
+        url: string;
+        source_name: string;
+        source_bias?: string;
+        published_at: string;
+        sentiment_score?: number;
+        political_lean?: string;
+        summary?: string;
+        relationship_type: string;
+        opposition_strength: number;
+        reasoning: string;
+        ai_explanation?: string;
+        quality_score?: number;
+        framework_name?: string;
+        primary_position?: number;
+        opposing_position?: number;
+      }>;
+      total_found: number;
+      relationship_types_available: string[];
+    }>(`/articles/${articleId}/opposing-viewpoints${queryString}`);
+  }
 }
 
 export { ApiClient };
