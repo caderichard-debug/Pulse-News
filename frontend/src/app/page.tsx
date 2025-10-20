@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import Image from 'next/image';
+import Footer from '@/components/Footer';
 
 export default function Home() {
   const router = useRouter();
@@ -52,7 +53,7 @@ export default function Home() {
 
           <div className="flex gap-4 justify-center">
             <a
-              href="/signup"
+              href="/welcome"
               className="px-8 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-semibold text-lg"
             >
               Get Started
@@ -180,19 +181,20 @@ export default function Home() {
         {/* CTA */}
         <div className="mt-16 text-center bg-gradient-to-r from-indigo-500 to-purple-600 dark:from-indigo-600 dark:to-purple-700 rounded-lg shadow-xl p-12 text-white transition-colors">
           <h2 className="text-3xl font-bold mb-4">
-            Start Your Free Newsletter Today
+            Questions? Get in Touch
           </h2>
           <p className="text-xl mb-8 text-indigo-100 dark:text-indigo-200">
-            Join readers who value clarity and depth in their news
+            We&apos;d love to hear from you
           </p>
           <a
-            href="/signup"
+            href="mailto:support@pulsenews.app"
             className="inline-block px-8 py-3 bg-white text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors font-semibold text-lg"
           >
-            Sign Up Now
+            Contact Us
           </a>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

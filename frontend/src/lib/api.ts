@@ -56,9 +56,13 @@ class ApiClient {
       // Handle auth errors by redirecting to login
       if (response.status === 401 || response.status === 403) {
         this.clearToken();
-        if (typeof window !== 'undefined'
-          && !window.location.pathname.includes('/login')
-          && window.location.pathname !== '/') {
+
+        // List of public pages that don't require redirect
+        const publicPages = ['/', '/login', '/signup', '/welcome', '/how-it-works', '/privacy-policy', '/forgot-password', '/reset-password', '/verify-email', '/insights', '/sources', '/analytics', '/analyze'];
+        const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+        const isPublicPage = publicPages.some(page => currentPath === page || currentPath.startsWith(page));
+
+        if (typeof window !== 'undefined' && !isPublicPage) {
           window.location.href = '/login';
         }
       }
@@ -120,6 +124,28 @@ class ApiClient {
   async logout() {
     this.clearToken();
     return this.request('/auth/logout', { method: 'POST' });
+  }
+
+  async deleteAccount() {
+    const response = await fetch(`${this.baseUrl}/auth/account`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+      },
+    });
+
+    if (!response.ok) {
+      // Try to parse JSON error, but handle cases where response has no body
+      const error: ApiError = await response.json().catch(() => ({
+        detail: 'Failed to delete account',
+      }));
+      throw new Error(error.detail);
+    }
+
+    // 204 No Content - successful deletion, no response body
+    // Clear token after successful deletion
+    this.clearToken();
+    return;
   }
 
   async requestPasswordReset(data: { email: string }) {

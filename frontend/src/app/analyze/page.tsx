@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
 import { formatDate } from '@/lib/dateUtils';
+import Footer from '@/components/Footer';
 
 function AnalyzePageContent() {
   const searchParams = useSearchParams();
@@ -664,6 +665,7 @@ function AnalyzePageContent() {
           )}
         </div>
       </div>
+      <Footer />
     </>
   );
 }

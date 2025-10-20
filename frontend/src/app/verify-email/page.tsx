@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import Footer from '@/components/Footer';
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
@@ -52,6 +53,7 @@ function VerifyEmailContent() {
           <p className="text-yellow-600 font-medium">{message}</p>
         )}
       </div>
+      <Footer />
     </div>
   );
 }
