@@ -7,6 +7,8 @@ import { formatDate } from '@/lib/dateUtils';
 import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
+import FavoriteButton from '@/components/FavoriteButton';
+import Footer from '@/components/Footer';
 
 interface ArticleDetail {
   id: number;
@@ -61,6 +63,7 @@ interface ArticleDetail {
     timeline: string | null;
     significance: string | null;
   } | null;
+  is_favorited: boolean;
 }
 
 export default function ArticleDetailPage() {
@@ -181,7 +184,15 @@ export default function ArticleDetailPage() {
           )}
         </div>
 
-        <h1 className="text-4xl font-bold mb-4 text-foreground">{article.title}</h1>
+        <div className="flex items-center gap-4 mb-4">
+          <h1 className="text-4xl font-bold flex-1 text-foreground">{article.title}</h1>
+          <FavoriteButton
+            articleId={article.id}
+            initialFavorited={article.is_favorited}
+            size="lg"
+            showLabel
+          />
+        </div>
 
         <a
           href={article.url}
@@ -552,6 +563,7 @@ export default function ArticleDetailPage() {
       )}
         </div>
       </div>
+      <Footer />
     </>
   );
 }

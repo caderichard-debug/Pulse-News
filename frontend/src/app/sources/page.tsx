@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
+import Footer from '@/components/Footer';
 
 interface Source {
   id: number;
@@ -230,6 +231,7 @@ export default function SourcesPage() {
           </div>
         </div>
       </div>
+      <Footer />
     </>
   );
 }

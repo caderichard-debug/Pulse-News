@@ -3,6 +3,7 @@
 
 import Navbar from '@/components/Navbar';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
+import Footer from '@/components/Footer';
 
 export default function HowItWorksPage() {
   return (
@@ -194,7 +195,7 @@ export default function HowItWorksPage() {
                   Our AI analyzes the full article text using GPT-4o-mini to extract two key metrics:
                 </p>
 
-                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 my-4">
+                <div className="bg-context-section border-l-4 border-blue-500 p-4 my-4">
                   <h4 className="font-semibold text-foreground mb-2">Sentiment Score (-10 to +10)</h4>
                   <p className="text-sm">
                     Measures the emotional tone of the article. Negative scores indicate pessimistic or critical coverage,
@@ -210,7 +211,7 @@ export default function HowItWorksPage() {
                   </div>
                 </div>
 
-                <div className="bg-purple-50 border-l-4 border-purple-500 p-4 my-4">
+                <div className="bg-purple-card border-l-4 border-purple-500 p-4 my-4">
                   <h4 className="font-semibold text-foreground mb-2">Political Lean (Left, Center, Right)</h4>
                   <p className="text-sm">
                     Detects the political framing of the article based on language choices, sources cited,
@@ -250,7 +251,7 @@ export default function HowItWorksPage() {
                 </p>
 
                 <div className="space-y-4 mt-6">
-                  <div className="border-l-4 border-green-500 bg-green-50 p-4">
+                  <div className="bg-success border-l-4 border-green-500 bg-green-50 p-4">
                     <h3 className="font-semibold text-foreground mb-2">Stage 1: Source Tracing</h3>
                     <p className="text-sm">
                       AI extracts statistics from the article and identifies the original source
@@ -259,7 +260,7 @@ export default function HowItWorksPage() {
                     </p>
                   </div>
 
-                  <div className="border-l-4 border-blue-500 bg-blue-50 p-4">
+                  <div className="bg-context-section border-l-4 border-blue-500 bg-blue-50 p-4">
                     <h3 className="font-semibold text-foreground mb-2">Stage 2: Credibility Rating</h3>
                     <p className="text-sm">
                       Each source is rated on a 0-5 star scale based on:
@@ -275,7 +276,7 @@ export default function HowItWorksPage() {
                     </p>
                   </div>
 
-                  <div className="border-l-4 border-yellow-500 bg-yellow-50 p-4">
+                  <div className="bg-stats-section border-l-4 border-yellow-500 bg-yellow-50 p-4">
                     <h3 className="font-semibold text-foreground mb-2">Stage 3: Fact-Check Integration</h3>
                     <p className="text-sm">
                       When available, we query external fact-checking APIs (Google Fact Check, ClaimBuster)
@@ -321,8 +322,8 @@ export default function HowItWorksPage() {
                   </p>
                 </div>
 
-                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mt-6">
-                  <p className="text-sm text-indigo-900">
+                <div className="bg-info border border-indigo-200 rounded-lg p-4 mt-6">
+                  <p className="text-sm text-info">
                     <strong>💡 Pro Tip:</strong> In your newsletter, verified statistics show badges like
                     ✓ (verified), ⚠️ (disputed), or ⏳ (unverified). Hover over badges to see credibility scores
                     and source information.
@@ -360,20 +361,21 @@ export default function HowItWorksPage() {
           </section>
 
           {/* Footer CTA */}
-          <div className="text-center bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg shadow-xl p-8 text-white">
-            <h2 className="text-2xl font-bold mb-3">Ready to Get Started?</h2>
-            <p className="text-indigo-100 mb-6">
-              Experience news with clarity, context, and critical thinking.
+          <div className="text-center bg-gradient-to-r from-indigo-500 to-purple-600 dark:from-indigo-600 dark:to-purple-700 rounded-lg shadow-xl p-8 text-white">
+            <h2 className="text-2xl font-bold mb-3">Have Questions?</h2>
+            <p className="text-indigo-100 dark:text-indigo-200 mb-6">
+              We're here to help. Reach out with any questions or feedback.
             </p>
             <a
-              href="/signup"
-              className="inline-block px-6 py-3 bg-card text-primary rounded-lg hover:bg-indigo-50 transition-colors font-semibold"
+              href="mailto:support@pulsenews.app"
+              className="inline-block px-6 py-3 bg-white text-primary rounded-lg hover:bg-indigo-50 transition-colors font-semibold"
             >
-              Sign Up Now
+              Contact Us
             </a>
           </div>
         </div>
       </div>
+      <Footer />
     </>
   );
 }

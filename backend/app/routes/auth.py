@@ -392,3 +392,100 @@ def logout():
     by deleting the token. This endpoint is provided for consistency.
     """
     return {"message": "Logged out successfully"}
+
+
+@router.delete("/account", status_code=status.HTTP_204_NO_CONTENT)
+def delete_account(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Delete the authenticated user's account and all associated data.
+
+    This is a permanent, destructive operation that:
+    - Deletes user topic preferences
+    - Deletes user source subscriptions
+    - Deletes newsletters associated with the user
+    - Deletes user favorites
+    - Deletes password reset tokens
+    - Deletes the user account itself
+
+    Requires: Authorization header with Bearer token
+    Returns: 204 No Content on success
+    """
+    from ..models import Newsletter, UserSourceSubscription, ArticleFavorite, PasswordResetToken, NewsletterArticle
+
+    try:
+        # Delete user topic preferences
+        for pref in session.exec(
+            select(UserTopicPreference).where(UserTopicPreference.user_id == current_user.id)
+        ):
+            session.delete(pref)
+
+        # Delete user source subscriptions
+        for subscription in session.exec(
+            select(UserSourceSubscription).where(UserSourceSubscription.user_id == current_user.id)
+        ):
+            session.delete(subscription)
+
+        # Delete user favorites
+        for favorite in session.exec(
+            select(ArticleFavorite).where(ArticleFavorite.user_id == current_user.id)
+        ):
+            session.delete(favorite)
+
+        # Delete newsletter articles first (foreign key constraint)
+        user_newsletters = session.exec(
+            select(Newsletter).where(Newsletter.user_id == current_user.id)
+        ).all()
+
+        for newsletter in user_newsletters:
+            # Delete articles associated with this newsletter
+            for newsletter_article in session.exec(
+                select(NewsletterArticle).where(NewsletterArticle.newsletter_id == newsletter.id)
+            ):
+                session.delete(newsletter_article)
+
+        # Now delete newsletters
+        for newsletter in user_newsletters:
+            session.delete(newsletter)
+
+        # Delete password reset tokens
+        for token in session.exec(
+            select(PasswordResetToken).where(PasswordResetToken.user_id == current_user.id)
+        ):
+            session.delete(token)
+
+        # Anonymize user-submitted articles (keep articles but remove user reference)
+        from ..models import Article
+        session.exec(
+            select(Article).where(Article.submitted_by_user_id == current_user.id)
+        )
+        # Set submitted_by_user_id to NULL for any articles they submitted
+        for article in session.exec(
+            select(Article).where(Article.submitted_by_user_id == current_user.id)
+        ):
+            article.submitted_by_user_id = None
+
+        # Anonymize admin audit logs (keep logs for accountability but remove user reference)
+        from ..models import AdminAuditLog
+        for log in session.exec(
+            select(AdminAuditLog).where(AdminAuditLog.user_id == current_user.id)
+        ):
+            log.user_id = None
+
+        # Finally, delete the user
+        session.delete(current_user)
+        session.commit()
+
+        logger.info(f"Account deleted for user: {current_user.email}")
+
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Error deleting account for user {current_user.email}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete account. Please try again later."
+        )
+
+    return None

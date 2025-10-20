@@ -56,9 +56,13 @@ class ApiClient {
       // Handle auth errors by redirecting to login
       if (response.status === 401 || response.status === 403) {
         this.clearToken();
-        if (typeof window !== 'undefined'
-          && !window.location.pathname.includes('/login')
-          && window.location.pathname !== '/') {
+
+        // List of public pages that don't require redirect
+        const publicPages = ['/', '/login', '/signup', '/welcome', '/how-it-works', '/privacy-policy', '/forgot-password', '/reset-password', '/verify-email', '/insights', '/sources', '/analytics', '/analyze'];
+        const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+        const isPublicPage = publicPages.some(page => currentPath === page || currentPath.startsWith(page));
+
+        if (typeof window !== 'undefined' && !isPublicPage) {
           window.location.href = '/login';
         }
       }
@@ -120,6 +124,28 @@ class ApiClient {
   async logout() {
     this.clearToken();
     return this.request('/auth/logout', { method: 'POST' });
+  }
+
+  async deleteAccount() {
+    const response = await fetch(`${this.baseUrl}/auth/account`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+      },
+    });
+
+    if (!response.ok) {
+      // Try to parse JSON error, but handle cases where response has no body
+      const error: ApiError = await response.json().catch(() => ({
+        detail: 'Failed to delete account',
+      }));
+      throw new Error(error.detail);
+    }
+
+    // 204 No Content - successful deletion, no response body
+    // Clear token after successful deletion
+    this.clearToken();
+    return;
   }
 
   async requestPasswordReset(data: { email: string }) {
@@ -313,6 +339,7 @@ class ApiClient {
     sort_by?: string;
     only_analyzed?: boolean;
     only_verified_stats?: boolean;
+    favorites_only?: boolean;
   }) {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
@@ -326,6 +353,7 @@ class ApiClient {
     if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
     if (params?.only_analyzed) queryParams.append('only_analyzed', params.only_analyzed.toString());
     if (params?.only_verified_stats) queryParams.append('only_verified_stats', params.only_verified_stats.toString());
+    if (params?.favorites_only) queryParams.append('favorites_only', params.favorites_only.toString());
 
     return this.request<{
       articles: Array<{
@@ -346,6 +374,7 @@ class ApiClient {
         stats_count: number;
         stats_verified_count: number;
         has_stats: boolean;
+        is_favorited: boolean;
       }>;
       total_count: number;
       page: number;
@@ -419,6 +448,7 @@ class ApiClient {
         timeline: string | null;
         significance: string | null;
       } | null;
+      is_favorited: boolean;
     }>(`/articles/${articleId}`);
   }
 
@@ -776,6 +806,52 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ url }),
     });
+  }
+
+  // Favorites endpoints
+  async addFavorite(articleId: number) {
+    return this.request<{
+      message: string;
+      favorited_at: string;
+    }>(`/favorites/articles/${articleId}`, {
+      method: 'POST',
+    });
+  }
+
+  async removeFavorite(articleId: number) {
+    return this.request<{
+      message: string;
+    }>(`/favorites/articles/${articleId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getFavorites(params?: { limit?: number; offset?: number }) {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.offset) queryParams.append('offset', params.offset.toString());
+
+    return this.request<{
+      favorites: Array<{
+        id: number;
+        title: string;
+        url: string;
+        source_name: string;
+        published_at: string;
+        favorited_at: string;
+        summary: string | null;
+        sentiment_score: number | null;
+        political_lean: string | null;
+      }>;
+      total_count: number;
+    }>(`/favorites?${queryParams}`);
+  }
+
+  async checkFavorite(articleId: number) {
+    return this.request<{
+      is_favorited: boolean;
+      favorited_at: string | null;
+    }>(`/favorites/check/${articleId}`);
   }
 }
 
