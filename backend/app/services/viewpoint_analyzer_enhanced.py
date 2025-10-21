@@ -12,8 +12,8 @@ from datetime import datetime
 from collections import defaultdict
 import re
 
-from sqlmodel import Session, select, and_, or_, func
-from sqlalchemy import text
+from sqlmodel import Session, select
+from sqlalchemy import text, and_, or_, func
 
 from ..models import (
     Article, ArticleAnalysis, ViewpointRelationship, ArticleFrameworkLink,
@@ -169,13 +169,30 @@ class ViewpointAnalyzer:
         unique_candidates = self._deduplicate_candidates(candidates)
         ranked_candidates = self._rank_candidates(unique_candidates)
 
-        # Generate AI explanations for top candidates
+        # Generate AI explanations for top candidates and add article metadata
         final_candidates = ranked_candidates[:max_results]
 
         for candidate in final_candidates:
-            candidate["ai_explanation"] = self._generate_framework_explanation(
+            explanations = self._generate_framework_explanation(
                 candidate, primary_frameworks, session
             )
+            candidate["how_this_opposes"] = explanations["how_this_opposes"]
+            candidate["why_this_opposes"] = explanations["why_this_opposes"]
+
+            # Add article metadata that frontend expects
+            opp_article = session.exec(select(Article).where(Article.id == candidate["article_id"])).first()
+            opp_analysis = session.exec(select(ArticleAnalysis).where(ArticleAnalysis.article_id == candidate["article_id"])).first()
+            opp_source = session.exec(select(Source).where(Source.id == opp_article.source_id)).first()
+
+            if opp_article:
+                candidate.update({
+                    "title": opp_article.title,
+                    "url": opp_article.url,
+                    "summary": opp_analysis.summary if opp_analysis else None,
+                    "sentiment_score": opp_analysis.sentiment_score if opp_analysis else None,
+                    "source_name": opp_source.name if opp_source else None,
+                    "published_at": opp_article.published_at.isoformat() if opp_article.published_at else None
+                })
 
         logger.info(f"Found {len(final_candidates)} cross-framework opposing viewpoints")
         return final_candidates
@@ -243,6 +260,7 @@ class ViewpointAnalyzer:
                     "article_id": opp_link.article_id,
                     "relationship_type": "framework_opposition",
                     "relationship_strength": combined_score,
+                    "opposition_strength": combined_score,  # Frontend expects this field
                     "relevance_score": relevance_avg,
                     "framework_name": chosen_framework.name,
                     "primary_position": chosen_primary_link.position_on_axis,
@@ -303,8 +321,8 @@ class ViewpointAnalyzer:
         candidate: Dict[str, Any],
         primary_frameworks: List[ArticleFrameworkLink],
         session: Session
-    ) -> str:
-        """Generate AI explanation for the framework opposition."""
+    ) -> Dict[str, str]:
+        """Generate AI explanations for the framework opposition."""
         framework_name = candidate["framework_name"]
         primary_pos = candidate["primary_position"]
         opposing_pos = candidate["opposing_position"]
@@ -312,33 +330,177 @@ class ViewpointAnalyzer:
         primary_framework = candidate.get("primary_framework", framework_name)
         opposing_framework = candidate.get("opposing_framework", framework_name)
 
-        # Generate narrative explanation
+        # Get article content for more detailed explanations
+        opp_article = session.exec(select(Article).where(Article.id == candidate["article_id"])).first()
+        opp_analysis = session.exec(select(ArticleAnalysis).where(ArticleAnalysis.article_id == candidate["article_id"])).first()
+
+        # Extract key content themes for more specific explanations
+        content_theme = ""
+        if opp_analysis and opp_analysis.summary:
+            # Extract key themes from summary (simplified approach)
+            summary_text = opp_analysis.summary.lower()
+            if any(word in summary_text for word in ['trump', 'election', 'political', 'campaign']):
+                content_theme = "political leadership"
+            elif any(word in summary_text for word in ['war', 'conflict', 'military', 'defense']):
+                content_theme = "international conflict"
+            elif any(word in summary_text for word in ['economy', 'market', 'financial', 'trade']):
+                content_theme = "economic policy"
+            elif any(word in summary_text for word in ['rights', 'freedom', 'justice', 'law']):
+                content_theme = "civil liberties"
+            elif any(word in summary_text for word in ['climate', 'environment', 'energy']):
+                content_theme = "environmental policy"
+            else:
+                content_theme = "current events"
+
+        # Generate "why this opposes" - focused on mechanism (old how_explanation)
         if primary_framework != opposing_framework:
-            explanation = (
-                f"This article presents a '{opposing_framework}' perspective (position {opposing_pos}), "
-                f"which opposes the primary article's '{primary_framework}' framework (position {primary_pos}). "
-                f"The {position_gap}-point gap represents fundamentally different approaches to this issue."
+            why_explanation = (
+                f"Frames through '{opposing_framework}' lens vs '{primary_framework}' approach; "
+                f"different ethical frameworks and value systems"
             )
         else:
             if primary_pos > 0 and opposing_pos < 0:
-                explanation = (
-                    f"This article takes a strongly negative position on {framework_name} ({opposing_pos}), "
-                    f"directly opposing the primary article's positive stance ({primary_pos}). "
-                    f"The frameworks clash on core values and priorities."
+                why_explanation = f"Direct position reversal: +{primary_pos} → {opposing_pos} on {framework_name}"
+            elif primary_pos < 0 and opposing_pos > 0:
+                why_explanation = f"Direct position reversal: {primary_pos} → +{opposing_pos} on {framework_name}"
+            else:
+                why_explanation = f"Position contrast: {primary_pos} vs {opposing_pos} on {framework_name}"
+
+        # Generate "how this opposes" - focused on content-specific reasoning (old why_explanation)
+        if primary_framework != opposing_framework:
+            how_explanation = (
+                f"Regarding {content_theme}, this '{opposing_framework}' perspective (position {opposing_pos}) "
+                f"challenges the primary article's '{primary_framework}' approach (position {primary_pos}), "
+                f"offering contrasting policy solutions based on different ideological foundations."
+            )
+        else:
+            if primary_pos > 0 and opposing_pos < 0:
+                how_explanation = (
+                    f"On {content_theme}, this article opposes the primary piece by advocating {framework_name} "
+                    f"(position {opposing_pos}) against the positive stance ({primary_pos}), "
+                    f"highlighting fundamental disagreements about effective approaches."
                 )
             elif primary_pos < 0 and opposing_pos > 0:
-                explanation = (
-                    f"This article advocates for {framework_name} (position {opposing_pos}), "
-                    f"contrasting with the primary article's oppositional stance ({primary_pos}). "
-                    f"The {position_gap}-point gap highlights deep ideological differences."
+                how_explanation = (
+                    f"Regarding {content_theme}, this piece supports {framework_name} (position {opposing_pos}) "
+                    f"contrasting with the primary article's resistance ({primary_pos}), "
+                    f"revealing competing priorities in addressing this issue."
                 )
             else:
-                explanation = (
-                    f"This article offers a contrasting view on {framework_name} (position {opposing_pos}), "
-                    f"providing a different perspective from the primary article (position {primary_pos})."
+                how_explanation = (
+                    f"On {content_theme}, this article provides alternative {framework_name} insights "
+                    f"(position {opposing_pos}) that complement or challenge the primary view (position {primary_pos}), "
+                    f"expanding the policy discussion with different considerations."
                 )
 
-        return explanation
+        # SWITCHED: The old "how" becomes "why" and the enhanced content-focused "how" becomes "how"
+        return {
+            "how_this_opposes": how_explanation,  # Content-focused explanation
+            "why_this_opposes": why_explanation   # Mechanism-focused explanation
+        }
+
+    def save_opposing_viewpoints(
+        self,
+        article: Article,
+        max_results: int = 10,
+        session: Optional[Session] = None
+    ) -> List[ViewpointRelationship]:
+        """
+        Find and save opposing viewpoints to the database using enhanced cross-framework analysis.
+
+        This method:
+        1. Finds opposing viewpoints using enhanced analysis
+        2. Saves them as ViewpointRelationship objects in the database
+        3. Returns the saved database objects
+
+        Args:
+            article: The primary article to find oppositions for
+            max_results: Maximum number of viewpoints to find and save
+            session: Database session
+
+        Returns:
+            List of saved ViewpointRelationship objects
+        """
+        if session is None:
+            from ..database import get_session
+            session = next(get_session())
+            should_close_session = True
+        else:
+            should_close_session = False
+
+        try:
+            # First, find opposing viewpoints using the existing enhanced analyzer
+            oppositions = self.find_opposing_viewpoints(article, max_results, session)
+
+            saved_relationships = []
+
+            for opposition in oppositions:
+                # Check if this relationship already exists
+                existing = session.exec(
+                    select(ViewpointRelationship).where(
+                        and_(
+                            ViewpointRelationship.primary_article_id == article.id,
+                            ViewpointRelationship.opposing_article_id == opposition["article_id"],
+                            ViewpointRelationship.relationship_type == opposition["relationship_type"]
+                        )
+                    )
+                ).first()
+
+                if existing:
+                    # Update existing relationship with enhanced fields
+                    existing.how_this_opposes = opposition.get("how_this_opposes")
+                    existing.why_this_opposes = opposition.get("why_this_opposes")
+                    existing.framework_name = opposition.get("framework_name")
+                    existing.primary_position = opposition.get("primary_position")
+                    existing.opposing_position = opposition.get("opposing_position")
+                    existing.reasoning = opposition.get("ai_explanation", opposition.get("why_this_opposes"))
+                    existing.opposition_strength = opposition.get("opposition_strength", opposition.get("relationship_strength"))
+                    existing.quality_score = opposition.get("relevance_score")
+                    existing.ai_explanation = opposition.get("ai_explanation")
+                    existing.updated_at = datetime.utcnow()
+
+                    saved_relationships.append(existing)
+                    logger.info(f"Updated existing viewpoint relationship: {article.id} -> {opposition['article_id']}")
+                else:
+                    # Create new ViewpointRelationship object
+                    relationship = ViewpointRelationship(
+                        primary_article_id=article.id,
+                        opposing_article_id=opposition["article_id"],
+                        relationship_type=opposition["relationship_type"],
+                        opposition_strength=opposition.get("opposition_strength", opposition.get("relationship_strength", 0.5)),
+                        ai_explanation=opposition.get("ai_explanation"),
+                        framework_name=opposition.get("framework_name"),
+                        reasoning=opposition.get("ai_explanation", opposition.get("why_this_opposes")),
+                        primary_position=opposition.get("primary_position"),
+                        opposing_position=opposition.get("opposing_position"),
+                        how_this_opposes=opposition.get("how_this_opposes"),  # Enhanced field
+                        why_this_opposes=opposition.get("why_this_opposes"),  # Enhanced field
+                        quality_score=opposition.get("relevance_score"),
+                        generation_method="enhanced_analyzer",
+                        ai_model_version="gpt-4o-mini-enhanced",
+                        processing_time_ms=opposition.get("processing_time_ms"),
+                        is_active=True,
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow()
+                    )
+
+                    session.add(relationship)
+                    saved_relationships.append(relationship)
+                    logger.info(f"Created new viewpoint relationship: {article.id} -> {opposition['article_id']}")
+
+            # Commit all changes
+            session.commit()
+
+            logger.info(f"Saved {len(saved_relationships)} viewpoint relationships for article {article.id}")
+            return saved_relationships
+
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error saving viewpoint relationships for article {article.id}: {e}", exc_info=True)
+            raise
+        finally:
+            if should_close_session:
+                session.close()
 
     @staticmethod
     def analyze_viewpoint_relationships(
