@@ -4,7 +4,7 @@ Article routes - both public listing and detailed analysis.
 Merged from articles.py and article_detail.py to resolve router conflict.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlmodel import Session, select
 from ..database import get_session
 from ..models import (
@@ -14,8 +14,9 @@ from ..models import (
 )
 from ..routes.auth import get_current_user
 from ..services.viewpoint_analyzer import ViewpointAnalyzer
+from ..jobs.tasks import analyze_single_article_viewpoints_job
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 import logging
 
@@ -466,3 +467,58 @@ async def get_opposing_viewpoints(
                 status_code=500,
                 detail="Internal server error while generating opposing viewpoints"
             )
+
+
+@router.post("/{article_id}/analyze-viewpoints")
+def trigger_viewpoint_analysis(
+    article_id: int,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+) -> Dict[str, Any]:
+    """
+    Trigger on-demand analysis of opposing viewpoints for a specific article.
+
+    This endpoint:
+    - Starts background analysis job for the specified article
+    - Returns immediately with job information
+    - Can be polled for completion status
+    - Uses ViewpointAnalyzer to find opposing viewpoints
+
+    Args:
+        article_id: ID of the article to analyze
+        current_user: Authenticated user
+        session: Database session
+    """
+    try:
+        # Verify article exists
+        article = session.exec(select(Article).where(Article.id == article_id)).first()
+        if not article:
+            raise HTTPException(
+                status_code=404,
+                detail="Article not found"
+            )
+
+        # Trigger background analysis
+        background_tasks.add_task(
+            analyze_single_article_viewpoints_job,
+            article_id=article_id
+        )
+
+        logger.info(f"Triggered viewpoint analysis for article {article_id} by user {current_user.id}")
+
+        return {
+            "status": "triggered",
+            "article_id": article_id,
+            "message": "Opposing viewpoints analysis started",
+            "job_id": f"analyze_single_article_viewpoints_{article_id}"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error triggering viewpoint analysis for article {article_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to start viewpoint analysis"
+        )

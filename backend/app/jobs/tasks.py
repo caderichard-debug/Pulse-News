@@ -1039,3 +1039,62 @@ def regenerate_viewpoints_job(session: Session = None):
     except Exception as e:
         logger.error(f"Viewpoint regeneration job failed: {e}", exc_info=True)
         return {"success": False, "error": str(e)}
+
+
+@track_job_execution(job_id="analyze_single_article_viewpoints", job_name="Analyze Single Article Viewpoints")
+def analyze_single_article_viewpoints_job(article_id: int, session: Session = None):
+    """
+    Job: Analyze a single article for opposing viewpoints.
+
+    This function:
+    - Uses ViewpointAnalyzer to find opposing viewpoints for a specific article
+    - Creates viewpoint relationships in the database
+    - Handles AI analysis with proper error handling
+    - Returns results for immediate feedback
+
+    Args:
+        article_id: The ID of the article to analyze
+        session: Optional session (for testing). If None, creates new session.
+    """
+    try:
+        logger.info(f"Starting single article viewpoint analysis for article {article_id}")
+
+        from ..services.viewpoint_analyzer import ViewpointAnalyzer
+        from ..database import get_session
+
+        # Use provided session or create new one
+        if session is None:
+            session = next(get_session())
+            should_close_session = True
+        else:
+            should_close_session = False
+
+        try:
+            # Use ViewpointAnalyzer to find opposing viewpoints
+            viewpoints = ViewpointAnalyzer.find_opposing_viewpoints(
+                article_id=article_id,
+                session=session,
+                max_results=10,  # Increased for single article analysis
+                relationship_types=['framework_opposition', 'source_bias', 'sentiment_contrast']
+            )
+
+            logger.info(f"Found {len(viewpoints)} opposing viewpoints for article {article_id}")
+
+            return {
+                "success": True,
+                "article_id": article_id,
+                "viewpoints_count": len(viewpoints),
+                "viewpoints": viewpoints
+            }
+
+        finally:
+            if should_close_session:
+                session.close()
+
+    except Exception as e:
+        logger.error(f"Single article viewpoint analysis failed for article {article_id}: {e}", exc_info=True)
+        return {
+            "success": False,
+            "article_id": article_id,
+            "error": str(e)
+        }

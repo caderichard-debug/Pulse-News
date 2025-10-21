@@ -151,30 +151,113 @@ class ViewpointAnalyzer:
         for link, framework in primary_frameworks:
             logger.debug(f"Searching for oppositions on framework: {framework.name} (position: {link.position_on_axis})")
 
-            # Find articles with opposite positions on the same framework
-            oppositions = session.exec(
-                select(ArticleFrameworkLink, Article, ArticleAnalysis, Source)
-                .join(Article, ArticleFrameworkLink.article_id == Article.id)
-                .join(ArticleAnalysis, ArticleAnalysis.article_id == Article.id)
-                .join(Source, Source.id == Article.source_id)
-                .where(ArticleFrameworkLink.framework_id == framework.id)
-                .where(ArticleFrameworkLink.article_id != article.id)
-                .where(ArticleFrameworkLink.relevance_score > 0.5)  # Reasonably strong relationship
-                .where(
-                    or_(
-                        # Opposite positions on the spectrum
-                        and_(
-                            ArticleFrameworkLink.position_on_axis < -5,
-                            link.position_on_axis > 5
-                        ),
-                        and_(
-                            ArticleFrameworkLink.position_on_axis > 5,
-                            link.position_on_axis < -5
+            # Priority 1: Same-event articles (same cluster) with opposite framework positions
+            # First get cluster IDs for the primary article
+            primary_clusters = session.exec(
+                select(ArticleClusterMember.cluster_id)
+                .where(ArticleClusterMember.article_id == article.id)
+            ).all()
+
+            same_event_oppositions = []
+            if primary_clusters:
+                cluster_ids = [cluster_id for cluster_id, in primary_clusters]
+                same_event_oppositions = session.exec(
+                    select(ArticleFrameworkLink, Article, ArticleAnalysis, Source)
+                    .join(Article, ArticleFrameworkLink.article_id == Article.id)
+                    .join(ArticleAnalysis, ArticleAnalysis.article_id == Article.id)
+                    .join(Source, Source.id == Article.source_id)
+                    .join(ArticleClusterMember, Article.id == ArticleClusterMember.article_id)
+                    .where(ArticleFrameworkLink.framework_id == framework.id)
+                    .where(ArticleFrameworkLink.article_id != article.id)
+                    .where(ArticleFrameworkLink.relevance_score > 0.5)
+                    .where(ArticleClusterMember.cluster_id.in_(cluster_ids))
+                    .where(
+                        or_(
+                            # Opposite positions on the spectrum
+                            and_(
+                                ArticleFrameworkLink.position_on_axis < -2,
+                                link.position_on_axis > 2
+                            ),
+                            and_(
+                                ArticleFrameworkLink.position_on_axis > 2,
+                                link.position_on_axis < -2
+                            )
                         )
                     )
-                )
-                .order_by(ArticleFrameworkLink.relevance_score.desc())
-            ).all()
+                    .order_by(ArticleFrameworkLink.relevance_score.desc())
+                ).all()
+
+            # Priority 2: Same-topic, different-event articles with opposite framework positions
+            if not same_event_oppositions:
+                oppositions = session.exec(
+                    select(ArticleFrameworkLink, Article, ArticleAnalysis, Source)
+                    .join(Article, ArticleFrameworkLink.article_id == Article.id)
+                    .join(ArticleAnalysis, ArticleAnalysis.article_id == Article.id)
+                    .join(Source, Source.id == Article.source_id)
+                    .where(ArticleFrameworkLink.framework_id == framework.id)
+                    .where(ArticleFrameworkLink.article_id != article.id)
+                    .where(ArticleFrameworkLink.relevance_score > 0.5)  # Reasonably strong relationship
+                    .where(Article.topic_category == article.topic_category)  # SAME TOPIC REQUIRED
+                    .where(
+                        or_(
+                            # Opposite positions on the spectrum (lowered threshold for more matches)
+                            and_(
+                                ArticleFrameworkLink.position_on_axis < -2,
+                                link.position_on_axis > 2
+                            ),
+                            and_(
+                                ArticleFrameworkLink.position_on_axis > 2,
+                                link.position_on_axis < -2
+                            )
+                        )
+                    )
+                    .order_by(ArticleFrameworkLink.relevance_score.desc())
+                ).all()
+            else:
+                oppositions = same_event_oppositions
+                logger.info(f"Found {len(same_event_oppositions)} same-event oppositions for article {article.id}")
+
+            # Fallback: If no same-topic oppositions found, look for similar topics
+            if not oppositions and article.topic_category:
+                # Define similar topic mappings
+                similar_topics = {
+                    'politics': ['world', 'economics'],
+                    'world': ['politics', 'economics'],
+                    'economics': ['politics', 'world'],
+                    'technology': ['science', 'economics'],
+                    'science': ['technology', 'environment'],
+                    'environment': ['science', 'economics'],
+                    'culture': ['general'],
+                    'general': ['culture']
+                }
+
+                similar_topic_list = similar_topics.get(article.topic_category, [])
+
+                if similar_topic_list:
+                    oppositions = session.exec(
+                        select(ArticleFrameworkLink, Article, ArticleAnalysis, Source)
+                        .join(Article, ArticleFrameworkLink.article_id == Article.id)
+                        .join(ArticleAnalysis, ArticleAnalysis.article_id == Article.id)
+                        .join(Source, Source.id == Article.source_id)
+                        .where(ArticleFrameworkLink.framework_id == framework.id)
+                        .where(ArticleFrameworkLink.article_id != article.id)
+                        .where(ArticleFrameworkLink.relevance_score > 0.5)
+                        .where(Article.topic_category.in_(similar_topic_list))  # SIMILAR TOPICS
+                        .where(
+                            or_(
+                                # Opposite positions on the spectrum (lowered threshold for more matches)
+                                and_(
+                                    ArticleFrameworkLink.position_on_axis < -2,
+                                    link.position_on_axis > 2
+                                ),
+                                and_(
+                                    ArticleFrameworkLink.position_on_axis > 2,
+                                    link.position_on_axis < -2
+                                )
+                            )
+                        )
+                        .order_by(ArticleFrameworkLink.relevance_score.desc())
+                    ).all()
 
             for opp_link, opp_article, opp_analysis, opp_source in oppositions:
                 # Calculate opposition strength based on position gap and relevance
