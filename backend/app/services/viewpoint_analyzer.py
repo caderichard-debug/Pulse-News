@@ -285,15 +285,24 @@ class ViewpointAnalyzer:
         Process candidates: deduplicate, rank, and enhance with explanations.
         """
 
-        # Deduplicate by article_id
-        seen_ids = set()
-        deduplicated = []
+        # Deduplicate by article_id - keep the best candidate for each article
+        best_candidates = {}
 
         for candidate in candidates:
             article_id = candidate["article_id"]
-            if article_id not in seen_ids:
-                seen_ids.add(article_id)
-                deduplicated.append(candidate)
+            # Calculate combined score (strength + relevance)
+            combined_score = (
+                candidate["opposition_strength"] * 0.6 +
+                candidate.get("relevance_score", 0) * 0.4
+            )
+
+            # Keep the candidate with the highest combined score
+            if (article_id not in best_candidates or
+                combined_score > best_candidates[article_id]["combined_score"]):
+                candidate["combined_score"] = combined_score
+                best_candidates[article_id] = candidate
+
+        deduplicated = list(best_candidates.values())
 
         # Sort by opposition strength descending
         deduplicated.sort(key=lambda x: x["opposition_strength"], reverse=True)
