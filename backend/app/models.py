@@ -524,6 +524,12 @@ class ViewpointRelationship(SQLModel, table=True):
     # AI-generated explanation
     ai_explanation: Optional[str] = Field(default=None, max_length=500)
 
+    # Framework analysis details (for framework_opposition relationships)
+    framework_name: Optional[str] = Field(default=None, max_length=100)  # Name of the framework
+    reasoning: Optional[str] = Field(default=None, max_length=500)  # Detailed reasoning for the relationship
+    primary_position: Optional[int] = Field(default=None)  # Primary article's position on framework
+    opposing_position: Optional[int] = Field(default=None)  # Opposing article's position on framework
+
     # Quality and engagement tracking
     quality_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)  # AI assessment of relationship quality
     user_engagement_count: int = Field(default=0)  # How many users clicked this
