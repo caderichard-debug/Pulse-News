@@ -14,18 +14,17 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { vi } from 'vitest'
 import OpposingViewpoints from '../OpposingViewpoints'
 
 // Mock the API module
-vi.mock('@/lib/api', () => ({
+jest.mock('@/lib/api', () => ({
   api: {
-    getOpposingViewpoints: vi.fn()
+    getOpposingViewpoints: jest.fn()
   }
 }))
 
 // Mock lucide-react icons
-vi.mock('lucide-react', () => ({
+jest.mock('lucide-react', () => ({
   ArrowRight: ({ className }: { className?: string }) => (
     <div data-testid="arrow-right" className={className} />
   ),
@@ -49,10 +48,10 @@ vi.mock('lucide-react', () => ({
 // Mock window.open
 Object.defineProperty(window, 'open', {
   writable: true,
-  value: vi.fn()
+  value: jest.fn()
 })
 
-const mockApi = vi.mocked('@/lib/api', true).api
+const mockApi = require('@/lib/api').api
 
 interface MockViewpoint {
   article_id: number
@@ -110,7 +109,7 @@ const mockResponse: MockResponse = {
 
 describe('OpposingViewpoints Component', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    jest.clearAllMocks()
   })
 
   describe('Component Rendering', () => {
