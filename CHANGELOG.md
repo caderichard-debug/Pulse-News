@@ -1,3 +1,40 @@
+## 2025-10-21 02:37
+
+**Frontend UI Polish and Backend Caching Removal** ✅
+
+### What Changed
+- Fixed framework position dot vertical alignment by removing conflicting transform classes
+- Removed viewpoint analysis caching to ensure fresh analysis on every request
+- Eliminated stale data issues and complex cache management logic
+- Improved user experience with consistent, accurate framework analysis results
+
+### Frontend Fixes
+- **Dot Positioning**: Fixed vertical alignment of position dots in framework visualization
+- **Transform Conflict**: Removed -translate-y-1/2 class that overrode inline positioning
+- **Visual Consistency**: Dots now properly centered on position line for all framework oppositions
+
+### Backend Improvements
+- **No More Caching**: Always run fresh analysis when user triggers viewpoint generation
+- **Simplified Flow**: Removed _get_cached_results and _cache_results method calls
+- **Consistent Data**: Users get accurate framework names and reasoning every time
+- **Better Reliability**: Eliminated stale cached relationship data issues
+
+### Framework Opposition Logic
+- **Current Behavior**: Shows strongest framework opposition by position gap × relevance score
+- **Results**: National Interest vs. Global Cooperation (position 6 vs -5, strength 0.8)
+- **Notes**: All opposition articles share same framework due to highest opposition strength
+- **Future**: Could implement semantic relevance analysis for better framework matching
+
+### Technical Details
+- Frontend: Fixed CSS transform conflicts in getFrameworkPositionVisual component
+- Backend: Simplified ViewpointAnalyzer flow by removing caching complexity
+- Database: Maintains framework analysis fields but no longer uses cached relationships
+- API: Returns fresh analysis on every request with accurate framework data
+
+**Code References:**
+- Frontend fix: [OpposingViewpoints.tsx:227](frontend/src/components/OpposingViewpoints.tsx:227)
+- Backend caching removal: [viewpoint_analyzer.py:57](backend/app/services/viewpoint_analyzer.py:57)
+
 ## 2025-10-21 02:18
 
 **UI Fixes: Framework Names and Enhanced Explanations Now Display** ✅
