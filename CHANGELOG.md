@@ -1,3 +1,38 @@
+## 2025-10-21 03:49
+
+**Cross-Framework Analysis Implementation** ✅
+
+### What Changed
+- **BREAKING**: Created enhanced ViewpointAnalyzer with cross-framework analysis capability
+- **New File**: [`viewpoint_analyzer_enhanced.py`](backend/app/services/viewpoint_analyzer_enhanced.py) - Complete rewrite of viewpoint analysis logic
+- **Core Innovation**: Finds semantically relevant oppositions across ALL framework combinations, not just same frameworks
+- **Updated**: Job tasks to use enhanced analyzer for on-demand analysis
+- **Fixed**: Article model field references (ArticleAnalysis.summary vs Article.summary)
+
+### Cross-Framework Analysis Architecture
+- **Before**: Limited to finding oppositions within the same framework only
+- **After**: Compares ALL possible framework pairs between primary and opposing articles
+- **Algorithm**: For each opposing article, finds the best framework opposition across all framework combinations
+- **Scoring**: Position gap (60%) + average relevance (40%) + semantic relevance
+- **Selection**: Chooses most meaningful opposition narrative rather than strongest mathematical opposition
+
+### Test Results
+- **Article 1014** (Trump): Now finds 3 different frameworks:
+  1. National Interest vs. Global Cooperation (position gap: 11)
+  2. Individual Liberty vs. Collective Welfare (position gap: 9)
+  3. Individual Liberty vs. Collective Welfare (different article)
+- **Semantic Variety**: Cross-framework analysis reveals multiple ideological dimensions of opposition
+
+### Key Methods
+- **[`_find_best_framework_opposition()`](backend/app/services/viewpoint_analyzer_enhanced.py:140)**: Core innovation - compares all framework pairs
+- **[`_generate_framework_explanation()`](backend/app/services/viewpoint_analyzer_enhanced.py:290)**: Creates narrative explanations for cross-framework oppositions
+- **Strategy Prioritization**: Same-event → Same-topic → Similar-topic fallback
+
+**Code References:**
+- Enhanced analyzer: [`viewpoint_analyzer_enhanced.py`](backend/app/services/viewpoint_analyzer_enhanced.py)
+- Job integration: [`tasks.py:1062`](backend/app/jobs/tasks.py#L1062)
+- Framework comparison logic: [`viewpoint_analyzer_enhanced.py:140-200`](backend/app/services/viewpoint_analyzer_enhanced.py#L140-L200)
+
 ## 2025-10-21 02:51
 
 **Improved Framework Selection Logic and Current Limitations** ✅

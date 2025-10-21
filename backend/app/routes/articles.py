@@ -381,13 +381,15 @@ async def get_opposing_viewpoints(
         if not requested_types:
             requested_types = available_types
 
-        # Get opposing viewpoints using the analyzer
+        # Get opposing viewpoints using the enhanced cross-framework analyzer
         start_time = datetime.utcnow()
-        oppositions = ViewpointAnalyzer.find_opposing_viewpoints(
-            article_id=article_id,
+        from ..services.viewpoint_analyzer_enhanced import ViewpointAnalyzer
+
+        analyzer = ViewpointAnalyzer(session)
+        oppositions = analyzer.find_opposing_viewpoints(
+            article=primary_article,
             session=session,
-            max_results=max_results,
-            relationship_types=requested_types
+            max_results=max_results
         )
         processing_time = (datetime.utcnow() - start_time).total_seconds() * 1000  # milliseconds
 
@@ -405,39 +407,105 @@ async def get_opposing_viewpoints(
                 # No viewpoints found, which is normal for some articles
                 logger.info(f"No opposing viewpoints found for article {article_id}")
 
-        # Build response
+        # Build response - handle both old and enhanced analyzer data structures
         opposing_viewpoints = []
         for opposition in oppositions:
-            opp_article = opposition["article"]
-            opp_analysis = opposition["analysis"]
-            opp_source = opposition["source"]
+            # Check if this is from the enhanced analyzer (has article_id key)
+            if "article_id" in opposition:
+                # Enhanced analyzer data structure
+                viewpoint = OpposingViewpoint(
+                    article_id=opposition["article_id"],
+                    title=f"Article {opposition['article_id']}",  # Will be populated below if available
+                    url="",  # Will be populated below if available
+                    source_name="",  # Will be populated below if available
+                    source_bias=None,  # Will be populated below if available
+                    published_at=datetime.utcnow(),  # Default to now, will be populated below if available
+                    sentiment_score=None,
+                    political_lean=None,
+                    summary=None,
+                    relationship_type=opposition["relationship_type"],
+                    opposition_strength=opposition["relationship_strength"],
+                    reasoning=opposition.get("ai_explanation", ""),  # Use AI explanation as reasoning
+                    ai_explanation=opposition.get("ai_explanation"),
+                    quality_score=opposition.get("relevance_score")  # Use relevance_score as quality proxy
+                )
 
-            viewpoint = OpposingViewpoint(
-                article_id=opp_article.id,
-                title=opp_article.title,
-                url=opp_article.url,
-                source_name=opp_source.name,
-                source_bias=opp_source.organizational_bias.value if opp_source.organizational_bias else None,
-                published_at=opp_article.published_at,
-                sentiment_score=opp_analysis.sentiment_score if opp_analysis else None,
-                political_lean=opp_analysis.political_lean.value if opp_analysis and opp_analysis.political_lean else None,
-                summary=opp_analysis.summary if opp_analysis else None,
-                relationship_type=opposition["relationship_type"],
-                opposition_strength=opposition["opposition_strength"],
-                reasoning=opposition["reasoning"],
-                ai_explanation=opposition.get("ai_explanation"),
-                quality_score=opposition.get("quality_score")
-            )
-
-            # Add framework-specific fields
-            if opposition["relationship_type"] == "framework_opposition":
-                framework = opposition.get("framework")
-                if framework:
-                    viewpoint.framework_name = framework.name
+                # Add framework-specific fields from enhanced analyzer
+                if opposition["relationship_type"] == "framework_opposition":
+                    viewpoint.framework_name = opposition.get("framework_name")
                     viewpoint.primary_position = opposition.get("primary_position")
                     viewpoint.opposing_position = opposition.get("opposing_position")
 
+            else:
+                # Original analyzer data structure
+                opp_article = opposition["article"]
+                opp_analysis = opposition["analysis"]
+                opp_source = opposition["source"]
+
+                viewpoint = OpposingViewpoint(
+                    article_id=opp_article.id,
+                    title=opp_article.title,
+                    url=opp_article.url,
+                    source_name=opp_source.name,
+                    source_bias=opp_source.organizational_bias.value if opp_source.organizational_bias else None,
+                    published_at=opp_article.published_at,
+                    sentiment_score=opp_analysis.sentiment_score if opp_analysis else None,
+                    political_lean=opp_analysis.political_lean.value if opp_analysis and opp_analysis.political_lean else None,
+                    summary=opp_analysis.summary if opp_analysis else None,
+                    relationship_type=opposition["relationship_type"],
+                    opposition_strength=opposition["opposition_strength"],
+                    reasoning=opposition["reasoning"],
+                    ai_explanation=opposition.get("ai_explanation"),
+                    quality_score=opposition.get("quality_score")
+                )
+
+                # Add framework-specific fields from original analyzer
+                if opposition["relationship_type"] == "framework_opposition":
+                    framework = opposition.get("framework")
+                    if framework:
+                        viewpoint.framework_name = framework.name
+                        viewpoint.primary_position = opposition.get("primary_position")
+                        viewpoint.opposing_position = opposition.get("opposing_position")
+
             opposing_viewpoints.append(viewpoint)
+
+        # Enhanced analyzer returns article_ids, so we need to fetch the full article details
+        if oppositions and "article_id" in oppositions[0]:
+            article_ids = [opp["article_id"] for opp in oppositions]
+            articles_map = {
+                article.id: article
+                for article in session.exec(select(Article).where(Article.id.in_(article_ids))).all()
+            }
+
+            # Map article sources and analyses
+            sources_map = {
+                source.id: source
+                for source in session.exec(select(Source).where(Source.id.in_([a.source_id for a in articles_map.values()]))).all()
+            }
+
+            analyses_map = {
+                analysis.article_id: analysis
+                for analysis in session.exec(select(ArticleAnalysis).where(ArticleAnalysis.article_id.in_(article_ids))).all()
+            }
+
+            # Update viewpoint data with full article information
+            for i, viewpoint in enumerate(opposing_viewpoints):
+                if viewpoint.article_id in articles_map:
+                    article = articles_map[viewpoint.article_id]
+                    viewpoint.title = article.title
+                    viewpoint.url = article.url
+                    viewpoint.published_at = article.published_at
+
+                    if article.source_id in sources_map:
+                        source = sources_map[article.source_id]
+                        viewpoint.source_name = source.name
+                        viewpoint.source_bias = source.organizational_bias.value if source.organizational_bias else None
+
+                    if viewpoint.article_id in analyses_map:
+                        analysis = analyses_map[viewpoint.article_id]
+                        viewpoint.sentiment_score = analysis.sentiment_score
+                        viewpoint.political_lean = analysis.political_lean.value if analysis.political_lean else None
+                        viewpoint.summary = analysis.summary
 
         logger.info(
             f"Generated {len(opposing_viewpoints)} opposing viewpoints for article {article_id} "

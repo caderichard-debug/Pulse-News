@@ -374,7 +374,9 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
                     {viewpoint.sentiment_score !== undefined && (
                       <div className="flex items-center space-x-1 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
                         <span>{getSentimentEmoji(viewpoint.sentiment_score)}</span>
-                        <span className="text-xs">{viewpoint.sentiment_score}</span>
+                        <span className="text-xs">
+                          {viewpoint.sentiment_score > 0 ? '+' : ''}{viewpoint.sentiment_score.toFixed(1)}
+                        </span>
                       </div>
                     )}
                   </div>

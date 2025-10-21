@@ -1059,8 +1059,9 @@ def analyze_single_article_viewpoints_job(article_id: int, session: Session = No
     try:
         logger.info(f"Starting single article viewpoint analysis for article {article_id}")
 
-        from ..services.viewpoint_analyzer import ViewpointAnalyzer
+        from ..services.viewpoint_analyzer_enhanced import ViewpointAnalyzer
         from ..database import get_session
+        from ..models import Article
 
         # Use provided session or create new one
         if session is None:
@@ -1070,12 +1071,17 @@ def analyze_single_article_viewpoints_job(article_id: int, session: Session = No
             should_close_session = False
 
         try:
-            # Use ViewpointAnalyzer to find opposing viewpoints
-            viewpoints = ViewpointAnalyzer.find_opposing_viewpoints(
-                article_id=article_id,
+            # Get the article
+            article = session.exec(select(Article).where(Article.id == article_id)).first()
+            if not article:
+                return {"success": False, "error": f"Article {article_id} not found"}
+
+            # Use enhanced ViewpointAnalyzer to find cross-framework opposing viewpoints
+            analyzer = ViewpointAnalyzer(session)
+            viewpoints = analyzer.find_opposing_viewpoints(
+                article=article,
                 session=session,
-                max_results=10,  # Increased for single article analysis
-                relationship_types=['framework_opposition', 'source_bias', 'sentiment_contrast']
+                max_results=10
             )
 
             logger.info(f"Found {len(viewpoints)} opposing viewpoints for article {article_id}")

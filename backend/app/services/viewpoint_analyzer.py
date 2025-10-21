@@ -137,6 +137,7 @@ class ViewpointAnalyzer:
 
         candidates = []
 
+        logger.info(f"Processing {len(primary_frameworks)} primary frameworks for article {article.id}")
         for link, framework in primary_frameworks:
             logger.debug(f"Searching for oppositions on framework: {framework.name} (position: {link.position_on_axis})")
 
@@ -258,6 +259,11 @@ class ViewpointAnalyzer:
 
                 # Only include strong oppositions
                 if strength >= 0.3:
+                    # Debug logging to understand what frameworks are being found
+                    logger.info(f"Found framework opposition: {framework.name} for article {opp_article.id}")
+                    logger.info(f"  Primary position: {link.position_on_axis}, Opposing position: {opp_link.position_on_axis}")
+                    logger.info(f"  Position gap: {position_gap}, Relevance: {relevance_avg:.2f}, Strength: {strength:.2f}")
+
                     candidates.append({
                         "article_id": opp_article.id,
                         "relationship_type": "framework_opposition",
