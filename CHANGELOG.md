@@ -1,3 +1,32 @@
+## 2025-10-21 02:18
+
+**UI Fixes: Framework Names and Enhanced Explanations Now Display** ✅
+
+### What Changed
+- Fixed ViewpointAnalyzer caching issues preventing framework names from displaying
+- Cleared stale cached viewpoint relationships to force fresh analysis
+- Restarted backend to clear in-memory cache
+- Confirmed framework names now show "Framework Opposition: National Interest vs. Global Cooperation"
+- Enhanced reasoning text shows position comparisons: "Opposite view on Framework: 6 vs -5"
+- Replaced generic "Cached relationship: framework_opposition" with meaningful explanations
+
+### Test Results
+- **Before**: framework_name=null, reasoning="Cached relationship: framework_opposition"
+- **After**: framework_name="National Interest vs. Global Cooperation", reasoning="Opposite view on National Interest vs. Global Cooperation: 6 vs -5"
+- **API Response**: Now includes proper framework names and detailed reasoning
+- **Frontend**: Should now display framework-specific relationship labels
+
+### Technical Details
+- Issue: Stale cached viewpoint relationships in database
+- Solution: Cleared cache and restarted backend service
+- Result: Fresh analysis with enhanced data structure
+- Impact: All opposing viewpoint cards now show framework-specific information
+
+**Code References:**
+- Cache clearing: Database operation to clear viewpoint_relationships table
+- Backend restart: Container restart to clear in-memory cache
+- API verification: Confirmed fresh data structure in responses
+
 ## 2025-10-21 01:55
 
 **Same-Event Prioritization & Feed Filter for Opposing Viewpoints** ✅
