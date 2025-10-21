@@ -484,7 +484,7 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getOppositionStrengthColor(viewpoint.opposition_strength)}`}>
                       {Math.round(viewpoint.opposition_strength * 100)}% different
                     </span>
-                    {viewpoint.sentiment_score !== undefined && (
+                    {viewpoint.sentiment_score !== undefined && viewpoint.sentiment_score !== null && (
                       <div className="flex items-center space-x-1 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
                         <span>{getSentimentEmoji(viewpoint.sentiment_score)}</span>
                         <span className="text-xs">

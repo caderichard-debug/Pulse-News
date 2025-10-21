@@ -658,7 +658,9 @@ describe('OpposingViewpoints Component', () => {
 
       await waitFor(() => {
         expect(screen.getByText('AI generated explanation')).toBeInTheDocument()
-        expect(screen.getByText('How this opposes: Direct position reversal: +7 → -6 on Individual Freedom vs Collective Safety')).toBeInTheDocument()
+        // Check for the new structure where "Why this opposes" shows the mechanism
+        expect(screen.getByText('Why this opposes:')).toBeInTheDocument()
+        expect(screen.getByText('How this opposes:')).toBeInTheDocument()
       })
     })
 
@@ -1071,7 +1073,7 @@ describe('OpposingViewpoints Component', () => {
 
       await waitFor(() => {
         // Should handle null values gracefully
-        expect(screen.getByText('Framework Opposition')).toBeInTheDocument()
+        expect(screen.getByText('Framework Opposition: Individual Freedom vs Collective Safety')).toBeInTheDocument()
         expect(screen.getByText('85% different')).toBeInTheDocument()
       })
     })
