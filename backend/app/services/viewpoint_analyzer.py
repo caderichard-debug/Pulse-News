@@ -53,14 +53,8 @@ class ViewpointAnalyzer:
         if relationship_types is None:
             relationship_types = ["framework_opposition"]
 
-        # Check if we have cached results that are still valid
-        cached_results = ViewpointAnalyzer._get_cached_results(
-            article_id, session, relationship_types, max_results
-        )
-
-        if cached_results:
-            logger.info(f"Returning {len(cached_results)} cached viewpoint relationships for article {article_id}")
-            return cached_results
+        # Skip caching - always run fresh analysis when triggered
+        logger.info(f"Running fresh viewpoint analysis for article {article_id}")
 
         # Get the primary article with analysis and source
         primary_article = session.exec(
@@ -108,11 +102,6 @@ class ViewpointAnalyzer:
         # Process and rank results
         processed_oppositions = ViewpointAnalyzer._process_candidates(
             all_oppositions, article, session
-        )
-
-        # Cache the results
-        ViewpointAnalyzer._cache_results(
-            article_id, processed_oppositions, session
         )
 
         logger.info(f"Returning {len(processed_oppositions)} viewpoint relationships for article {article_id}")
@@ -451,7 +440,10 @@ class ViewpointAnalyzer:
                     "source": source,
                     "ai_explanation": rel.ai_explanation,
                     "quality_score": rel.quality_score,
-                    "reasoning": f"Cached relationship: {rel.relationship_type}",
+                    "framework_name": rel.framework_name,
+                    "reasoning": rel.reasoning or f"Cached relationship: {rel.relationship_type}",
+                    "primary_position": rel.primary_position,
+                    "opposing_position": rel.opposing_position,
                     "cached": True
                 })
 
@@ -484,6 +476,10 @@ class ViewpointAnalyzer:
                 existing.opposition_strength = viewpoint["opposition_strength"]
                 existing.ai_explanation = viewpoint.get("ai_explanation")
                 existing.quality_score = viewpoint.get("quality_score")
+                existing.framework_name = viewpoint.get("framework_name")
+                existing.reasoning = viewpoint.get("reasoning")
+                existing.primary_position = viewpoint.get("primary_position")
+                existing.opposing_position = viewpoint.get("opposing_position")
                 existing.updated_at = datetime.utcnow()
                 existing.expires_at = datetime.utcnow() + timedelta(days=7)  # Expire in 7 days
                 existing.is_active = True
@@ -496,6 +492,10 @@ class ViewpointAnalyzer:
                     opposition_strength=viewpoint["opposition_strength"],
                     ai_explanation=viewpoint.get("ai_explanation"),
                     quality_score=viewpoint.get("quality_score"),
+                    framework_name=viewpoint.get("framework_name"),
+                    reasoning=viewpoint.get("reasoning"),
+                    primary_position=viewpoint.get("primary_position"),
+                    opposing_position=viewpoint.get("opposing_position"),
                     generation_method="automatic",
                     expires_at=datetime.utcnow() + timedelta(days=7),  # Expire in 7 days
                     created_at=datetime.utcnow(),
