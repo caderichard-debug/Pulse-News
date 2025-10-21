@@ -256,8 +256,25 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
               transform: 'translate(-50%, -50%)'
             }}
           >
-            <div className="w-3 h-3 bg-white border-2 border-blue-600 rounded-full shadow-sm" />
-            <span className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium bg-white dark:bg-gray-800 px-1 rounded">
+            <div
+              className="w-4 h-4 rounded-full shadow-sm border-2"
+              style={{
+                backgroundColor: gradientDirection === 'right'
+                  ? 'rgb(59 130 246)'  // Blue (right side of gradient)
+                  : 'rgb(239 68 68)',   // Red (left side of gradient)
+                borderColor: gradientDirection === 'right'
+                  ? 'rgb(29 78 216)'   // Dark blue border
+                  : 'rgb(185 28 28)'    // Dark red border
+              }}
+            >
+              <div className="w-2 h-2 bg-white rounded-full mt-0.5 ml-0.5" />
+            </div>
+            <span className="text-xs mt-1 font-medium bg-white dark:bg-gray-800 px-1 rounded"
+                  style={{
+                    color: gradientDirection === 'right'
+                      ? 'rgb(29 78 216)'   // Dark blue text
+                      : 'rgb(185 28 28)'   // Dark red text
+                  }}>
               current
             </span>
             <span className="text-xs text-gray-600 dark:text-gray-400 mt-1">
@@ -274,8 +291,25 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
               transform: 'translate(-50%, -50%)'
             }}
           >
-            <div className="w-3 h-3 bg-white border-2 border-red-600 rounded-full shadow-sm" />
-            <span className="text-xs text-red-600 dark:text-red-400 mt-1 font-medium bg-white dark:bg-gray-800 px-1 rounded">
+            <div
+              className="w-4 h-4 rounded-full shadow-sm border-2"
+              style={{
+                backgroundColor: gradientDirection === 'right'
+                  ? 'rgb(239 68 68)'   // Red (left side of gradient)
+                  : 'rgb(59 130 246)',  // Blue (right side of gradient)
+                borderColor: gradientDirection === 'right'
+                  ? 'rgb(185 28 28)'    // Dark red border
+                  : 'rgb(29 78 216)'   // Dark blue border
+              }}
+            >
+              <div className="w-2 h-2 bg-white rounded-full mt-0.5 ml-0.5" />
+            </div>
+            <span className="text-xs mt-1 font-medium bg-white dark:bg-gray-800 px-1 rounded"
+                  style={{
+                    color: gradientDirection === 'right'
+                      ? 'rgb(185 28 28)'   // Dark red text
+                      : 'rgb(29 78 216)'   // Dark blue text
+                  }}>
               opposing
             </span>
             <span className="text-xs text-gray-600 dark:text-gray-400 mt-1">
