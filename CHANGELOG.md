@@ -1,3 +1,59 @@
+## 2025-10-21 02:51
+
+**Improved Framework Selection Logic and Current Limitations** ✅
+
+### What Changed
+- Enhanced framework selection to prioritize best candidate per article
+- Implemented combined scoring: opposition strength (60%) + relevance score (40%)
+- Fixed frontend framework position dot vertical alignment
+- Removed viewpoint analysis caching for consistent fresh results
+- Documented architectural limitations of current framework opposition logic
+
+### Framework Selection Improvements
+- **Before**: Kept first framework match found per article
+- **After**: Selects best framework match per article using combined scoring
+- **Scoring**: opposition_strength × 0.6 + relevance_score × 0.4
+- **Result**: Better semantic relevance when multiple frameworks available per article
+
+### Current Architectural Limitation
+**Root Issue**: ViewpointAnalyzer only finds framework oppositions for the primary article's frameworks
+
+**How it Works**:
+1. Primary article (1014) has "National Interest vs. Global Cooperation" (position: 6)
+2. ViewpointAnalyzer looks for opposing articles with same framework
+3. Article 105 (Venezuela) has both:
+   - National Interest vs. Global Cooperation (position: -5, relevance: 0.70)
+   - Individual Liberty vs. Collective Welfare (position: -3, relevance: 0.80)
+4. System finds National Interest match (stronger position gap) and ignores Individual Liberty (higher relevance)
+
+**Why This Happens**:
+- Position gap: 6 - (-5) = 11 (strongest mathematically)
+- Position gap: 6 - (-3) = 9 (weaker mathematically)
+- Relevance is secondary to position gap in current scoring
+
+### Future Improvements Needed
+For complete semantic relevance, ViewpointAnalyzer would need:
+1. **Cross-Framework Analysis**: Find oppositions across all framework combinations
+2. **Semantic Relevance**: AI-based assessment of framework-applicability to article content
+3. **Multi-Framework Support**: Show multiple framework oppositions per article
+4. **Content-Based Matching**: Match frameworks based on article topics and themes
+
+### Current Results
+- ✅ **Visual Fix**: Dots now properly centered on position lines
+- ✅ **Data Quality**: Fresh analysis, no stale cached data
+- ✅ **Better Selection**: Chooses best framework when multiple options exist
+- ⚠️ **Limitation**: Still constrained to primary article's framework set
+
+### Technical Details
+- **Frontend**: Fixed CSS transform conflicts in getFrameworkPositionVisual
+- **Backend**: Enhanced _process_candidates with combined scoring algorithm
+- **Framework Logic**: Improved candidate selection but limited by primary framework scope
+- **Architecture**: Need cross-framework analysis for complete semantic relevance
+
+**Code References:**
+- Framework selection: [viewpoint_analyzer.py:293](backend/app/services/viewpoint_analyzer.py:293)
+- Frontend fix: [OpposingViewpoints.tsx:227](frontend/src/components/OpposingViewpoints.tsx:227)
+
 ## 2025-10-21 02:37
 
 **Frontend UI Polish and Backend Caching Removal** ✅
