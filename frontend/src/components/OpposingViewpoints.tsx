@@ -224,7 +224,7 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
             }}
           />
           <div
-            className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white border-2 border-gray-800 rounded-full"
+            className="absolute top-1/2 w-3 h-3 bg-white border-2 border-gray-800 rounded-full"
             style={{ left: `${normalizedPosition}%`, transform: 'translate(-50%, -50%)' }}
           />
         </div>
