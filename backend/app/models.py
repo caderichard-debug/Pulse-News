@@ -530,6 +530,10 @@ class ViewpointRelationship(SQLModel, table=True):
     primary_position: Optional[int] = Field(default=None)  # Primary article's position on framework
     opposing_position: Optional[int] = Field(default=None)  # Opposing article's position on framework
 
+    # Enhanced analyzer explanations (for framework_opposition relationships)
+    how_this_opposes: Optional[str] = Field(default=None, max_length=1000)  # How this article opposes the primary (mechanism-focused)
+    why_this_opposes: Optional[str] = Field(default=None, max_length=1000)  # Why this opposition matters (reasoning-focused)
+
     # Quality and engagement tracking
     quality_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)  # AI assessment of relationship quality
     user_engagement_count: int = Field(default=0)  # How many users clicked this

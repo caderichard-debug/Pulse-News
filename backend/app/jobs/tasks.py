@@ -1076,21 +1076,22 @@ def analyze_single_article_viewpoints_job(article_id: int, session: Session = No
             if not article:
                 return {"success": False, "error": f"Article {article_id} not found"}
 
-            # Use enhanced ViewpointAnalyzer to find cross-framework opposing viewpoints
+            # Use enhanced ViewpointAnalyzer to find and save cross-framework opposing viewpoints
             analyzer = ViewpointAnalyzer(session)
-            viewpoints = analyzer.find_opposing_viewpoints(
+            saved_relationships = analyzer.save_opposing_viewpoints(
                 article=article,
                 session=session,
                 max_results=10
             )
 
-            logger.info(f"Found {len(viewpoints)} opposing viewpoints for article {article_id}")
+            logger.info(f"Saved {len(saved_relationships)} opposing viewpoints for article {article_id}")
 
             return {
                 "success": True,
                 "article_id": article_id,
-                "viewpoints_count": len(viewpoints),
-                "viewpoints": viewpoints
+                "viewpoints_count": len(saved_relationships),
+                "viewpoints_saved": True,
+                "relationship_ids": [rel.id for rel in saved_relationships]
             }
 
         finally:

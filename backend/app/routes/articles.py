@@ -81,6 +81,8 @@ class OpposingViewpoint(BaseModel):
     opposition_strength: float
     reasoning: str
     ai_explanation: Optional[str]
+    how_this_opposes: Optional[str] = None  # Enhanced analyzer field
+    why_this_opposes: Optional[str] = None  # Enhanced analyzer field
     quality_score: Optional[float]
     framework_name: Optional[str] = None  # For framework opposition type
     primary_position: Optional[int] = None  # For framework opposition type
@@ -381,17 +383,93 @@ async def get_opposing_viewpoints(
         if not requested_types:
             requested_types = available_types
 
-        # Get opposing viewpoints using the enhanced cross-framework analyzer
-        start_time = datetime.utcnow()
-        from ..services.viewpoint_analyzer_enhanced import ViewpointAnalyzer
+        # First, check database for existing viewpoint relationships
+        from ..models import ViewpointRelationship
+        from sqlalchemy import and_
 
-        analyzer = ViewpointAnalyzer(session)
-        oppositions = analyzer.find_opposing_viewpoints(
-            article=primary_article,
-            session=session,
-            max_results=max_results
-        )
+        start_time = datetime.utcnow()
+
+        # Query database for existing viewpoint relationships
+        existing_relationships = session.exec(
+            select(ViewpointRelationship).where(
+                and_(
+                    ViewpointRelationship.primary_article_id == article_id,
+                    ViewpointRelationship.is_active == True
+                )
+            ).order_by(ViewpointRelationship.opposition_strength.desc()).limit(max_results)
+        ).all()
+
+        # Check if we have complete data (enhanced fields) in the database
+        needs_analysis = False
+        missing_enhanced_fields = []
+
+        for rel in existing_relationships:
+            if not rel.how_this_opposes or not rel.why_this_opposes:
+                missing_enhanced_fields.append(rel.id)
+
+        # If we have relationships but missing enhanced fields, trigger on-demand analysis
+        if existing_relationships and missing_enhanced_fields:
+            logger.info(f"Found {len(existing_relationships)} viewpoint relationships but {len(missing_enhanced_fields)} missing enhanced fields - triggering analysis")
+            needs_analysis = True
+
+        # If no relationships exist, trigger analysis
+        elif not existing_relationships:
+            logger.info(f"No viewpoint relationships found for article {article_id} - triggering analysis")
+            needs_analysis = True
+
+        else:
+            logger.info(f"Found {len(existing_relationships)} complete viewpoint relationships in database - using existing data")
+
+        # Trigger on-demand analysis if needed
+        if needs_analysis:
+            from ..services.viewpoint_analyzer_enhanced import ViewpointAnalyzer
+            analyzer = ViewpointAnalyzer(session)
+            saved_relationships = analyzer.save_opposing_viewpoints(
+                article=primary_article,
+                session=session,
+                max_results=max_results
+            )
+            # Use the newly saved relationships
+            existing_relationships = saved_relationships
+
         processing_time = (datetime.utcnow() - start_time).total_seconds() * 1000  # milliseconds
+
+        # Convert database relationships to opposition format for response building
+        oppositions = []
+        for rel in existing_relationships:
+            # Get opposing article details
+            opposing_article = session.exec(select(Article).where(Article.id == rel.opposing_article_id)).first()
+            if not opposing_article:
+                continue
+
+            # Get analysis and source info
+            opp_analysis = session.exec(select(ArticleAnalysis).where(ArticleAnalysis.article_id == rel.opposing_article_id)).first()
+            opp_source = session.exec(select(Source).where(Source.id == opposing_article.source_id)).first()
+
+            # Build opposition dict in the expected format
+            opposition = {
+                "article_id": rel.opposing_article_id,
+                "relationship_type": rel.relationship_type,
+                "relationship_strength": rel.opposition_strength,
+                "opposition_strength": rel.opposition_strength,
+                "relevance_score": rel.quality_score,
+                "framework_name": rel.framework_name,
+                "primary_position": rel.primary_position,
+                "opposing_position": rel.opposing_position,
+                "how_this_opposes": rel.how_this_opposes,  # From database
+                "why_this_opposes": rel.why_this_opposes,  # From database
+                "ai_explanation": rel.ai_explanation,
+                "title": opposing_article.title,
+                "url": opposing_article.url,
+                "summary": opp_analysis.summary if opp_analysis else None,
+                "sentiment_score": opp_analysis.sentiment_score if opp_analysis else None,
+                "source_name": opp_source.name if opp_source else None,
+                "published_at": opposing_article.published_at,
+                "article": opposing_article,
+                "analysis": opp_analysis,
+                "source": opp_source
+            }
+            oppositions.append(opposition)
 
         # Handle rate limiting and API availability issues
         if not oppositions:
@@ -409,10 +487,12 @@ async def get_opposing_viewpoints(
 
         # Build response - handle both old and enhanced analyzer data structures
         opposing_viewpoints = []
-        for opposition in oppositions:
+        for i, opposition in enumerate(oppositions):
+
             # Check if this is from the enhanced analyzer (has article_id key)
             if "article_id" in opposition:
                 # Enhanced analyzer data structure
+                print(f"  Using enhanced analyzer path")
                 viewpoint = OpposingViewpoint(
                     article_id=opposition["article_id"],
                     title=f"Article {opposition['article_id']}",  # Will be populated below if available
@@ -425,8 +505,10 @@ async def get_opposing_viewpoints(
                     summary=None,
                     relationship_type=opposition["relationship_type"],
                     opposition_strength=opposition["relationship_strength"],
-                    reasoning=opposition.get("ai_explanation", ""),  # Use AI explanation as reasoning
+                    reasoning=opposition.get("why_this_opposes", opposition.get("ai_explanation", "")),  # Use why_this_opposes as reasoning
                     ai_explanation=opposition.get("ai_explanation"),
+                    how_this_opposes=opposition.get("how_this_opposes"),  # Enhanced analyzer field
+                    why_this_opposes=opposition.get("why_this_opposes"),  # Enhanced analyzer field
                     quality_score=opposition.get("relevance_score")  # Use relevance_score as quality proxy
                 )
 
@@ -488,13 +570,30 @@ async def get_opposing_viewpoints(
                 for analysis in session.exec(select(ArticleAnalysis).where(ArticleAnalysis.article_id.in_(article_ids))).all()
             }
 
-            # Update viewpoint data with full article information
+            # Update viewpoint data with full article information, preserving enhanced fields
             for i, viewpoint in enumerate(opposing_viewpoints):
                 if viewpoint.article_id in articles_map:
                     article = articles_map[viewpoint.article_id]
+                    # Store enhanced fields to preserve them
+                    existing_how_opposes = viewpoint.how_this_opposes
+                    existing_why_opposes = viewpoint.why_this_opposes
+                    existing_ai_explanation = viewpoint.ai_explanation
+                    existing_framework_name = viewpoint.framework_name
+                    existing_primary_position = viewpoint.primary_position
+                    existing_opposing_position = viewpoint.opposing_position
+
+                    # Update basic fields
                     viewpoint.title = article.title
                     viewpoint.url = article.url
                     viewpoint.published_at = article.published_at
+
+                    # Restore enhanced fields that may have been lost
+                    viewpoint.how_this_opposes = existing_how_opposes
+                    viewpoint.why_this_opposes = existing_why_opposes
+                    viewpoint.ai_explanation = existing_ai_explanation or viewpoint.reasoning  # Fallback to reasoning
+                    viewpoint.framework_name = existing_framework_name
+                    viewpoint.primary_position = existing_primary_position
+                    viewpoint.opposing_position = existing_opposing_position
 
                     if article.source_id in sources_map:
                         source = sources_map[article.source_id]
