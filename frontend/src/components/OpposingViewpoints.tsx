@@ -47,6 +47,7 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
   const [response, setResponse] = useState<OpposingViewpointsResponse | null>(null)
   const [hasTriedAnalysis, setHasTriedAnalysis] = useState(false)
   const [analysisCount, setAnalysisCount] = useState(0)
+  const [primaryArticle, setPrimaryArticle] = useState<any>(null)
 
   const handleViewInFeed = (articleId: number) => {
     router.push(`/article/${articleId}`)
@@ -86,6 +87,15 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
       }
 
       setViewpoints(filteredViewpoints)
+
+      // Fetch primary article data for bias display
+      try {
+        const articleData = await api.getArticleDetail(articleId)
+        setPrimaryArticle(articleData)
+      } catch (articleErr) {
+        console.error('Error fetching primary article:', articleErr)
+        // Continue even if primary article fetch fails
+      }
     } catch (err: any) {
       if (err.detail?.includes('OpenAI API is unavailable')) {
         setError('Cannot complete this request right now. OpenAI API is unavailable.')
@@ -205,32 +215,81 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
     }
   }
 
-  const getFrameworkPositionVisual = (position?: number) => {
-    if (!position) return null
+  const getFrameworkPositionVisual = (opposingPosition?: number, primaryPosition?: number) => {
+    if (!opposingPosition || primaryPosition === undefined) return null
 
-    const normalizedPosition = ((position + 10) / 20) * 100 // Convert -10 to 10 range to 0-100%
-    const isLeft = position < 0
+    // Convert positions to 0-100% range
+    const primaryNormalized = ((primaryPosition + 10) / 20) * 100
+    const opposingNormalized = ((opposingPosition + 10) / 20) * 100
+
+    // Determine left and right positions
+    const leftPos = Math.min(primaryNormalized, opposingNormalized)
+    const rightPos = Math.max(primaryNormalized, opposingNormalized)
+
+    // Create gradient between the two positions
+    const gradientDirection = primaryPosition < opposingPosition ? 'right' : 'left'
 
     return (
-      <div className="flex items-center space-x-2 mt-2">
-        <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 relative">
+      <div className="mt-3">
+        <div className="relative">
+          {/* Main scale bar */}
+          <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full relative overflow-hidden">
+            {/* Gradient between positions */}
+            <div
+              className="absolute top-0 h-2 rounded-full"
+              style={{
+                left: `${Math.min(leftPos, rightPos)}%`,
+                width: `${Math.abs(rightPos - leftPos)}%`,
+                background: gradientDirection === 'right'
+                  ? 'linear-gradient(to right, rgb(239 68 68), rgb(59 130 246))'  // red to blue
+                  : 'linear-gradient(to left, rgb(239 68 68), rgb(59 130 246))'   // blue to red
+              }}
+            />
+          </div>
+
+          {/* Current article dot */}
           <div
-            className={`absolute top-0 h-2 rounded-full ${
-              isLeft ? 'bg-blue-500' : 'bg-red-500'
-            }`}
+            className="absolute flex flex-col items-center"
             style={{
-              left: isLeft ? `${normalizedPosition}%` : '0%',
-              width: isLeft ? `${100 - normalizedPosition}%` : `${normalizedPosition}%`
+              left: `${primaryNormalized}%`,
+              top: '50%',
+              transform: 'translate(-50%, -50%)'
             }}
-          />
+          >
+            <div className="w-3 h-3 bg-white border-2 border-blue-600 rounded-full shadow-sm" />
+            <span className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium bg-white dark:bg-gray-800 px-1 rounded">
+              current
+            </span>
+            <span className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+              {primaryPosition > 0 ? '+' : ''}{primaryPosition}
+            </span>
+          </div>
+
+          {/* Opposing article dot */}
           <div
-            className="absolute top-1/2 w-3 h-3 bg-white border-2 border-gray-800 rounded-full"
-            style={{ left: `${normalizedPosition}%`, transform: 'translate(-50%, -50%)' }}
-          />
+            className="absolute flex flex-col items-center"
+            style={{
+              left: `${opposingNormalized}%`,
+              top: '50%',
+              transform: 'translate(-50%, -50%)'
+            }}
+          >
+            <div className="w-3 h-3 bg-white border-2 border-red-600 rounded-full shadow-sm" />
+            <span className="text-xs text-red-600 dark:text-red-400 mt-1 font-medium bg-white dark:bg-gray-800 px-1 rounded">
+              opposing
+            </span>
+            <span className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+              {opposingPosition > 0 ? '+' : ''}{opposingPosition}
+            </span>
+          </div>
+
+          {/* Scale labels */}
+          <div className="flex justify-between mt-4 text-xs text-gray-500 dark:text-gray-400">
+            <span>-10</span>
+            <span>0</span>
+            <span>+10</span>
+          </div>
         </div>
-        <span className="text-xs text-gray-600 dark:text-gray-400 w-12 text-right">
-          {position > 0 ? '+' : ''}{position}
-        </span>
       </div>
     )
   }
@@ -345,6 +404,32 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
         </div>
       ) : viewpoints.length > 0 ? (
         <div className="space-y-4">
+          {/* Primary Article Info */}
+          {primaryArticle && (
+            <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Current Article Analysis</h4>
+                  <div className="flex items-center space-x-3 text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Source: {primaryArticle.source_name}</span>
+                    {primaryArticle.source_bias && (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs ${getSourceBiasColor(primaryArticle.source_bias)}`}>
+                        {primaryArticle.source_bias}
+                      </span>
+                    )}
+                    {primaryArticle.sentiment_score !== null && (
+                      <div className="flex items-center space-x-1 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                        <span>{getSentimentEmoji(primaryArticle.sentiment_score)}</span>
+                        <span className="text-xs">
+                          {primaryArticle.sentiment_score > 0 ? '+' : ''}{primaryArticle.sentiment_score.toFixed(1)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           {viewpoints.map((viewpoint, index) => (
             <div key={`${viewpoint.article_id}-${index}`} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
               <div className="p-4 pb-3 border-l-4 border-l-blue-500">
@@ -395,10 +480,10 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
                   )}
                 </div>
 
-                {/* Framework position visualization */}
+                {/* Enhanced framework position visualization */}
                 {viewpoint.relationship_type === 'framework_opposition' && viewpoint.framework_name && (
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
-                    <div className="flex items-center justify-between mb-2">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4">
+                    <div className="flex items-center justify-between mb-3">
                       <h5 className="font-medium text-blue-900 dark:text-blue-100">
                         {viewpoint.framework_name}
                       </h5>
@@ -408,15 +493,17 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
                         </span>
                       )}
                     </div>
-                    <div className="grid grid-cols-2 gap-4 text-xs">
-                      <div>
-                        <span className="text-gray-600 dark:text-gray-400">Position Gap:</span>
-                        <div className="font-medium">
-                          {viewpoint.primary_position} vs {viewpoint.opposing_position}
-                        </div>
+
+                    {/* Position gap info */}
+                    <div className="mb-4 text-xs">
+                      <span className="text-gray-600 dark:text-gray-400">Position Gap:</span>
+                      <div className="font-medium">
+                        {viewpoint.primary_position} vs {viewpoint.opposing_position}
                       </div>
                     </div>
-                    {getFrameworkPositionVisual(viewpoint.opposing_position)}
+
+                    {/* Enhanced dual-dot visualization with gradient */}
+                    {getFrameworkPositionVisual(viewpoint.opposing_position, viewpoint.primary_position)}
                   </div>
                 )}
 
@@ -426,10 +513,7 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
                   </p>
                 </div>
 
-                <div className="flex justify-between items-center pt-2">
-                  <div className="text-xs text-gray-500 dark:text-gray-400 max-w-[60%]">
-                    {viewpoint.ai_explanation || viewpoint.reasoning}
-                  </div>
+                <div className="flex justify-end items-center pt-2">
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => handleViewInFeed(viewpoint.article_id)}
