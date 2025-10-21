@@ -28,6 +28,7 @@ interface Article {
   stats_verified_count: number;
   has_stats: boolean;
   is_favorited: boolean;
+  has_opposing_viewpoints: boolean;
 }
 
 interface FeedResponse {
@@ -64,6 +65,7 @@ export default function FeedPage() {
   const [onlyAnalyzed, setOnlyAnalyzed] = useState(storedFilters?.onlyAnalyzed ?? true);
   const [onlyVerifiedStats, setOnlyVerifiedStats] = useState(storedFilters?.onlyVerifiedStats ?? false);
   const [favoritesOnly, setFavoritesOnly] = useState(false); // Always default to unchecked
+  const [hasOpposingViewpoints, setHasOpposingViewpoints] = useState(storedFilters?.hasOpposingViewpoints ?? false);
   const [page, setPage] = useState(storedFilters?.page || 1);
   const [pageInput, setPageInput] = useState((storedFilters?.page || 1).toString());
 
@@ -80,11 +82,12 @@ export default function FeedPage() {
         onlyAnalyzed,
         onlyVerifiedStats,
         favoritesOnly,
+        hasOpposingViewpoints,
         page
       };
       localStorage.setItem('feedFilters', JSON.stringify(filters));
     }
-  }, [searchQuery, selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, page]);
+  }, [searchQuery, selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, hasOpposingViewpoints, page]);
 
   const loadFeedData = useCallback(async () => {
     try {
@@ -101,6 +104,7 @@ export default function FeedPage() {
         only_analyzed: onlyAnalyzed,
         only_verified_stats: onlyVerifiedStats,
         favorites_only: favoritesOnly,
+        has_opposing_viewpoints: hasOpposingViewpoints,
       });
       setFeedData(data);
       setPageInput(page.toString());
@@ -111,12 +115,12 @@ export default function FeedPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, searchQuery, selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly]);
+  }, [page, searchQuery, selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, hasOpposingViewpoints]);
 
   useEffect(() => {
     loadFeedData();
     loadFilters();
-  }, [searchQuery, selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, page, loadFeedData]);
+  }, [searchQuery, selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, hasOpposingViewpoints, page, loadFeedData]);
 
   async function loadFilters() {
     try {
@@ -346,6 +350,19 @@ export default function FeedPage() {
                 />
                 <label htmlFor="favorites-only" className="ml-2 text-sm font-medium text-card-foreground">
                   ⭐ Show only favorite articles
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="has-opposing-viewpoints"
+                  checked={hasOpposingViewpoints}
+                  onChange={(e) => { setHasOpposingViewpoints(e.target.checked); setPage(1); }}
+                  className="w-4 h-4 text-primary border-border rounded focus:ring-indigo-500"
+                />
+                <label htmlFor="has-opposing-viewpoints" className="ml-2 text-sm font-medium text-card-foreground">
+                  🔄 Show only articles with opposing viewpoint analysis
                 </label>
               </div>
             </div>

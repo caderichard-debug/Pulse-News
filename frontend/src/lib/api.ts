@@ -345,6 +345,7 @@ class ApiClient {
     only_analyzed?: boolean;
     only_verified_stats?: boolean;
     favorites_only?: boolean;
+    has_opposing_viewpoints?: boolean;
   }) {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
@@ -360,6 +361,7 @@ class ApiClient {
     if (params?.only_analyzed) queryParams.append('only_analyzed', params.only_analyzed.toString());
     if (params?.only_verified_stats) queryParams.append('only_verified_stats', params.only_verified_stats.toString());
     if (params?.favorites_only) queryParams.append('favorites_only', params.favorites_only.toString());
+    if (params?.has_opposing_viewpoints) queryParams.append('has_opposing_viewpoints', params.has_opposing_viewpoints.toString());
 
     return this.request<{
       articles: Array<{
@@ -381,6 +383,7 @@ class ApiClient {
         stats_verified_count: number;
         has_stats: boolean;
         is_favorited: boolean;
+        has_opposing_viewpoints: boolean;
       }>;
       total_count: number;
       page: number;
@@ -913,6 +916,17 @@ class ApiClient {
       total_found: number;
       relationship_types_available: string[];
     }>(`/articles/${articleId}/opposing-viewpoints${queryString}`);
+  }
+
+  async triggerViewpointAnalysis(articleId: number) {
+    return this.request<{
+      status: string;
+      article_id: number;
+      message: string;
+      job_id: string;
+    }>(`/articles/${articleId}/analyze-viewpoints`, {
+      method: 'POST'
+    });
   }
 }
 
