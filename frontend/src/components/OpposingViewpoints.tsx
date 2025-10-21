@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { ArrowRight, Eye, EyeOff, RefreshCw, Filter, X } from 'lucide-react'
 import { api } from '@/lib/api'
 
@@ -36,6 +37,7 @@ interface OpposingViewpointsProps {
 }
 
 export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
+  const router = useRouter()
   const [viewpoints, setViewpoints] = useState<OpposingViewpoint[]>([])
   const [loading, setLoading] = useState(false)
   const [expanded, setExpanded] = useState(false)
@@ -43,6 +45,12 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
   const [selectedRelationshipType, setSelectedRelationshipType] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
   const [response, setResponse] = useState<OpposingViewpointsResponse | null>(null)
+  const [hasTriedAnalysis, setHasTriedAnalysis] = useState(false)
+  const [analysisCount, setAnalysisCount] = useState(0)
+
+  const handleViewInFeed = (articleId: number) => {
+    router.push(`/article/${articleId}`)
+  }
 
   const relationshipTypes = [
     { value: 'framework_opposition', label: 'Framework Opposition', description: 'Opposite positions on ethical frameworks' },
@@ -60,16 +68,12 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
   const fetchViewpoints = async () => {
     setLoading(true)
     setError(null)
+    setHasTriedAnalysis(true)
 
     try {
-      const params = new URLSearchParams()
-      if (selectedRelationshipType) {
-        params.append('relationship_types', selectedRelationshipType)
-      }
-
       const response = await api.getOpposingViewpoints(articleId, {
-        relationship_types: selectedRelationshipType || undefined,
-        max_results: 5
+        relationshipTypes: selectedRelationshipType ? [selectedRelationshipType] : undefined,
+        maxResults: 5
       })
       setResponse(response)
 
@@ -96,6 +100,57 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
     }
   }
 
+  const triggerOnDemandAnalysis = async () => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      // Trigger the backend analysis job
+      const analysisResponse = await api.triggerViewpointAnalysis(articleId)
+      console.log('Analysis triggered:', analysisResponse)
+
+      // After triggering, wait a moment then check for results
+      await new Promise(resolve => setTimeout(resolve, 2000)) // 2 second delay
+
+      // Fetch the updated results
+      const response = await api.getOpposingViewpoints(articleId, {
+        relationshipTypes: selectedRelationshipType ? [selectedRelationshipType] : undefined,
+        maxResults: 10 // Increased max results for analysis
+      })
+      setResponse(response)
+
+      let filteredViewpoints = response.opposing_viewpoints
+      if (selectedRelationshipType) {
+        filteredViewpoints = response.opposing_viewpoints.filter(
+          vp => vp.relationship_type === selectedRelationshipType
+        )
+      }
+
+      setViewpoints(filteredViewpoints)
+      setHasTriedAnalysis(true)
+      setAnalysisCount(prev => prev + 1)
+
+      // If no results after analysis, that's okay - some articles genuinely don't have opposing viewpoints
+      if (filteredViewpoints.length === 0) {
+        console.log('No opposing viewpoints found after analysis')
+      }
+
+    } catch (err: any) {
+      if (err.detail?.includes('OpenAI API is unavailable')) {
+        setError('Cannot complete analysis right now. OpenAI API is unavailable.')
+      } else if (err.detail?.includes('rate limited')) {
+        setError('Analysis temporarily unavailable due to rate limiting. Please try again later.')
+      } else if (err.detail?.includes('Article not found')) {
+        setError('Article not found. Please refresh the page.')
+      } else {
+        setError('Failed to analyze article for opposing viewpoints')
+      }
+      console.error('Error triggering analysis:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const getRelationshipIcon = (type: string) => {
     switch (type) {
       case 'framework_opposition':
@@ -111,7 +166,10 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
     }
   }
 
-  const getRelationshipLabel = (type: string) => {
+  const getRelationshipLabel = (type: string, frameworkName?: string) => {
+    if (type === 'framework_opposition' && frameworkName) {
+      return `Framework Opposition: ${frameworkName}`
+    }
     const relationship = relationshipTypes.find(rt => rt.value === type)
     return relationship?.label || 'Different Perspective'
   }
@@ -192,7 +250,7 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
           </p>
           <button
             onClick={() => setExpanded(true)}
-            className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+            className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex items-center mx-auto"
           >
             <Eye className="h-4 w-4 mr-2" />
             View Opposing Viewpoints
@@ -294,7 +352,7 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
                   <div className="flex items-center space-x-2">
                     <span className="text-lg">{getRelationshipIcon(viewpoint.relationship_type)}</span>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">{getRelationshipLabel(viewpoint.relationship_type)}</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">{getRelationshipLabel(viewpoint.relationship_type, viewpoint.framework_name)}</h3>
                       <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
                         <span>{viewpoint.source_name}</span>
                         {viewpoint.source_bias && (
@@ -324,7 +382,12 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
               </div>
               <div className="p-4 space-y-3">
                 <div>
-                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">{viewpoint.title}</h4>
+                  <button
+                    onClick={() => handleViewInFeed(viewpoint.article_id)}
+                    className="font-semibold text-gray-900 dark:text-gray-100 mb-1 text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  >
+                    {viewpoint.title}
+                  </button>
                   {viewpoint.summary && (
                     <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{viewpoint.summary}</p>
                   )}
@@ -362,16 +425,24 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
                 </div>
 
                 <div className="flex justify-between items-center pt-2">
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {viewpoint.reasoning}
+                  <div className="text-xs text-gray-500 dark:text-gray-400 max-w-[60%]">
+                    {viewpoint.ai_explanation || viewpoint.reasoning}
                   </div>
-                  <button
-                    onClick={() => window.open(viewpoint.url, '_blank')}
-                    className="flex items-center space-x-1 border border-gray-300 dark:border-gray-600 px-3 py-1.5 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-                  >
-                    Read Article
-                    <ArrowRight className="h-3 w-3 ml-1" />
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleViewInFeed(viewpoint.article_id)}
+                      className="flex items-center space-x-1 border border-blue-300 dark:border-blue-600 px-3 py-1.5 rounded text-sm text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                    >
+                      View in Feed
+                    </button>
+                    <button
+                      onClick={() => window.open(viewpoint.url, '_blank')}
+                      className="flex items-center space-x-1 border border-gray-300 dark:border-gray-600 px-3 py-1.5 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      Read Original
+                      <ArrowRight className="h-3 w-3 ml-1" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -381,26 +452,77 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
         <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6">
           <div className="text-center text-gray-600 dark:text-gray-400">
             <RefreshCw className="h-8 w-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-            <p>No opposing viewpoints found for this article.</p>
-            <p className="text-sm mt-1">
-              {selectedRelationshipType
-                ? `No ${getRelationshipLabel(selectedRelationshipType).toLowerCase()} found for this article.`
-                : "This article might not have clear opposing perspectives in our current database."
+            <p className="font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {hasTriedAnalysis
+                ? analysisCount > 1
+                  ? `No opposing viewpoints found after ${analysisCount} analyses.`
+                  : "No opposing viewpoints found for this article."
+                : "No opposing viewpoints available yet."
               }
             </p>
-            <button
-              onClick={() => {
-                setSelectedRelationshipType(null)
-                fetchViewpoints()
-              }}
-              className="mt-2 flex items-center space-x-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
-            >
-              <RefreshCw className="h-3 w-3" />
-              Refresh
-            </button>
+            <p className="text-sm mb-4">
+              {selectedRelationshipType
+                ? `No ${getRelationshipLabel(selectedRelationshipType).toLowerCase()} found for this article.`
+                : hasTriedAnalysis
+                  ? analysisCount > 1
+                    ? "This article appears to have limited opposing perspectives in our current database. Try again later as more articles are added."
+                    : "This article might not have clear opposing perspectives in our current database, or our analysis hasn't found opposing coverage yet."
+                  : "Our system can analyze this article to find opposing perspectives from different sources and frameworks."
+              }
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+              <button
+                onClick={triggerOnDemandAnalysis}
+                disabled={loading}
+                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-md transition-colors"
+              >
+                {loading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span>Analyzing...</span>
+                  </>
+                ) : hasTriedAnalysis ? (
+                  <>
+                    <RefreshCw className="h-4 w-4" />
+                    <span>Retry Analysis</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4" />
+                    <span>Analyze for Opposing Viewpoints</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => {
+                  setSelectedRelationshipType(null)
+                  fetchViewpoints()
+                }}
+                disabled={loading}
+                className="flex items-center space-x-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className="h-3 w-3" />
+                <span>Refresh</span>
+              </button>
+            </div>
+
+            {hasTriedAnalysis && (
+              <div className="mt-4 text-xs text-gray-500 dark:text-gray-500">
+                <p>Analysis complete. Our system searched for articles with:</p>
+                <ul className="mt-1 space-y-1">
+                  <li>• Different political frameworks and ethical positions</li>
+                  <li>• Contrasting emotional tones and perspectives</li>
+                  <li>• Coverage from diverse news sources</li>
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       )}
     </div>
   )
 }
+
+export default OpposingViewpoints
