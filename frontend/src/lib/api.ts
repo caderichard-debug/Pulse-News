@@ -908,6 +908,8 @@ class ApiClient {
         opposition_strength: number;
         reasoning: string;
         ai_explanation?: string;
+        how_this_opposes?: string;
+        why_this_opposes?: string;
         quality_score?: number;
         framework_name?: string;
         primary_position?: number;

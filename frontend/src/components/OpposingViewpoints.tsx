@@ -19,6 +19,8 @@ interface OpposingViewpoint {
   opposition_strength: number
   reasoning: string
   ai_explanation?: string
+  how_this_opposes?: string
+  why_this_opposes?: string
   quality_score?: number
   framework_name?: string
   primary_position?: number
@@ -222,59 +224,47 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
     const primaryNormalized = ((primaryPosition + 10) / 20) * 100
     const opposingNormalized = ((opposingPosition + 10) / 20) * 100
 
-    // Determine left and right positions
-    const leftPos = Math.min(primaryNormalized, opposingNormalized)
-    const rightPos = Math.max(primaryNormalized, opposingNormalized)
-
-    // Create gradient between the two positions
-    const gradientDirection = primaryPosition < opposingPosition ? 'right' : 'left'
-
     return (
       <div className="mt-3">
         <div className="relative">
-          {/* Main scale bar */}
+          {/* Main scale bar with full gradient centered on 0 */}
           <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full relative overflow-hidden">
-            {/* Gradient between positions */}
-            <div
-              className="absolute top-0 h-2 rounded-full"
-              style={{
-                left: `${Math.min(leftPos, rightPos)}%`,
-                width: `${Math.abs(rightPos - leftPos)}%`,
-                background: gradientDirection === 'right'
-                  ? 'linear-gradient(to right, rgb(239 68 68), rgb(59 130 246))'  // red to blue
-                  : 'linear-gradient(to left, rgb(239 68 68), rgb(59 130 246))'   // blue to red
-              }}
-            />
+            {/* Full gradient from -10 to +10, centered on 0 */}
+            <div className="absolute inset-0 bg-gradient-to-r from-red-400 via-white to-blue-400 opacity-60"></div>
           </div>
 
-          {/* Current article dot */}
+          {/* Current article dot - positioned on the line, labels below */}
           <div
             className="absolute flex flex-col items-center"
             style={{
               left: `${primaryNormalized}%`,
-              top: '50%',
-              transform: 'translate(-50%, -50%)'
+              top: '0px'  // Align with the top of the scale bar
             }}
           >
+            {/* Dot container - positioned exactly on the line */}
             <div
-              className="w-4 h-4 rounded-full shadow-sm border-2"
+              className="relative"
               style={{
-                backgroundColor: gradientDirection === 'right'
-                  ? 'rgb(59 130 246)'  // Blue (right side of gradient)
-                  : 'rgb(239 68 68)',   // Red (left side of gradient)
-                borderColor: gradientDirection === 'right'
-                  ? 'rgb(29 78 216)'   // Dark blue border
-                  : 'rgb(185 28 28)'    // Dark red border
+                top: '50%', 
+                transform: 'translate(-50%, -25%)'
               }}
             >
-              <div className="w-2 h-2 bg-white rounded-full mt-0.5 ml-0.5" />
+              <div
+                className="w-4 h-4 rounded-full shadow-sm border-2 flex items-center justify-center"
+                style={{
+                  backgroundColor: primaryPosition > 0
+                    ? 'rgb(59 130 246)'  // Blue (positive position)
+                    : 'rgb(239 68 68)',   // Red (negative position)
+                  borderColor: primaryPosition > 0
+                    ? 'rgb(29 78 216)'   // Dark blue border
+                    : 'rgb(185 28 28)'   // Dark red border
+                }}
+              >
+                <div className="w-2 h-2 bg-white rounded-full" />
+              </div>
             </div>
-            <span className="text-xs mt-1 font-medium bg-white dark:bg-gray-800 px-1 rounded"
-                  style={{
-                    color: gradientDirection === 'right'
-                      ? 'rgb(29 78 216)'   // Dark blue text
-                      : 'rgb(185 28 28)'   // Dark red text
-                  }}>
+            {/* Labels positioned below the dot */}
+            <span className="text-xs mt-1 font-medium bg-white dark:bg-gray-800 px-1 rounded">
               current
             </span>
             <span className="text-xs text-gray-600 dark:text-gray-400 mt-1">
@@ -282,34 +272,38 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
             </span>
           </div>
 
-          {/* Opposing article dot */}
+          {/* Opposing article dot - positioned on the line, labels below */}
           <div
             className="absolute flex flex-col items-center"
             style={{
               left: `${opposingNormalized}%`,
-              top: '50%',
-              transform: 'translate(-50%, -50%)'
+              top: '0px'  // Align with the top of the scale bar
             }}
           >
+            {/* Dot container - positioned exactly on the line */}
             <div
-              className="w-4 h-4 rounded-full shadow-sm border-2"
+              className="relative"
               style={{
-                backgroundColor: gradientDirection === 'right'
-                  ? 'rgb(239 68 68)'   // Red (left side of gradient)
-                  : 'rgb(59 130 246)',  // Blue (right side of gradient)
-                borderColor: gradientDirection === 'right'
-                  ? 'rgb(185 28 28)'    // Dark red border
-                  : 'rgb(29 78 216)'   // Dark blue border
+                top: '50%', 
+                transform: 'translate(-50%, -25%)'
               }}
             >
-              <div className="w-2 h-2 bg-white rounded-full mt-0.5 ml-0.5" />
+              <div
+                className="w-4 h-4 rounded-full shadow-sm border-2 flex items-center justify-center"
+                style={{
+                  backgroundColor: opposingPosition > 0
+                    ? 'rgb(59 130 246)'  // Blue (positive position)
+                    : 'rgb(239 68 68)',   // Red (negative position)
+                  borderColor: opposingPosition > 0
+                    ? 'rgb(29 78 216)'   // Dark blue border
+                    : 'rgb(185 28 28)'   // Dark red border
+                }}
+              >
+                <div className="w-2 h-2 bg-white rounded-full" />
+              </div>
             </div>
-            <span className="text-xs mt-1 font-medium bg-white dark:bg-gray-800 px-1 rounded"
-                  style={{
-                    color: gradientDirection === 'right'
-                      ? 'rgb(185 28 28)'   // Dark red text
-                      : 'rgb(29 78 216)'   // Dark blue text
-                  }}>
+            {/* Labels positioned below the dot */}
+            <span className="text-xs mt-1 font-medium bg-white dark:bg-gray-800 px-1 rounded">
               opposing
             </span>
             <span className="text-xs text-gray-600 dark:text-gray-400 mt-1">
@@ -528,26 +522,33 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
                       )}
                     </div>
 
-                    {/* Position gap info */}
-                    <div className="mb-4 text-xs">
-                      <span className="text-gray-600 dark:text-gray-400">Position Gap:</span>
-                      <div className="font-medium">
-                        {viewpoint.primary_position} vs {viewpoint.opposing_position}
-                      </div>
-                    </div>
-
                     {/* Enhanced dual-dot visualization with gradient */}
                     {getFrameworkPositionVisual(viewpoint.opposing_position, viewpoint.primary_position)}
                   </div>
                 )}
 
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
-                  <p className="text-sm text-blue-800 dark:text-blue-200">
-                    <strong>Why this opposes:</strong> {viewpoint.ai_explanation || viewpoint.reasoning}
-                  </p>
-                </div>
+                {/* "Why this opposes" section between graphic and how */}
+                {viewpoint.how_this_opposes && (
+                  <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-3">
+                    <div className="text-xs">
+                      <span className="text-gray-600 dark:text-gray-400 font-medium">Why this opposes:</span>
+                      <div className="text-gray-800 dark:text-gray-200 mt-1">
+                        {viewpoint.how_this_opposes}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-                <div className="flex justify-end items-center pt-2">
+  
+                <div className="flex justify-between items-end pt-2">
+                  {/* "How this opposes" section moved to bottom left - smaller font, no background */}
+                  <div className="max-w-md flex-1 mr-4">
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      <span className="font-medium">How this opposes:</span> {viewpoint.why_this_opposes || viewpoint.ai_explanation || viewpoint.reasoning}
+                    </p>
+                  </div>
+
+                  {/* Action buttons on the right */}
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => handleViewInFeed(viewpoint.article_id)}
