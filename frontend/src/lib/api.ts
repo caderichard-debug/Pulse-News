@@ -887,6 +887,69 @@ class ApiClient {
     }>(`/favorites/check/${articleId}`);
   }
 
+  // Enhanced coverage endpoints
+  async getCoverageAnalysis(params: {
+    articleId: number;
+    biasFilter?: string;
+    sentimentRange?: [number, number];
+    maxResults?: number;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params.biasFilter && params.biasFilter !== 'all') {
+      queryParams.append('bias_filter', params.biasFilter);
+    }
+    if (params.sentimentRange) {
+      queryParams.append('sentiment_range', `${params.sentimentRange[0]},${params.sentimentRange[1]}`);
+    }
+    if (params.maxResults) {
+      queryParams.append('max_results', params.maxResults.toString());
+    }
+
+    return this.request<{
+      success: boolean;
+      coverage_articles: Array<{
+        id: number;
+        title: string;
+        url: string;
+        source_name: string;
+        source_bias: string | null;
+        source_trust_score: number | null;
+        published_at: string;
+        sentiment_score: number;
+        political_lean: string | null;
+        similarity_score: number;
+        summary?: string;
+        time_diff_hours: number;
+        published_later: boolean;
+      }>;
+      coverage_count: number;
+      sources_count: number;
+      avg_similarity: number;
+      bias_distribution: Record<string, number>;
+      cluster_id: number | null;
+      cluster_topic: string;
+      has_cluster: boolean;
+      primary_article_id: number;
+      filters_applied: {
+        bias_filter: string | null;
+        sentiment_range: [number, number] | null;
+        max_results: number;
+      };
+    }>(`/articles/${params.articleId}/coverage?${queryParams}`);
+  }
+
+  async triggerCoverageAnalysis(articleId: number) {
+    return this.request<{
+      success: boolean;
+      message: string;
+      cluster_id: number | null;
+      coverage_count: number;
+      article_id: number;
+    }>(`/articles/${articleId}/analyze-coverage`, {
+      method: 'POST'
+    });
+  }
+
   async getOpposingViewpoints(articleId: number, params?: { relationshipTypes?: string[]; maxResults?: number }) {
     const queryParams: Record<string, string> = {};
     if (params?.maxResults) queryParams.max_results = params.maxResults.toString();
