@@ -401,6 +401,13 @@ class ArticleCluster(SQLModel, table=True):
     primary_topic: str = Field(max_length=200, index=True)
     detected_at: datetime = Field(default_factory=datetime.utcnow)
 
+    # Event-specific fields
+    event_signature: str = Field(max_length=500, index=True)  # Unique event identifier
+    event_date: Optional[datetime] = Field(default=None, index=True)  # When the event occurred
+    article_count: int = Field(default=0)  # Number of articles in cluster
+    sources_count: int = Field(default=0)  # Number of unique sources
+    last_updated: datetime = Field(default_factory=datetime.utcnow)
+
     # Relationships
     members: List["ArticleClusterMember"] = Relationship(back_populates="cluster")
 
