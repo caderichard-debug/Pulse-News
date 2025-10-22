@@ -139,13 +139,35 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
   // Real-time filtering when filters change
   useEffect(() => {
     if (expanded && coverageData) {
-      fetchCoverage({
+      const filters = {
         bias_filter: biasFilter !== "all" ? biasFilter : undefined,
         similarity_threshold: similarityThreshold,
         max_results: maxResults
-      });
+      };
+
+      setLoading(true);
+      setError(null);
+
+      const fetchFilteredCoverage = async () => {
+        try {
+          const response = await api.getCoverageAnalysis({
+            articleId: primaryArticleId,
+            biasFilter: filters.bias_filter,
+            sentimentRange: undefined,
+            maxResults: filters.max_results
+          });
+          setCoverageData(response);
+        } catch (err) {
+          console.error("Error fetching coverage:", err);
+          setError("Failed to load coverage data");
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchFilteredCoverage();
     }
-  }, [biasFilter, similarityThreshold, maxResults, expanded, coverageData, fetchCoverage]);
+  }, [biasFilter, similarityThreshold, maxResults, expanded, coverageData, primaryArticleId]);
 
   // If not expanded, show collapsed state
   if (!expanded) {
