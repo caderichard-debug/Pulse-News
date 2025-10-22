@@ -1,5 +1,5 @@
 """
-OAuth authentication routes for Google and Apple sign-in.
+OAuth authentication routes for Google sign-in.
 Handles OAuth callbacks, account linking, and token management.
 """
 
@@ -21,26 +21,24 @@ logger = logging.getLogger(__name__)
 
 # Request/Response Models
 class OAuthSignInRequest(BaseModel):
-    """Request model for OAuth sign-in."""
-    provider: str = Field(..., description="OAuth provider ('google', 'apple')")
-    provider_user_id: str = Field(..., description="Provider-specific user ID")
-    email: EmailStr = Field(..., description="User email from provider")
-    name: Optional[str] = Field(default=None, description="User name from provider")
-    avatar_url: Optional[str] = Field(default=None, description="Avatar URL from provider")
+    """Request model for Google OAuth sign-in."""
+    provider_user_id: str = Field(..., description="Google-specific user ID")
+    email: EmailStr = Field(..., description="User email from Google")
+    name: Optional[str] = Field(default=None, description="User name from Google")
+    avatar_url: Optional[str] = Field(default=None, description="Avatar URL from Google")
     access_token: Optional[str] = Field(default=None, description="OAuth access token")
     refresh_token: Optional[str] = Field(default=None, description="OAuth refresh token")
     token_expires_at: Optional[datetime] = Field(default=None, description="Token expiration time")
-    provider_data: Optional[Dict[str, Any]] = Field(default=None, description="Additional provider data")
+    provider_data: Optional[Dict[str, Any]] = Field(default=None, description="Additional Google provider data")
 
 
 class OAuthLinkRequest(BaseModel):
-    """Request model for linking OAuth account."""
-    provider: str = Field(..., description="OAuth provider ('google', 'apple')")
-    provider_user_id: str = Field(..., description="Provider-specific user ID")
+    """Request model for linking Google OAuth account."""
+    provider_user_id: str = Field(..., description="Google-specific user ID")
     access_token: Optional[str] = Field(default=None, description="OAuth access token")
     refresh_token: Optional[str] = Field(default=None, description="OAuth refresh token")
     token_expires_at: Optional[datetime] = Field(default=None, description="Token expiration time")
-    provider_data: Optional[Dict[str, Any]] = Field(default=None, description="Additional provider data")
+    provider_data: Optional[Dict[str, Any]] = Field(default=None, description="Additional Google provider data")
 
 
 class OAuthTokenUpdateRequest(BaseModel):
@@ -72,24 +70,17 @@ async def oauth_signin(
     session: Session = Depends(get_session)
 ):
     """
-    Sign in or sign up user using OAuth provider.
+    Sign in or sign up user using Google OAuth.
 
     Handles both new user creation and existing user sign-in.
     Automatically creates default topic preferences for new users.
     """
     try:
-        # Validate provider
-        if request.provider not in ["google", "apple"]:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unsupported OAuth provider: {request.provider}"
-            )
-
         oauth_service = OAuthService(session)
 
-        # Find or create user
+        # Find or create user (Google is hardcoded as provider)
         user, created = oauth_service.find_or_create_oauth_user(
-            provider=request.provider,
+            provider="google",
             provider_user_id=request.provider_user_id,
             email=request.email,
             name=request.name,
@@ -101,7 +92,7 @@ async def oauth_signin(
         if request.access_token:
             oauth_service.update_oauth_tokens(
                 user_id=user.id,
-                provider=request.provider,
+                provider="google",
                 access_token=request.access_token,
                 refresh_token=request.refresh_token,
                 token_expires_at=request.token_expires_at
@@ -116,7 +107,7 @@ async def oauth_signin(
         access_token = oauth_service.create_auth_token_for_user(user)
 
         action = "created" if created else "signed in"
-        logger.info(f"User {action} via {request.provider} OAuth: {user.email}")
+        logger.info(f"User {action} via Google OAuth: {user.email}")
 
         return {
             "access_token": access_token,
@@ -141,10 +132,10 @@ async def oauth_signin(
             detail=str(e)
         )
     except Exception as e:
-        logger.error(f"OAuth sign-in error for {request.provider}: {str(e)}")
+        logger.error(f"Google OAuth sign-in error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"OAuth sign-in failed: {str(e)}"
+            detail=f"Google OAuth sign-in failed: {str(e)}"
         )
 
 
@@ -155,33 +146,26 @@ async def link_oauth_account(
     session: Session = Depends(get_session)
 ):
     """
-    Link OAuth account to authenticated user.
+    Link Google OAuth account to authenticated user.
 
-    Allows users to connect multiple OAuth providers to their existing account.
+    Allows users to connect Google OAuth to their existing account.
     """
     try:
-        # Validate provider
-        if request.provider not in ["google", "apple"]:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unsupported OAuth provider: {request.provider}"
-            )
-
         oauth_service = OAuthService(session)
 
-        # Check if user already has this provider linked
+        # Check if user already has Google linked
         existing_accounts = oauth_service.get_user_oauth_accounts(current_user.id)
         for account in existing_accounts:
-            if account.provider == request.provider:
+            if account.provider == "google":
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Account is already linked to {request.provider}"
+                    detail="Google account is already linked"
                 )
 
-        # Link OAuth account
+        # Link Google OAuth account
         oauth_account = oauth_service.link_oauth_account(
             user_id=current_user.id,
-            provider=request.provider,
+            provider="google",
             provider_user_id=request.provider_user_id,
             provider_data=request.provider_data,
             access_token=request.access_token,
@@ -189,7 +173,7 @@ async def link_oauth_account(
             token_expires_at=request.token_expires_at
         )
 
-        logger.info(f"Linked {request.provider} account to user: {current_user.email}")
+        logger.info(f"Linked Google account to user: {current_user.email}")
 
         return OAuthAccountResponse(
             provider=oauth_account.provider,

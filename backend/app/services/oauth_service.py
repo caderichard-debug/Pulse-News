@@ -1,6 +1,6 @@
 """
 OAuth service for managing OAuth authentication and account linking.
-Supports Google and Apple OAuth providers.
+Supports Google OAuth provider.
 """
 
 from sqlmodel import Session, select
@@ -110,7 +110,7 @@ class OAuthService:
                 )
                 self.session.add(preference)
 
-            logger.info(f"Created new OAuth user: {email} via {provider}")
+            logger.info(f"Created new Google OAuth user: {email}")
 
         else:
             user = existing_user
