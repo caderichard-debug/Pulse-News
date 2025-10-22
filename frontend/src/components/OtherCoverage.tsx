@@ -56,14 +56,12 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
 
   // Filter states
   const [biasFilter, setBiasFilter] = useState<string>("all");
-  const [similarityThreshold, setSimilarityThreshold] = useState<number>(0.3);
   const [maxResults, setMaxResults] = useState(10);
 
   const router = useRouter();
 
   const fetchCoverage = useCallback(async (filters: {
     bias_filter?: string;
-    similarity_threshold?: number;
     max_results?: number;
   } = {}) => {
     setLoading(true);
@@ -95,7 +93,6 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
       // After successful analysis, fetch the updated coverage data
       await fetchCoverage({
         bias_filter: biasFilter !== "all" ? biasFilter : undefined,
-        similarity_threshold: similarityThreshold,
         max_results: maxResults
       });
     } catch (err) {
@@ -140,10 +137,9 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
   const filters = useMemo(() => {
     return {
       bias_filter: biasFilter !== "all" ? biasFilter : undefined,
-      similarity_threshold: similarityThreshold,
       max_results: maxResults
     };
-  }, [biasFilter, similarityThreshold, maxResults]);
+  }, [biasFilter, maxResults]);
 
   // Real-time filtering when filters change
   useEffect(() => {
@@ -274,31 +270,6 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
                 </div>
               </div>
 
-              {/* Similarity Threshold */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Similarity Threshold
-                </label>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Loose</span>
-                    <input
-                      type="range"
-                      min="0.1"
-                      max="0.9"
-                      step="0.1"
-                      value={similarityThreshold}
-                      onChange={(e) => setSimilarityThreshold(parseFloat(e.target.value))}
-                      className="flex-1"
-                    />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Strict</span>
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {(similarityThreshold * 100).toFixed(0)}% similarity minimum
-                  </div>
-                </div>
-              </div>
-
               {/* Max Results */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -315,19 +286,24 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
                   <option value={50}>50 articles</option>
                 </select>
               </div>
-            </div>
 
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={() => {
-                  setBiasFilter('all');
-                  setSimilarityThreshold(0.3);
-                  setMaxResults(10);
-                }}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
-              >
-                Reset
-              </button>
+              {/* Filter Actions */}
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  {biasFilter !== 'all' && (
+                    <span>Filtered by: <span className="font-medium text-gray-700 dark:text-gray-300 ml-1 capitalize">{biasFilter}</span></span>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    setBiasFilter('all');
+                    setMaxResults(10);
+                  }}
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                >
+                  Reset
+                </button>
+              </div>
             </div>
           </div>
         )}
