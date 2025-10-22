@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Globe, TrendingUp, Minus, TrendingDown, ExternalLink, RefreshCw, AlertCircle, EyeOff } from "lucide-react";
+import { Eye, Globe, ArrowLeft, Minus, ArrowRight, ExternalLink, RefreshCw, AlertCircle, EyeOff } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatDate } from "@/lib/dateUtils";
 
@@ -122,9 +122,9 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
 
   const FilterOptions = [
     { value: 'all', label: 'All Sources', icon: Globe },
-    { value: 'left', label: 'Left-Leaning', icon: TrendingUp },
+    { value: 'left', label: 'Left-Leaning', icon: ArrowLeft },
     { value: 'center', label: 'Center', icon: Minus },
-    { value: 'right', label: 'Right-Leaning', icon: TrendingDown }
+    { value: 'right', label: 'Right-Leaning', icon: ArrowRight }
   ];
 
   // Initial load when component expands
@@ -255,14 +255,13 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
 
         {/* Filters Panel */}
         {showFilters && (
-          <div className="p-6 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Bias Filter */}
+          <div className="p-6 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 space-y-4">
+              {/* Political Bias - All on One Line */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Political Bias
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-wrap gap-2">
                   {FilterOptions.map((option) => {
                     const Icon = option.icon;
                     return (
@@ -283,38 +282,47 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
                 </div>
               </div>
 
-              {/* Max Results */}
+              {/* Similarity Threshold */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Max Results
+                  Similarity Threshold
                 </label>
-                <select
-                  value={maxResults}
-                  onChange={(e) => setMaxResults(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                >
-                  <option value={5}>5 articles</option>
-                  <option value={10}>10 articles</option>
-                  <option value={20}>20 articles</option>
-                  <option value={50}>50 articles</option>
-                </select>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Loose</span>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="0.9"
+                      step="0.05"
+                      value={similarityThreshold}
+                      onChange={(e) => setSimilarityThreshold(parseFloat(e.target.value))}
+                      className="flex-1"
+                    />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Strict</span>
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {(similarityThreshold * 100).toFixed(0)}% similarity minimum
+                  </div>
+                </div>
               </div>
 
-              {/* Filter Actions */}
-              <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  {(biasFilter !== 'all' || similarityThreshold !== 0.3) && (
-                    <span>
-                      Filtered by:
-                      {biasFilter !== 'all' && (
-                        <span className="font-medium text-gray-700 dark:text-gray-300 ml-1 capitalize">{biasFilter}</span>
-                      )}
-                      {biasFilter !== 'all' && similarityThreshold !== 0.3 && ', '}
-                      {similarityThreshold !== 0.3 && (
-                        <span className="font-medium text-gray-700 dark:text-gray-300">{(similarityThreshold * 100).toFixed(0)}% similarity</span>
-                      )}
-                    </span>
-                  )}
+              {/* Max Results and Reset - Same Line */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Max Results
+                  </label>
+                  <select
+                    value={maxResults}
+                    onChange={(e) => setMaxResults(parseInt(e.target.value))}
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
                 </div>
                 <button
                   onClick={() => {
@@ -327,32 +335,6 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
                   Reset
                 </button>
               </div>
-            </div>
-
-            {/* Similarity Threshold - Full Width */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Similarity Threshold
-              </label>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Loose</span>
-                  <input
-                    type="range"
-                    min="0.1"
-                    max="0.9"
-                    step="0.05"
-                    value={similarityThreshold}
-                    onChange={(e) => setSimilarityThreshold(parseFloat(e.target.value))}
-                    className="flex-1"
-                  />
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Strict</span>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {(similarityThreshold * 100).toFixed(0)}% similarity minimum
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
