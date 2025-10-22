@@ -8,6 +8,7 @@ import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
 import FavoriteButton from '@/components/FavoriteButton';
+import OtherCoverage from '@/components/OtherCoverage';
 import Footer from '@/components/Footer';
 
 interface ArticleDetail {
@@ -388,50 +389,12 @@ export default function ArticleDetailPage() {
         </div>
       )}
 
-      {/* Coverage Comparison */}
-      {article.related_articles.length > 0 && (
-        <div className="mb-8">
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
-            <h2 className="text-2xl font-semibold mb-2 flex items-center gap-2 text-foreground">
-              <span>🔗</span>
-              <span>Cross-Source Coverage</span>
-            </h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              This story is being covered by {article.related_articles.length + 1} sources. Compare how different outlets frame the same story.
-            </p>
-            <div className="space-y-3">
-              {article.related_articles.map((related) => (
-                <div
-                  key={related.id}
-                  className="bg-card border border-purple-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => router.push(`/article/${related.id}`)}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <p className="font-medium text-foreground mb-1">{related.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {related.source_name} • {formatDate(related.published_at)}
-                      </p>
-                    </div>
-                    <div className="ml-4 text-right text-sm flex flex-col gap-1">
-                      {related.sentiment_score !== null && (
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${getSentimentColor(related.sentiment_score)}`}>
-                          {related.sentiment_score > 0 ? '+' : ''}{related.sentiment_score.toFixed(1)}
-                        </span>
-                      )}
-                      {related.political_lean && (
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${getLeanColor(related.political_lean)}`}>
-                          {related.political_lean}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+          {/* Other Coverage - Enhanced with filtering and real-time analysis */}
+      <OtherCoverage
+        primaryArticleId={article.id}
+        initialCoverage={article.related_articles}
+        className="mb-8"
+      />
 
       {/* Key Statistics - Enhanced with newsletter-style design */}
       {article.statistics.length > 0 && (
