@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, Globe, TrendingUp, Minus, TrendingDown, ExternalLink, RefreshCw, AlertCircle, EyeOff } from "lucide-react";
 import { api } from "@/lib/api";
@@ -136,15 +136,18 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
     }
   }, [expanded, coverageData, fetchCoverage]);
 
+  // Create stable filters object
+  const filters = useMemo(() => {
+    return {
+      bias_filter: biasFilter !== "all" ? biasFilter : undefined,
+      similarity_threshold: similarityThreshold,
+      max_results: maxResults
+    };
+  }, [biasFilter, similarityThreshold, maxResults]);
+
   // Real-time filtering when filters change
   useEffect(() => {
-    if (expanded && coverageData) {
-      const filters = {
-        bias_filter: biasFilter !== "all" ? biasFilter : undefined,
-        similarity_threshold: similarityThreshold,
-        max_results: maxResults
-      };
-
+    if (expanded) {
       setLoading(true);
       setError(null);
 
@@ -167,7 +170,7 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
 
       fetchFilteredCoverage();
     }
-  }, [biasFilter, similarityThreshold, maxResults, expanded, coverageData, primaryArticleId]);
+  }, [filters, expanded, primaryArticleId]);
 
   // If not expanded, show collapsed state
   if (!expanded) {
