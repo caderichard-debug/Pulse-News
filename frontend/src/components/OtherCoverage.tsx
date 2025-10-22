@@ -49,13 +49,14 @@ interface OtherCoverageProps {
 export default function OtherCoverage({ primaryArticleId, initialCoverage = [], className = "" }: OtherCoverageProps) {
   const [expanded, setExpanded] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [coverageData, setCoverageData] = useState<CoverageData | null>(null);
+  const [rawCoverageData, setRawCoverageData] = useState<CoverageData | null>(null);
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Filter states
   const [biasFilter, setBiasFilter] = useState<string>("all");
+  const [similarityThreshold, setSimilarityThreshold] = useState<number>(0.3);
   const [maxResults, setMaxResults] = useState(10);
 
   const router = useRouter();
@@ -74,7 +75,7 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
         sentimentRange: undefined, // Always undefined now
         maxResults: filters.max_results
       });
-      setCoverageData(response);
+      setRawCoverageData(response);
     } catch (err) {
       console.error("Error fetching coverage:", err);
       setError("Failed to load coverage data");
@@ -128,46 +129,58 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
 
   // Initial load when component expands
   useEffect(() => {
-    if (expanded && !coverageData) {
+    if (expanded && !rawCoverageData) {
       fetchCoverage();
     }
-  }, [expanded, coverageData, fetchCoverage]);
+  }, [expanded, rawCoverageData, fetchCoverage]);
 
-  // Create stable filters object
-  const filters = useMemo(() => {
-    return {
-      bias_filter: biasFilter !== "all" ? biasFilter : undefined,
-      max_results: maxResults
-    };
-  }, [biasFilter, maxResults]);
+  
+  
+  // Filter coverage data based on similarity threshold
+  const coverageData = useMemo(() => {
+    if (!rawCoverageData) return null;
 
-  // Real-time filtering when filters change
-  useEffect(() => {
-    if (expanded) {
-      setLoading(true);
-      setError(null);
+    let filteredArticles = [...rawCoverageData.coverage_articles];
 
-      const fetchFilteredCoverage = async () => {
-        try {
-          const response = await api.getCoverageAnalysis({
-            articleId: primaryArticleId,
-            biasFilter: filters.bias_filter,
-            sentimentRange: undefined,
-            maxResults: filters.max_results
-          });
-          setCoverageData(response);
-        } catch (err) {
-          console.error("Error fetching coverage:", err);
-          setError("Failed to load coverage data");
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      fetchFilteredCoverage();
+    // Apply bias filter
+    if (biasFilter !== "all") {
+      filteredArticles = filteredArticles.filter(article => article.source_bias === biasFilter);
     }
-  }, [filters, expanded, primaryArticleId]);
 
+    // Apply similarity filter
+    filteredArticles = filteredArticles.filter(article => article.similarity_score >= similarityThreshold);
+
+    // Apply max results
+    filteredArticles = filteredArticles.slice(0, maxResults);
+
+    // Recalculate statistics
+    const uniqueSources = new Set(filteredArticles.map(a => a.source_name)).size;
+    const avgSimilarity = filteredArticles.length > 0
+      ? filteredArticles.reduce((sum, a) => sum + a.similarity_score, 0) / filteredArticles.length
+      : 0;
+
+    const biasDistribution: Record<string, number> = {};
+    filteredArticles.forEach(article => {
+      const bias = article.source_bias || 'unknown';
+      biasDistribution[bias] = (biasDistribution[bias] || 0) + 1;
+    });
+
+    return {
+      ...rawCoverageData,
+      coverage_articles: filteredArticles,
+      coverage_count: filteredArticles.length,
+      sources_count: uniqueSources,
+      avg_similarity: avgSimilarity,
+      bias_distribution: biasDistribution,
+      filters_applied: {
+        bias_filter: biasFilter !== "all" ? biasFilter : null,
+        similarity_threshold: similarityThreshold,
+        max_results: maxResults
+      }
+    };
+  }, [rawCoverageData, biasFilter, similarityThreshold, maxResults]);
+
+  
   // If not expanded, show collapsed state
   if (!expanded) {
     return (
@@ -290,19 +303,54 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
               {/* Filter Actions */}
               <div className="flex justify-between items-center">
                 <div className="text-sm text-gray-500 dark:text-gray-400">
-                  {biasFilter !== 'all' && (
-                    <span>Filtered by: <span className="font-medium text-gray-700 dark:text-gray-300 ml-1 capitalize">{biasFilter}</span></span>
+                  {(biasFilter !== 'all' || similarityThreshold !== 0.3) && (
+                    <span>
+                      Filtered by:
+                      {biasFilter !== 'all' && (
+                        <span className="font-medium text-gray-700 dark:text-gray-300 ml-1 capitalize">{biasFilter}</span>
+                      )}
+                      {biasFilter !== 'all' && similarityThreshold !== 0.3 && ', '}
+                      {similarityThreshold !== 0.3 && (
+                        <span className="font-medium text-gray-700 dark:text-gray-300">{(similarityThreshold * 100).toFixed(0)}% similarity</span>
+                      )}
+                    </span>
                   )}
                 </div>
                 <button
                   onClick={() => {
                     setBiasFilter('all');
+                    setSimilarityThreshold(0.3);
                     setMaxResults(10);
                   }}
                   className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
                 >
                   Reset
                 </button>
+              </div>
+            </div>
+
+            {/* Similarity Threshold - Full Width */}
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Similarity Threshold
+              </label>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Loose</span>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="0.9"
+                    step="0.05"
+                    value={similarityThreshold}
+                    onChange={(e) => setSimilarityThreshold(parseFloat(e.target.value))}
+                    className="flex-1"
+                  />
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Strict</span>
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {(similarityThreshold * 100).toFixed(0)}% similarity minimum
+                </div>
               </div>
             </div>
           </div>
