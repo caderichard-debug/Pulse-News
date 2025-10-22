@@ -335,9 +335,9 @@ class ApiClient {
     page?: number;
     page_size?: number;
     search?: string;
-    topic?: string;
-    source_id?: number;
-    political_lean?: string;
+    topics?: string[];
+    source_ids?: number[];
+    political_leans?: string[];
     date_range?: string;
     date_from?: string;
     date_to?: string;
@@ -351,9 +351,18 @@ class ApiClient {
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
     if (params?.search) queryParams.append('search', params.search);
-    if (params?.topic) queryParams.append('topic', params.topic);
-    if (params?.source_id) queryParams.append('source_id', params.source_id.toString());
-    if (params?.political_lean) queryParams.append('political_lean', params.political_lean);
+
+    // Handle multiple values for multi-select filters
+    if (params?.topics && params.topics.length > 0) {
+      params.topics.forEach(topic => queryParams.append('topics', topic));
+    }
+    if (params?.source_ids && params.source_ids.length > 0) {
+      params.source_ids.forEach(sourceId => queryParams.append('source_ids', sourceId.toString()));
+    }
+    if (params?.political_leans && params.political_leans.length > 0) {
+      params.political_leans.forEach(lean => queryParams.append('political_leans', lean));
+    }
+
     if (params?.date_range) queryParams.append('date_range', params.date_range);
     if (params?.date_from) queryParams.append('date_from', params.date_from);
     if (params?.date_to) queryParams.append('date_to', params.date_to);

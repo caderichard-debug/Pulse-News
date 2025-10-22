@@ -1,3 +1,66 @@
+## 2025-10-21 22:15
+
+**Scraper and Newsletter Updates** ✅
+
+### What Changed
+- **Enhanced Scraper Coverage**: Updated RSS scraper to scrape articles from all sources regardless of `is_active` status
+  - Added new `scrape_all_sources()` function in [`rss_scraper.py`](backend/app/services/rss_scraper.py:112) that scrapes all sources
+  - Updated scheduled job in [`tasks.py`](backend/app/jobs/tasks.py:157) to use new function
+  - Maintained legacy `scrape_all_active_sources()` function for backward compatibility
+  - Ensures articles from user-added/inactive sources are still collected for newsletters
+- **Strict Newsletter Source Filtering**: Modified newsletter generation to only use user-subscribed sources
+  - Updated [`newsletter_service.py`](backend/app/services/newsletter_service.py:178-181) to skip newsletter generation for users with no source subscriptions
+  - Removed fallback to all sources - newsletters now strictly respect user source preferences
+  - Users will only receive newsletters from sources they have explicitly subscribed to
+- **Job Scheduling Updates**: Updated background task logging to reflect new scraping behavior
+  - Enhanced job logs to indicate when scraping from "all sources" vs "active sources"
+
+### Technical Details
+- **Source Coverage**: Now scrapes from all sources in database, providing comprehensive article collection
+- **Newsletter Logic**: Strict source filtering ensures users only get content from their selected sources
+- **User Experience**: Users must subscribe to sources to receive newsletters, encouraging deliberate source selection
+- **Backward Compatibility**: Legacy scraping function maintained for existing code that may depend on it
+
+**Code References:**
+- Enhanced Scraper: [`rss_scraper.py`](backend/app/services/rss_scraper.py#L112-L135)
+- Job Tasks: [`tasks.py`](backend/app/jobs/tasks.py#L157-L162)
+- Newsletter Service: [`newsletter_service.py`](backend/app/services/newsletter_service.py#L178-L189)
+
+## 2025-10-21 22:00
+
+**App Polish Improvements** ✅
+
+### What Changed
+- **Multi-select Filters**: Enhanced feed page filters to support multiple selections
+  - Topics filter now supports selecting multiple topics simultaneously
+  - Sources filter allows selecting multiple news sources
+  - Political lean filter allows selecting left, center, and/or right biases
+  - Added custom `MultiSelect` component with search, clear all, and tag management
+- **Backend API Updates**: Modified feed API endpoints to handle multi-select filters
+  - Updated `get_feed_articles` in [`feed.py`](backend/app/routes/feed.py:70-72) to accept `topics`, `source_ids`, and `political_leans` arrays
+  - Added OR logic for multiple filter values in [`feed.py`](backend/app/routes/feed.py:113-135)
+  - Updated API client in [`api.ts`](frontend/src/lib/api.ts:334-364) to properly serialize array parameters
+- **Framework Analysis Cards**: Fixed dynamic resizing issues with text wrapping
+  - Modified framework scale layout in both [`analyze/page.tsx`](frontend/src/app/analyze/page.tsx:494-508) and [`article/[id]/page.tsx`](frontend/src/app/article/[id]/page.tsx:269-285)
+  - Added proper text wrapping with `text-wrap break-words` for left and right position labels
+  - Set fixed width for scale bars (`w-32 flex-shrink-0`) to prevent shrinking to nothing
+  - Added min/max width constraints for text containers (`min-w-[80px] max-w-[120px]`)
+- **Filter State Management**: Updated localStorage integration for new multi-select filter arrays
+  - Modified feed page state management to handle filter arrays instead of single values
+  - Updated filter persistence and restoration logic
+
+### Technical Details
+- **Multi-select Component**: Custom React component with search, checkbox selection, and tag-based display
+- **API Compatibility**: Backward compatible - existing single-value filters still work but are deprecated
+- **Text Wrapping Fix**: Uses CSS `text-wrap: balance` and `break-words` for proper text flow before scale shrinks
+- **Responsive Design**: Framework analysis cards now properly adapt to different screen sizes and text lengths
+
+**Code References:**
+- Feed API: [`feed.py`](backend/app/routes/feed.py#L70-L135)
+- API Client: [`api.ts`](frontend/src/lib/api.ts#L334-L364)
+- Multi-select Component: [`feed/page.tsx`](frontend/src/app/feed/page.tsx#L21-L151)
+- Framework Cards Fix: [`analyze/page.tsx`](frontend/src/app/analyze/page.tsx#L494-L508) and [`article/[id]/page.tsx`](frontend/src/app/article/[id]/page.tsx#L269-L285)
+
 ## 2025-10-21 20:30
 
 **Enhanced Coverage Implementation** ✅

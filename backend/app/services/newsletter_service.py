@@ -173,18 +173,20 @@ def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict
         .where(UserSourceSubscription.subscribed == True)
     ).all()
 
-    subscribed_source_ids = [sub.source_id for sub in user_source_subs] if user_source_subs else None
+    subscribed_source_ids = [sub.source_id for sub in user_source_subs]
 
-    # Build article query based on preferences
+    # If user has no subscribed sources, return None (no newsletter will be sent)
+    if not subscribed_source_ids:
+        logger.info(f"User {user.email} has no subscribed sources - skipping newsletter generation")
+        return None
+
+    # Build article query based on preferences - ONLY use subscribed sources
     from sqlalchemy import func
     articles_query = (
         select(Article, ArticleAnalysis)
         .join(ArticleAnalysis)
+        .where(Article.source_id.in_(subscribed_source_ids))
     )
-
-    # Filter by subscribed sources if user has specific subscriptions
-    if subscribed_source_ids:
-        articles_query = articles_query.where(Article.source_id.in_(subscribed_source_ids))
 
     # Order by user preference (good_first, good_last, or mixed)
     if user.article_order_preference == "good_first":
