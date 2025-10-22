@@ -13,8 +13,9 @@ from ..models import (
     ArticleCluster, ArticleContext, ArticleFavorite
 )
 from ..routes.auth import get_current_user
+from ..services.article_clusterer import get_enhanced_coverage_comparison, trigger_realtime_clustering
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from datetime import datetime
 import logging
 
@@ -96,6 +97,9 @@ class ArticleDetailResponse(BaseModel):
     # Favorites
     is_favorited: bool = False
 
+    # Coverage metadata for frontend component
+    coverage_metadata: Optional[dict] = None
+
 
 @router.get("/analyzed")
 def get_analyzed_articles(
@@ -157,6 +161,9 @@ def get_analyzed_articles(
 @router.get("/{article_id}", response_model=ArticleDetailResponse)
 async def get_article_detail(
     article_id: int,
+    coverage_bias_filter: Optional[str] = None,
+    coverage_sentiment_range: Optional[str] = None,
+    coverage_max_results: int = 10,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
@@ -227,35 +234,37 @@ async def get_article_detail(
         for link, framework in framework_links
     ]
 
-    # Get related articles from same cluster
-    cluster_member = session.exec(
-        select(ArticleClusterMember)
-        .where(ArticleClusterMember.article_id == article_id)
-    ).first()
+    # Parse sentiment range if provided
+    sentiment_range = None
+    if coverage_sentiment_range:
+        try:
+            min_sent, max_sent = map(float, coverage_sentiment_range.split(','))
+            sentiment_range = (min_sent, max_sent)
+        except ValueError:
+            logger.warning(f"Invalid sentiment range format: {coverage_sentiment_range}")
+
+    # Get enhanced coverage comparison with filtering
+    coverage_data = get_enhanced_coverage_comparison(
+        article_id=article_id,
+        session=session,
+        bias_filter=coverage_bias_filter,
+        sentiment_range=sentiment_range,
+        max_results=coverage_max_results
+    )
 
     related_articles = []
-    if cluster_member:
-        # Get other articles in the same cluster
-        related_members = session.exec(
-            select(ArticleClusterMember, Article, ArticleAnalysis, Source)
-            .join(Article, Article.id == ArticleClusterMember.article_id)
-            .join(ArticleAnalysis, ArticleAnalysis.article_id == Article.id, isouter=True)
-            .join(Source, Source.id == Article.source_id)
-            .where(ArticleClusterMember.cluster_id == cluster_member.cluster_id)
-            .where(ArticleClusterMember.article_id != article_id)
-        ).all()
-
+    if coverage_data.get("success") and coverage_data.get("coverage_articles"):
         related_articles = [
             RelatedArticle(
-                id=rel_article.id,
-                title=rel_article.title,
-                source_name=rel_source.name,
-                published_at=rel_article.published_at,
-                sentiment_score=rel_analysis.sentiment_score if rel_analysis else None,
-                political_lean=rel_analysis.political_lean.value if rel_analysis and rel_analysis.political_lean else None,
-                url=rel_article.url
+                id=coverage["id"],
+                title=coverage["title"],
+                source_name=coverage["source_name"],
+                published_at=datetime.fromisoformat(coverage["published_at"]),
+                sentiment_score=coverage["sentiment_score"],
+                political_lean=coverage["political_lean"],
+                url=coverage["url"]
             )
-            for _, rel_article, rel_analysis, rel_source in related_members
+            for coverage in coverage_data["coverage_articles"]
         ]
 
     # Get context
@@ -304,5 +313,93 @@ async def get_article_detail(
         frameworks=frameworks,
         related_articles=related_articles,
         context=context,
-        is_favorited=is_favorited
+        is_favorited=is_favorited,
+        coverage_metadata=coverage_data if coverage_data.get("success") else None
     )
+
+
+@router.post("/{article_id}/analyze-coverage")
+async def trigger_coverage_analysis(
+    article_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Trigger real-time analysis to find coverage for articles that don't have existing clusters.
+    Uses the article clusterer service to find similar articles and create clusters on-demand.
+    """
+    logger.info(f"User {current_user.id} triggered coverage analysis for article {article_id}")
+
+    try:
+        result = trigger_realtime_clustering(
+            article_id=article_id,
+            session=session
+        )
+
+        if result["success"]:
+            return {
+                "success": True,
+                "message": result["message"],
+                "cluster_id": result["cluster_id"],
+                "coverage_count": result["coverage_count"],
+                "article_id": article_id
+            }
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=result.get("error", "Failed to analyze coverage")
+            )
+
+    except Exception as e:
+        logger.error(f"Error in coverage analysis for article {article_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to analyze coverage: {str(e)}"
+        )
+
+
+@router.get("/{article_id}/coverage")
+async def get_enhanced_coverage(
+    article_id: int,
+    bias_filter: Optional[str] = None,
+    sentiment_range: Optional[str] = None,
+    max_results: int = 10,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Get enhanced coverage data for an article with filtering options.
+    Returns structured data for the Other Coverage component.
+    """
+    # Parse sentiment range if provided
+    parsed_sentiment_range = None
+    if sentiment_range:
+        try:
+            min_sent, max_sent = map(float, sentiment_range.split(','))
+            parsed_sentiment_range = (min_sent, max_sent)
+        except ValueError:
+            logger.warning(f"Invalid sentiment range format: {sentiment_range}")
+
+    try:
+        coverage_data = get_enhanced_coverage_comparison(
+            article_id=article_id,
+            session=session,
+            bias_filter=bias_filter,
+            sentiment_range=parsed_sentiment_range,
+            max_results=max_results
+        )
+
+        if coverage_data.get("success"):
+            return coverage_data
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=coverage_data.get("error", "Failed to get coverage data")
+            )
+
+    except Exception as e:
+        logger.error(f"Error getting coverage for article {article_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get coverage data: {str(e)}"
+        )
