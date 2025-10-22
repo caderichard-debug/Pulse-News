@@ -38,10 +38,10 @@ const handler = NextAuth({
           refresh_token: account.refresh_token,
           token_expires_at: account.expires_at ? new Date(account.expires_at * 1000).toISOString() : null,
           provider_data: {
-            given_name: profile?.given_name,
-            family_name: profile?.family_name,
-            locale: profile?.locale,
-            verified_email: profile?.email_verified,
+            given_name: (profile as any)?.given_name,
+            family_name: (profile as any)?.family_name,
+            locale: (profile as any)?.locale,
+            verified_email: (profile as any)?.email_verified,
           },
         }
 
@@ -127,7 +127,6 @@ const handler = NextAuth({
 
   pages: {
     signIn: '/login',
-    signUp: '/signup',
     error: '/login',
   },
 
