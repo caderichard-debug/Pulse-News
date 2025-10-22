@@ -16,7 +16,8 @@ from ..jobs.tasks import (
     article_clustering_job,
     context_generation_job,
     process_articles_job,
-    process_unprocessed_articles_job
+    process_unprocessed_articles_job,
+    regenerate_viewpoints_job
 )
 from ..config import settings
 import logging
@@ -82,6 +83,18 @@ def start_scheduler():
         replace_existing=True,
     )
     logger.info("✓ Scheduled: Newsletter sending daily at 10:20 AM PST")
+
+    # Job 4: Regenerate opposing viewpoints daily at 3:00 AM PST
+    scheduler.add_job(
+        func=regenerate_viewpoints_job,
+        trigger=CronTrigger(hour=3, minute=0, timezone='America/Los_Angeles'),
+        id='regenerate_viewpoints',
+        name='Regenerate Opposing Viewpoints',
+        replace_existing=True,
+        max_instances=1,
+    )
+    logger.info("✓ Scheduled: Viewpoint regeneration daily at 3:00 AM PST")
+    logger.info("  └─> Refreshes cached viewpoint relationships with fresh AI analysis")
 
     # Start the scheduler
     scheduler.start()

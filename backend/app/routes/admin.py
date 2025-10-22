@@ -10,7 +10,7 @@ from ..database import get_session
 from ..jobs.tasks import (
     scrape_job, extract_job, analyze_job, framework_job,
     statistics_verification_job, article_clustering_job, context_generation_job,
-    process_articles_job, process_unprocessed_articles_job
+    process_articles_job, process_unprocessed_articles_job, regenerate_viewpoints_job
 )
 from ..jobs.scheduler import get_job_status
 from datetime import datetime, timedelta
@@ -307,6 +307,25 @@ def trigger_process_unprocessed_job(background_tasks: BackgroundTasks) -> Dict[s
         "status": "triggered",
         "job": "process_unprocessed",
         "message": "Unprocessed articles scan started in background"
+    }
+
+
+@router.post("/jobs/regenerate-viewpoints")
+def trigger_regenerate_viewpoints_job(background_tasks: BackgroundTasks) -> Dict[str, str]:
+    """
+    Manually trigger opposing viewpoints regeneration job in the background.
+
+    This job:
+    - Finds articles with expired or missing viewpoint relationships
+    - Regenerates framework oppositions using fresh AI analysis
+    - Updates cached relationships for improved accuracy
+    - Processes up to 100 articles per run with rate limiting
+    """
+    background_tasks.add_task(regenerate_viewpoints_job)
+    return {
+        "status": "triggered",
+        "job": "regenerate_viewpoints",
+        "message": "Opposing viewpoints regeneration started in background"
     }
 
 
