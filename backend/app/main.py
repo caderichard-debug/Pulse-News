@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from .database import create_db_and_tables
 from .jobs.scheduler import start_scheduler, stop_scheduler
-from .routes import admin, auth, preferences, articles, test_email, analytics, feed, sources, admin_panel, password_reset, analyze, favorites
+from .routes import admin, auth, preferences, articles, test_email, analytics, feed, sources, admin_panel, password_reset, analyze, favorites, oauth
 import logging
 from .config import settings
 
@@ -74,6 +74,7 @@ app.add_middleware(
 app.include_router(admin.router)
 app.include_router(admin_panel.router)  # Admin panel (requires admin token + JWT)
 app.include_router(auth.router)
+app.include_router(oauth.router)  # OAuth authentication endpoints
 app.include_router(password_reset.router)  # Password reset endpoints
 app.include_router(preferences.router)
 app.include_router(articles.router)  # Merged: includes both /analyzed and /{article_id}
