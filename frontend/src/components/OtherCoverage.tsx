@@ -47,7 +47,7 @@ interface OtherCoverageProps {
 }
 
 export default function OtherCoverage({ primaryArticleId, initialCoverage = [], className = "" }: OtherCoverageProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(initialCoverage.length > 0);
   const [showFilters, setShowFilters] = useState(false);
   const [rawCoverageData, setRawCoverageData] = useState<CoverageData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -138,49 +138,63 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
   
   // Filter coverage data based on similarity threshold
   const coverageData = useMemo(() => {
-    if (!rawCoverageData) return null;
+    // If we have raw coverage data from API, use it
+    if (rawCoverageData) {
+      let filteredArticles = [...rawCoverageData.coverage_articles];
 
-    let filteredArticles = [...rawCoverageData.coverage_articles];
+      // Apply bias filter
+      if (biasFilter !== "all") {
+        filteredArticles = filteredArticles.filter(article => article.source_bias === biasFilter);
+      }
 
-    // Apply bias filter
-    if (biasFilter !== "all") {
-      filteredArticles = filteredArticles.filter(article => article.source_bias === biasFilter);
+      // Apply similarity threshold
+      filteredArticles = filteredArticles.filter(article => article.similarity_score >= similarityThreshold);
+
+      // Apply max results limit
+      if (maxResults > 0) {
+        filteredArticles = filteredArticles.slice(0, maxResults);
+      }
+
+      return {
+        ...rawCoverageData,
+        coverage_articles: filteredArticles
+      };
     }
 
-    // Apply similarity filter
-    filteredArticles = filteredArticles.filter(article => article.similarity_score >= similarityThreshold);
+    // Fallback to initial coverage data if no API data yet
+    if (initialCoverage.length > 0) {
+      return {
+        success: true,
+        coverage_articles: initialCoverage,
+        coverage_count: initialCoverage.length,
+        sources_count: initialCoverage.length + 1, // +1 for current article
+        avg_similarity: 0.8,
+        bias_distribution: {
+          left: initialCoverage.filter(a => a.political_lean === 'left').length,
+          center: initialCoverage.filter(a => a.political_lean === 'center').length,
+          right: initialCoverage.filter(a => a.political_lean === 'right').length,
+        },
+        cluster_id: null,
+        cluster_topic: 'Related Coverage',
+        has_cluster: false,
+        primary_article_id: primaryArticleId,
+        filters_applied: {
+          bias_filter: biasFilter !== "all" ? biasFilter : null,
+          sentiment_range: null,
+          max_results: maxResults,
+        },
+      };
+    }
 
-    // Apply max results
-    filteredArticles = filteredArticles.slice(0, maxResults);
-
-    // Recalculate statistics
-    const uniqueSources = new Set(filteredArticles.map(a => a.source_name)).size;
-    const avgSimilarity = filteredArticles.length > 0
-      ? filteredArticles.reduce((sum, a) => sum + a.similarity_score, 0) / filteredArticles.length
-      : 0;
-
-    const biasDistribution: Record<string, number> = {};
-    filteredArticles.forEach(article => {
-      const bias = article.source_bias || 'unknown';
-      biasDistribution[bias] = (biasDistribution[bias] || 0) + 1;
-    });
-
-    return {
-      ...rawCoverageData,
-      coverage_articles: filteredArticles,
-      coverage_count: filteredArticles.length,
-      sources_count: uniqueSources,
-      avg_similarity: avgSimilarity,
-      bias_distribution: biasDistribution,
-      filters_applied: {
-        bias_filter: biasFilter !== "all" ? biasFilter : null,
-        similarity_threshold: similarityThreshold,
-        max_results: maxResults
-      }
-    };
-  }, [rawCoverageData, biasFilter, similarityThreshold, maxResults]);
+    return null;
+  }, [rawCoverageData, initialCoverage, biasFilter, similarityThreshold, maxResults, primaryArticleId]);
 
   
+  // Don't render anything if no initial coverage
+  if (initialCoverage.length === 0) {
+    return null;
+  }
+
   // If not expanded, show collapsed state
   if (!expanded) {
     return (
@@ -188,7 +202,7 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
         <div className="text-center">
           <Eye className="h-8 w-8 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
           <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            Other Coverage
+            Cross-Source Coverage
           </h3>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             {initialCoverage.length > 0
@@ -210,14 +224,14 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
 
   return (
     <div className={`mt-6 ${className}`}>
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+      <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-lg">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="p-6 border-b border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <Eye className="h-6 w-6 text-blue-600" />
               <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                Other Coverage
+                Cross-Source Coverage
               </h3>
             </div>
             <button
@@ -229,6 +243,11 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
           </div>
 
           {/* Coverage Summary */}
+          <div className="mb-4">
+            <p className="text-gray-600 dark:text-gray-400">
+              This story is being covered by {coverageData?.sources_count || initialCoverage.length + 1} sources. Compare how different outlets frame the same story.
+            </p>
+          </div>
           {coverageData && (
             <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
               <span>
@@ -255,7 +274,7 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
 
         {/* Filters Panel */}
         {showFilters && (
-          <div className="p-6 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 space-y-4">
+          <div className="p-6 bg-purple-100 dark:bg-purple-900/30 border-b border-purple-200 dark:border-purple-700 space-y-4">
               {/* Political Bias - All on One Line */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -405,12 +424,12 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
               {coverageData.coverage_articles.map((article) => (
                 <div
                   key={article.id}
-                  className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow"
+                  className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => router.push(`/article/${article.id}`)}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
-                      <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
-                          onClick={() => router.push(`/article/${article.id}`)}>
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2 hover:text-blue-600 dark:hover:text-blue-400">
                         {article.title}
                       </h4>
                       <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 dark:text-gray-400">

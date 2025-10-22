@@ -8,6 +8,8 @@ jest.mock('@/lib/api', () => ({
   api: {
     getArticleDetail: jest.fn(),
     getCurrentUser: jest.fn(),
+    getCoverageAnalysis: jest.fn(),
+    triggerCoverageAnalysis: jest.fn(),
   },
 }));
 
@@ -101,6 +103,60 @@ describe('ArticleDetailPage', () => {
     jest.clearAllMocks();
     (api.getArticleDetail as jest.Mock).mockResolvedValue(mockArticleDetail);
     (api.getCurrentUser as jest.Mock).mockResolvedValue({ name: 'Test User' });
+    (api.getCoverageAnalysis as jest.Mock).mockResolvedValue({
+      success: true,
+      coverage_articles: [
+        {
+          id: 2,
+          title: 'Related Article 1',
+          url: 'https://bbc.com/article',
+          source_name: 'BBC',
+          source_bias: 'left',
+          source_trust_score: 0.8,
+          published_at: '2025-10-02T15:00:00Z',
+          sentiment_score: -2.5,
+          political_lean: 'left',
+          similarity_score: 0.85,
+          time_diff_hours: 19,
+          published_later: false,
+        },
+        {
+          id: 3,
+          title: 'Related Article 2',
+          url: 'https://cnn.com/article',
+          source_name: 'CNN',
+          source_bias: 'center',
+          source_trust_score: 0.75,
+          published_at: '2025-10-01T12:00:00Z',
+          sentiment_score: 1.2,
+          political_lean: 'center',
+          similarity_score: 0.75,
+          time_diff_hours: 46,
+          published_later: false,
+        },
+      ],
+      coverage_count: 2,
+      sources_count: 3,
+      avg_similarity: 0.8,
+      bias_distribution: {
+        left: 1,
+        center: 1,
+        right: 0,
+      },
+      cluster_id: 1,
+      cluster_topic: 'Test Topic',
+      has_cluster: true,
+      primary_article_id: 1,
+      filters_applied: {
+        bias_filter: null,
+        sentiment_range: null,
+        max_results: 10,
+      },
+    });
+    (api.triggerCoverageAnalysis as jest.Mock).mockResolvedValue({
+      message: 'Coverage analysis started',
+      coverage_count: 2,
+    });
   });
 
   it('should render loading state initially', () => {
