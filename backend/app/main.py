@@ -59,10 +59,11 @@ app = FastAPI(
 
 # CORS middleware for frontend
 frontend_url = settings.frontend_url
+frontend_custom_url = settings.frontend_custom_url
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url],  # Local dev
+    allow_origins=[frontend_url, frontend_custom_url],  # Local dev
     allow_origin_regex=r"^https:\/\/[\w\-]+\.onrender\.com$",  # Any *.onrender.com
     allow_credentials=True,
     allow_methods=["*"],
