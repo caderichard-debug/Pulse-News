@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Globe, TrendingUp, Minus, TrendingDown, ExternalLink, RefreshCw, AlertCircle } from "lucide-react";
+import { Eye, Globe, TrendingUp, Minus, TrendingDown, ExternalLink, RefreshCw, AlertCircle, EyeOff } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatDate } from "@/lib/dateUtils";
 
@@ -56,35 +56,24 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
 
   // Filter states
   const [biasFilter, setBiasFilter] = useState<string>("all");
-  const [sentimentRange, setSentimentRange] = useState<[number, number]>([-1.0, 1.0]);
+  const [similarityThreshold, setSimilarityThreshold] = useState<number>(0.3);
   const [maxResults, setMaxResults] = useState(10);
 
   const router = useRouter();
 
   const fetchCoverage = useCallback(async (filters: {
     bias_filter?: string;
-    sentiment_range?: string;
+    similarity_threshold?: number;
     max_results?: number;
   } = {}) => {
     setLoading(true);
     setError(null);
 
     try {
-      const params = new URLSearchParams();
-      if (filters.bias_filter && filters.bias_filter !== "all") {
-        params.append("bias_filter", filters.bias_filter);
-      }
-      if (filters.sentiment_range) {
-        params.append("sentiment_range", filters.sentiment_range);
-      }
-      if (filters.max_results) {
-        params.append("max_results", filters.max_results.toString());
-      }
-
       const response = await api.getCoverageAnalysis({
         articleId: primaryArticleId,
         biasFilter: filters.bias_filter,
-        sentimentRange: filters.sentiment_range ? filters.sentiment_range.split(',').map(Number) as [number, number] : undefined,
+        sentimentRange: undefined, // Always undefined now
         maxResults: filters.max_results
       });
       setCoverageData(response);
@@ -106,7 +95,7 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
       // After successful analysis, fetch the updated coverage data
       await fetchCoverage({
         bias_filter: biasFilter !== "all" ? biasFilter : undefined,
-        sentiment_range: biasFilter !== "all" ? `${sentimentRange[0]},${sentimentRange[1]}` : undefined,
+        similarity_threshold: similarityThreshold,
         max_results: maxResults
       });
     } catch (err) {
@@ -117,14 +106,7 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
     }
   };
 
-  const applyFilters = () => {
-    fetchCoverage({
-      bias_filter: biasFilter !== "all" ? biasFilter : undefined,
-      sentiment_range: biasFilter !== "all" ? `${sentimentRange[0]},${sentimentRange[1]}` : undefined,
-      max_results: maxResults
-    });
-  };
-
+  
   const getBiasColor = (bias: string | null) => {
     switch (bias) {
       case "left": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
@@ -153,6 +135,17 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
       fetchCoverage();
     }
   }, [expanded, coverageData, fetchCoverage]);
+
+  // Real-time filtering when filters change
+  useEffect(() => {
+    if (expanded && coverageData) {
+      fetchCoverage({
+        bias_filter: biasFilter !== "all" ? biasFilter : undefined,
+        similarity_threshold: similarityThreshold,
+        max_results: maxResults
+      });
+    }
+  }, [biasFilter, similarityThreshold, maxResults, expanded, coverageData, fetchCoverage]);
 
   // If not expanded, show collapsed state
   if (!expanded) {
@@ -195,9 +188,9 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
             </div>
             <button
               onClick={() => setExpanded(false)}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1"
             >
-              ×
+              <EyeOff className="h-4 w-4" />
             </button>
           </div>
 
@@ -256,27 +249,27 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
                 </div>
               </div>
 
-              {/* Sentiment Range */}
+              {/* Similarity Threshold */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Sentiment Range
+                  Similarity Threshold
                 </label>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Negative</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Loose</span>
                     <input
                       type="range"
-                      min="-1"
-                      max="1"
+                      min="0.1"
+                      max="0.9"
                       step="0.1"
-                      value={sentimentRange[0]}
-                      onChange={(e) => setSentimentRange([parseFloat(e.target.value), sentimentRange[1]])}
+                      value={similarityThreshold}
+                      onChange={(e) => setSimilarityThreshold(parseFloat(e.target.value))}
                       className="flex-1"
                     />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Positive</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Strict</span>
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {sentimentRange[0].toFixed(1)} to {sentimentRange[1].toFixed(1)}
+                    {(similarityThreshold * 100).toFixed(0)}% similarity minimum
                   </div>
                 </div>
               </div>
@@ -299,18 +292,11 @@ export default function OtherCoverage({ primaryArticleId, initialCoverage = [], 
               </div>
             </div>
 
-            <div className="mt-4 flex gap-2">
-              <button
-                onClick={applyFilters}
-                disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-              >
-                {loading ? 'Applying...' : 'Apply Filters'}
-              </button>
+            <div className="mt-4 flex justify-end">
               <button
                 onClick={() => {
                   setBiasFilter('all');
-                  setSentimentRange([-1.0, 1.0]);
+                  setSimilarityThreshold(0.3);
                   setMaxResults(10);
                 }}
                 className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
