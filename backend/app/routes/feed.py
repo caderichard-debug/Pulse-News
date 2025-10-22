@@ -9,7 +9,7 @@ from ..models import (
     User, Article, ArticleAnalysis, ArticleFrameworkLink,
     Framework, Source, Topic, UserTopicPreference,
     UserSourceSubscription, PoliticalLean, ProcessingStatus, StatisticVerification,
-    ArticleFavorite
+    ArticleFavorite, ViewpointRelationship
 )
 from ..routes.auth import get_optional_user
 from pydantic import BaseModel
@@ -50,6 +50,9 @@ class ArticleFeedItem(BaseModel):
     # Favorites
     is_favorited: bool = False
 
+    # Opposing viewpoints
+    has_opposing_viewpoints: bool = False
+
 
 class FeedResponse(BaseModel):
     articles: List[ArticleFeedItem]
@@ -74,6 +77,7 @@ async def get_feed_articles(
     only_analyzed: bool = Query(default=False, description="Show only articles with analysis"),
     only_verified_stats: bool = Query(default=False, description="Show only articles with verified statistics"),
     favorites_only: bool = Query(default=False, description="Show only favorited articles (requires authentication)"),
+    has_opposing_viewpoints: bool = Query(default=False, description="Show only articles with opposing viewpoint analysis"),
     session: Session = Depends(get_session)
 ):
     """
@@ -153,6 +157,15 @@ async def get_feed_articles(
         )
         query = query.where(Article.id.in_(favorited_articles_subquery))
 
+    if has_opposing_viewpoints:
+        # Filter for articles that have opposing viewpoint analysis
+        articles_with_opposing_viewpoints = (
+            select(ViewpointRelationship.primary_article_id)
+            .where(ViewpointRelationship.expires_at > datetime.utcnow())
+            .distinct()
+        )
+        query = query.where(Article.id.in_(articles_with_opposing_viewpoints))
+
     # Get total count before pagination
     count_query = select(func.count()).select_from(query.subquery())
     total_count = session.exec(count_query).one()
@@ -215,6 +228,15 @@ async def get_feed_articles(
         ).all()
         article_favorites = set(favorites)
 
+    # Get opposing viewpoints data for articles
+    articles_with_opposing_viewpoints = session.exec(
+        select(ViewpointRelationship.primary_article_id)
+        .where(ViewpointRelationship.primary_article_id.in_(article_ids))
+        .where(ViewpointRelationship.expires_at > datetime.utcnow())
+        .distinct()
+    ).all()
+    opposing_viewpoints_set = set(articles_with_opposing_viewpoints)
+
     # Build response
     articles = []
     for article, analysis, source in results:
@@ -244,7 +266,8 @@ async def get_feed_articles(
             stats_count=stats[0],
             stats_verified_count=stats[1],
             has_stats=stats[0] > 0,
-            is_favorited=article.id in article_favorites
+            is_favorited=article.id in article_favorites,
+            has_opposing_viewpoints=article.id in opposing_viewpoints_set
         ))
 
     return FeedResponse(

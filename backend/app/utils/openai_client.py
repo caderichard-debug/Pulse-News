@@ -348,6 +348,86 @@ Return as JSON:
 
         return prompt
 
+    def generate_framework_opposition_explanation(
+        self,
+        framework_name: str,
+        framework_left: str,
+        framework_right: str,
+        primary_title: str,
+        primary_summary: str,
+        opposing_title: str,
+        opposing_summary: str
+    ) -> Optional[str]:
+        """
+        Generate explanation for why two articles represent opposing viewpoints on a framework.
+
+        Args:
+            framework_name: Name of the ethical framework
+            framework_left: Left position description
+            framework_right: Right position description
+            primary_title: First article title
+            primary_summary: First article summary
+            opposing_title: Opposing article title
+            opposing_summary: Opposing article summary
+
+        Returns:
+            Explanation string or None if generation fails
+        """
+        if not self.is_available():
+            return None
+
+        prompt = f"""Explain why these two news articles represent opposing viewpoints on the framework "{framework_name}".
+
+Framework: {framework_name}
+- Left Position: {framework_left}
+- Right Position: {framework_right}
+
+PRIMARY ARTICLE:
+Title: {primary_title}
+Summary: {primary_summary}
+
+OPPOSING ARTICLE:
+Title: {opposing_title}
+Summary: {opposing_summary}
+
+Provide a concise 1-2 sentence explanation that helps readers understand the fundamental difference in perspective between these articles. Focus on the core ideological or ethical tension that makes these viewpoints oppose each other.
+
+Examples of good explanations:
+- "While the first article emphasizes individual freedom and personal choice, the second prioritizes collective safety and regulatory oversight, showing the classic tension between liberty and security."
+- "The first piece frames the issue as a matter of economic efficiency and market competition, while the second presents it as a question of social equity and government responsibility, highlighting the conflict between free-market principles and social justice goals."
+
+Explanation:"""
+
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an expert at political philosophy and media analysis. Your task is to clearly explain ideological differences in news coverage."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                max_tokens=150,
+                temperature=0.7
+            )
+
+            explanation = response.choices[0].message.content.strip()
+
+            if explanation and len(explanation) > 20:  # Ensure meaningful explanation
+                logger.debug(f"Generated framework opposition explanation for {framework_name}")
+                return explanation
+            else:
+                logger.warning("Generated explanation was too short or empty")
+                return None
+
+        except Exception as e:
+            logger.error(f"Error generating framework opposition explanation: {e}")
+            return None
+
     def _calculate_cost(self, input_tokens: int, output_tokens: int) -> float:
         """
         Calculate API cost based on token usage.

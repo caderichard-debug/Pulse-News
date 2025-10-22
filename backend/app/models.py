@@ -515,3 +515,57 @@ class AdminAuditLog(SQLModel, table=True):
     user_agent: Optional[str] = Field(default=None, max_length=500)
     timestamp: datetime = Field(default_factory=datetime.utcnow, index=True)
     notes: Optional[str] = Field(default=None, max_length=500)
+
+
+class ViewpointRelationship(SQLModel, table=True):
+    __tablename__ = "viewpoint_relationships"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    primary_article_id: int = Field(foreign_key="articles.id")
+    opposing_article_id: int = Field(foreign_key="articles.id")
+
+    # Relationship type and strength
+    relationship_type: str = Field(max_length=50)  # "source_bias", "framework_opposition", "sentiment_contrast", "temporal_evolution"
+    opposition_strength: float = Field(ge=0.0, le=1.0)  # How different they are
+
+    # AI-generated explanation
+    ai_explanation: Optional[str] = Field(default=None, max_length=500)
+
+    # Framework analysis details (for framework_opposition relationships)
+    framework_name: Optional[str] = Field(default=None, max_length=100)  # Name of the framework
+    reasoning: Optional[str] = Field(default=None, max_length=500)  # Detailed reasoning for the relationship
+    primary_position: Optional[int] = Field(default=None)  # Primary article's position on framework
+    opposing_position: Optional[int] = Field(default=None)  # Opposing article's position on framework
+
+    # Enhanced analyzer explanations (for framework_opposition relationships)
+    how_this_opposes: Optional[str] = Field(default=None, max_length=1000)  # How this article opposes the primary (mechanism-focused)
+    why_this_opposes: Optional[str] = Field(default=None, max_length=1000)  # Why this opposition matters (reasoning-focused)
+
+    # Quality and engagement tracking
+    quality_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)  # AI assessment of relationship quality
+    user_engagement_count: int = Field(default=0)  # How many users clicked this
+    user_feedback_helpful: int = Field(default=0)  # Helpful feedback count
+    user_feedback_not_helpful: int = Field(default=0)  # Not helpful feedback count
+
+    # Generation metadata
+    generation_method: str = Field(max_length=50, default="automatic")  # "automatic", "batch", "manual"
+    ai_model_version: Optional[str] = Field(default=None, max_length=50)  # Track which AI model generated this
+    processing_time_ms: Optional[int] = Field(default=None)  # Track generation performance
+
+    # Status and lifecycle
+    is_active: bool = Field(default=True, index=True)  # Soft delete capability
+    last_regenerated: Optional[datetime] = Field(default=None)  # For periodic regeneration
+    expires_at: Optional[datetime] = Field(default=None)  # When to refresh this relationship
+
+    # Metadata
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    __table_args__ = (
+        Index("idx_primary_article", "primary_article_id"),
+        Index("idx_opposing_article", "opposing_article_id"),
+        Index("idx_relationship_type", "relationship_type"),
+        Index("idx_active_relationships", "is_active", "created_at"),
+        Index("idx_strength_order", "opposition_strength", "created_at"),
+        Index("idx_expiration", "expires_at", "is_active"),
+    )

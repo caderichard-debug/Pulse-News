@@ -345,6 +345,7 @@ class ApiClient {
     only_analyzed?: boolean;
     only_verified_stats?: boolean;
     favorites_only?: boolean;
+    has_opposing_viewpoints?: boolean;
   }) {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
@@ -360,6 +361,7 @@ class ApiClient {
     if (params?.only_analyzed) queryParams.append('only_analyzed', params.only_analyzed.toString());
     if (params?.only_verified_stats) queryParams.append('only_verified_stats', params.only_verified_stats.toString());
     if (params?.favorites_only) queryParams.append('favorites_only', params.favorites_only.toString());
+    if (params?.has_opposing_viewpoints) queryParams.append('has_opposing_viewpoints', params.has_opposing_viewpoints.toString());
 
     return this.request<{
       articles: Array<{
@@ -381,6 +383,7 @@ class ApiClient {
         stats_verified_count: number;
         has_stats: boolean;
         is_favorited: boolean;
+        has_opposing_viewpoints: boolean;
       }>;
       total_count: number;
       page: number;
@@ -943,6 +946,50 @@ class ApiClient {
       coverage_count: number;
       article_id: number;
     }>(`/articles/${articleId}/analyze-coverage`, {
+      method: 'POST'
+    });
+  }
+
+  async getOpposingViewpoints(articleId: number, params?: { relationshipTypes?: string[]; maxResults?: number }) {
+    const queryParams: Record<string, string> = {};
+    if (params?.maxResults) queryParams.max_results = params.maxResults.toString();
+    if (params?.relationshipTypes) queryParams.relationship_types = params.relationshipTypes.join(',');
+    const queryString = Object.keys(queryParams).length > 0 ? `?${new URLSearchParams(queryParams).toString()}` : '';
+    return this.request<{
+      primary_article_id: number;
+      opposing_viewpoints: Array<{
+        article_id: number;
+        title: string;
+        url: string;
+        source_name: string;
+        source_bias?: string;
+        published_at: string;
+        sentiment_score?: number;
+        political_lean?: string;
+        summary?: string;
+        relationship_type: string;
+        opposition_strength: number;
+        reasoning: string;
+        ai_explanation?: string;
+        how_this_opposes?: string;
+        why_this_opposes?: string;
+        quality_score?: number;
+        framework_name?: string;
+        primary_position?: number;
+        opposing_position?: number;
+      }>;
+      total_found: number;
+      relationship_types_available: string[];
+    }>(`/articles/${articleId}/opposing-viewpoints${queryString}`);
+  }
+
+  async triggerViewpointAnalysis(articleId: number) {
+    return this.request<{
+      status: string;
+      article_id: number;
+      message: string;
+      job_id: string;
+    }>(`/articles/${articleId}/analyze-viewpoints`, {
       method: 'POST'
     });
   }
