@@ -320,6 +320,12 @@ class User(SQLModel, table=True):
     articles_per_topic_default: int = Field(default=5)
     theme_preference: str = Field(default="auto", max_length=10)  # 'light', 'dark', or 'auto'
     newsletter_enabled: bool = Field(default=True)  # Whether user wants to receive newsletters
+    # OAuth authentication fields
+    oauth_provider: Optional[str] = Field(default=None, max_length=50)  # 'google', 'apple'
+    oauth_provider_id: Optional[str] = Field(default=None, max_length=255)  # Provider-specific user ID
+    oauth_provider_data: Optional[str] = Field(default=None, max_length=2000)  # JSON string with provider data
+    oauth_avatar_url: Optional[str] = Field(default=None, max_length=500)
+    passwordless_login_enabled: bool = Field(default=False)
 
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -328,6 +334,32 @@ class User(SQLModel, table=True):
     # Relationships
     newsletters: List["Newsletter"] = Relationship(back_populates="user")
     password_reset_tokens: List["PasswordResetToken"] = Relationship(back_populates="user")
+    oauth_accounts: List["OAuthAccount"] = Relationship(back_populates="user")
+
+
+class OAuthAccount(SQLModel, table=True):
+    """OAuth account linking and token management for users."""
+    __tablename__ = "oauth_accounts"
+    __table_args__ = (
+        Index("idx_oauth_user_provider", "user_id", "provider"),
+        Index("idx_oauth_provider_user", "provider", "provider_user_id"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    provider: str = Field(max_length=50)  # 'google', 'apple'
+    provider_user_id: str = Field(max_length=255)  # Provider-specific user ID
+    provider_data: Optional[str] = Field(default=None, max_length=2000)  # JSON string with provider data
+    access_token: Optional[str] = Field(default=None, max_length=1000)
+    refresh_token: Optional[str] = Field(default=None, max_length=1000)
+    token_expires_at: Optional[datetime] = Field(default=None)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Relationships
+    user: Optional["User"] = Relationship(back_populates="oauth_accounts")
+
+
 
 
 class Newsletter(SQLModel, table=True):
