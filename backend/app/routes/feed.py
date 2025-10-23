@@ -3,7 +3,7 @@ Feed routes for home page article browsing.
 """
 
 from fastapi import APIRouter, Depends, Query
-from sqlmodel import Session, select, func, or_
+from sqlmodel import Session, select, func, or_, and_
 from ..database import get_session
 from ..models import (
     User, Article, ArticleAnalysis, ArticleFrameworkLink,
@@ -67,9 +67,9 @@ async def get_feed_articles(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     search: Optional[str] = Query(default=None, description="Search articles by title"),
-    topic: Optional[str] = Query(default=None, description="Filter by topic name"),
-    source_id: Optional[int] = Query(default=None, description="Filter by source ID"),
-    political_lean: Optional[str] = Query(default=None, description="Filter by political lean: left, center, right"),
+    topics: Optional[List[str]] = Query(default=None, description="Filter by topic names (multiple)"),
+    source_ids: Optional[List[int]] = Query(default=None, description="Filter by source IDs (multiple)"),
+    political_leans: Optional[List[str]] = Query(default=None, description="Filter by political leans: left, center, right (multiple)"),
     date_from: Optional[datetime] = Query(default=None, description="Filter articles published on or after this date"),
     date_to: Optional[datetime] = Query(default=None, description="Filter articles published on or before this date"),
     date_range: Optional[str] = Query(default=None, description="Preset date range: today, week, month, year"),
@@ -110,16 +110,29 @@ async def get_feed_articles(
         search_pattern = f"%{search}%"
         query = query.where(Article.title.ilike(search_pattern))
 
-    if topic:
-        query = query.where(Article.topic_category == topic)
+    if topics:
+        # Filter by multiple topics (OR logic - articles matching any topic)
+        topic_conditions = [Article.topic_category == topic for topic in topics]
+        query = query.where(or_(*topic_conditions))
 
-    if source_id:
-        query = query.where(Article.source_id == source_id)
+    if source_ids:
+        # Filter by multiple source IDs (OR logic - articles from any selected source)
+        source_conditions = [Article.source_id == source_id for source_id in source_ids]
+        query = query.where(or_(*source_conditions))
 
-    if political_lean:
-        # Convert string to enum
-        lean_enum = PoliticalLean(political_lean)
-        query = query.where(ArticleAnalysis.political_lean == lean_enum)
+    if political_leans:
+        # Filter by multiple political leans (OR logic - articles matching any lean)
+        # Convert strings to enums and build conditions
+        lean_enums = []
+        for lean in political_leans:
+            try:
+                lean_enums.append(PoliticalLean(lean))
+            except ValueError:
+                continue  # Skip invalid political lean values
+
+        if lean_enums:
+            lean_conditions = [ArticleAnalysis.political_lean == lean_enum for lean_enum in lean_enums]
+            query = query.where(or_(*lean_conditions))
 
     if date_from:
         query = query.where(Article.published_at >= date_from)

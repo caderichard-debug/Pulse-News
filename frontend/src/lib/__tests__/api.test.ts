@@ -234,13 +234,13 @@ describe('ApiClient', () => {
 
       const result = await api.getFeedArticles({
         page: 1,
-        topic: 'politics',
+        topics: ['politics'],
         sort_by: 'newest'
       });
 
       expect(result).toEqual(mockFeed);
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('topic=politics'),
+        expect.stringContaining('topics=politics'),
         expect.any(Object)
       );
     });
