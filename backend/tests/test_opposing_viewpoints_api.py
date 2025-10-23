@@ -13,17 +13,18 @@ Tests all aspects of the /articles/{id}/opposing-viewpoints endpoint:
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, create_engine, select
+from sqlalchemy.orm import sessionmaker
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
 import json
 
-from ..main import app
-from ..models import (
+from app.main import app
+from app.models import (
     User, Article, ArticleAnalysis, Source, ViewpointRelationship,
     Framework, ArticleFrameworkLink, PoliticalLean
 )
-from ..database import get_session
-from ..routes.auth import create_access_token
+from app.database import get_session
+from app.routes.auth import create_access_token
 
 
 @pytest.fixture
@@ -36,7 +37,7 @@ def client():
 def session():
     """Create test database session"""
     engine = create_engine("sqlite:///:memory:")
-    from ..models import SQLModel
+    from app.models import SQLModel
     SQLModel.metadata.create_all(engine)
     SessionLocal = sessionmaker(bind=engine)
     session = SessionLocal()
