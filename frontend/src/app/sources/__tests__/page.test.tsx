@@ -1,5 +1,4 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { useSearchParams } from 'next/navigation';
 import SourcesPage from '../page';
 import { api } from '@/lib/api';
 

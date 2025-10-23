@@ -3,9 +3,9 @@
  */
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { SessionProvider } from 'next-auth/react'
 import LoginPage from '@/app/login/page'
 import SignupPage from '@/app/signup/page'
+import { signIn } from 'next-auth/react'
 
 // Mock NextAuth.js
 jest.mock('next-auth/react', () => ({
@@ -13,8 +13,6 @@ jest.mock('next-auth/react', () => ({
   useSession: jest.fn(),
   SessionProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
-
-import { signIn } from 'next-auth/react'
 
 // Mock API
 jest.mock('@/lib/api', () => ({
@@ -48,8 +46,8 @@ describe('OAuth Authentication', () => {
       error: null,
     })
     // Mock getTopics to return an empty array by default
-    const mockApi = require('@/lib/api').api
-    mockApi.getTopics.mockResolvedValue([])
+    const { api } = jest.requireMock('@/lib/api')
+    api.getTopics.mockResolvedValue([])
   })
 
   describe('Google Sign-In Button', () => {

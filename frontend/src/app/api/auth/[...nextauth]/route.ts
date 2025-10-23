@@ -2,7 +2,7 @@ import NextAuth from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
 import { api } from '@/lib/api'
 
-const handler = NextAuth({
+const authOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -19,7 +19,7 @@ const handler = NextAuth({
   ],
 
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account, profile }: any) {
       try {
         console.log('OAuth sign-in attempt:', { user: user.email, provider: account?.provider })
 
@@ -87,7 +87,7 @@ const handler = NextAuth({
       }
     },
 
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account }: any) {
       // Persist backend user info and OAuth tokens to JWT
       if (user && account) {
         token.backendUser = user.backendUser
@@ -99,7 +99,7 @@ const handler = NextAuth({
       return token
     },
 
-    async session({ session, token }) {
+    async session({ session, token }: any) {
       // Send backend user info and OAuth tokens to client
       if (token.backendUser) {
         session.user = {
@@ -116,7 +116,7 @@ const handler = NextAuth({
       return session
     },
 
-    async redirect({ url, baseUrl }) {
+    async redirect({ url, baseUrl }: any) {
       // Allows relative callback URLs
       if (url.startsWith('/')) return `${baseUrl}${url}`
       // Allows callback URLs on the same origin
@@ -140,6 +140,8 @@ const handler = NextAuth({
   },
 
   debug: process.env.NODE_ENV === 'development',
-})
+}
+
+const handler = (NextAuth as any)(authOptions)
 
 export { handler as GET, handler as POST }
