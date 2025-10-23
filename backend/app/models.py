@@ -46,6 +46,33 @@ class VerificationMethod(str, Enum):
     AI_ANALYSIS = "ai_analysis"
 
 
+# Challenge System Enums
+class ChallengeClaimType(str, Enum):
+    POLICY = "policy"
+    SOCIAL_ISSUE = "social_issue"
+    ECONOMIC = "economic"
+    TECHNOLOGY = "technology"
+    ENVIRONMENT = "environment"
+    FOREIGN_POLICY = "foreign_policy"
+    HEALTHCARE = "healthcare"
+    EDUCATION = "education"
+
+
+class ChallengeResponseStatus(str, Enum):
+    PENDING = "pending"
+    RESPONDED = "responded"
+    COMPLETED = "completed"
+    SKIPPED = "skipped"
+
+
+class AgreementLevel(str, Enum):
+    STRONGLY_DISAGREE = "strongly_disagree"
+    DISAGREE = "disagree"
+    NEUTRAL = "neutral"
+    AGREE = "agree"
+    STRONGLY_AGREE = "strongly_agree"
+
+
 # Link Tables (Many-to-Many relationships)
 class SourceTopicLink(SQLModel, table=True):
     __tablename__ = "source_topics"
@@ -215,6 +242,8 @@ class Article(SQLModel, table=True):
         back_populates="articles",
         link_model=ArticleTopicLink
     )
+    challenge_assignments: List["ChallengeArticleAssignment"] = Relationship(back_populates="article")
+    challenge_claims: List["ChallengeClaim"] = Relationship(back_populates="source_article")
 
 
 class ArticleAnalysis(SQLModel, table=True):
@@ -320,6 +349,8 @@ class User(SQLModel, table=True):
     articles_per_topic_default: int = Field(default=5)
     theme_preference: str = Field(default="auto", max_length=10)  # 'light', 'dark', or 'auto'
     newsletter_enabled: bool = Field(default=True)  # Whether user wants to receive newsletters
+    challenge_participation_enabled: bool = Field(default=True)  # Whether user wants to receive weekly challenges
+
     # OAuth authentication fields
     oauth_provider: Optional[str] = Field(default=None, max_length=50)  # 'google', 'apple'
     oauth_provider_id: Optional[str] = Field(default=None, max_length=255)  # Provider-specific user ID
@@ -335,6 +366,11 @@ class User(SQLModel, table=True):
     newsletters: List["Newsletter"] = Relationship(back_populates="user")
     password_reset_tokens: List["PasswordResetToken"] = Relationship(back_populates="user")
     oauth_accounts: List["OAuthAccount"] = Relationship(back_populates="user")
+
+    # Challenge system relationships
+    challenge_responses: List["UserChallengeResponse"] = Relationship(back_populates="user")
+    challenge_assignments: List["ChallengeArticleAssignment"] = Relationship(back_populates="user")
+    challenge_engagement: List["ChallengeEngagement"] = Relationship(back_populates="user")
 
 
 class OAuthAccount(SQLModel, table=True):
@@ -601,3 +637,197 @@ class ViewpointRelationship(SQLModel, table=True):
         Index("idx_strength_order", "opposition_strength", "created_at"),
         Index("idx_expiration", "expires_at", "is_active"),
     )
+
+
+# ============================================================================
+# CHALLENGE SYSTEM MODELS
+# ============================================================================
+
+class WeeklyChallenge(SQLModel, table=True):
+    """Weekly challenge set with 4 ethical claims for users to consider."""
+    __tablename__ = "weekly_challenges"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    # Challenge identification
+    week_start_date: datetime = Field(index=True)  # Monday of challenge week
+    week_end_date: datetime = Field(index=True)  # Sunday of challenge week
+    challenge_date: datetime = Field(index=True)  # Friday when challenge is delivered
+    title: str = Field(max_length=200)
+    description: Optional[str] = Field(default=None, max_length=500)
+
+    # Generation and admin controls
+    generation_method: str = Field(max_length=50, default="automatic")  # automatic, manual, batch
+    ai_model_version: Optional[str] = Field(default=None, max_length=50)
+    generated_at: datetime = Field(default_factory=datetime.utcnow)
+    is_published: bool = Field(default=False, index=True)  # Ready for delivery
+    published_at: Optional[datetime] = Field(default=None)
+
+    # Admin review fields
+    admin_notes: Optional[str] = Field(default=None, max_length=1000)
+    last_reviewed_by: Optional[int] = Field(default=None, foreign_key="users.id")
+    last_reviewed_at: Optional[datetime] = Field(default=None)
+
+    # Participation tracking
+    total_participants: int = Field(default=0)  # How many users received this challenge
+    is_active: bool = Field(default=True)  # For soft delete/archiving
+
+    # Relationships
+    claims: List["ChallengeClaim"] = Relationship(back_populates="weekly_challenge")
+    user_responses: List["UserChallengeResponse"] = Relationship(back_populates="weekly_challenge")
+
+
+class ChallengeClaim(SQLModel, table=True):
+    """Individual ethical claim within a weekly challenge."""
+    __tablename__ = "challenge_claims"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    weekly_challenge_id: int = Field(foreign_key="weekly_challenges.id", index=True)
+
+    # Claim content
+    claim_text: str = Field(max_length=300)  # The ethical claim statement
+    claim_type: ChallengeClaimType = Field(
+        sa_column=Column(SQLEnum(ChallengeClaimType, values_callable=lambda x: [e.value for e in x]))
+    )
+
+    # Background information
+    background_context: Optional[str] = Field(default=None, max_length=1000)
+    key_statistics: Optional[str] = Field(default=None, max_length=1000)
+    political_lean_distribution: Optional[str] = Field(default=None, max_length=200)
+
+    # AI analysis of claim properties
+    controversy_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    reasonableness_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+
+    # Source tracking
+    source_article_id: Optional[int] = Field(default=None, foreign_key="articles.id")
+    source_topic_ids: Optional[str] = Field(default=None)  # Comma-separated topic IDs
+
+    # Display and ordering
+    display_order: int = Field(default=0)
+    is_active: bool = Field(default=True)
+
+    # Generation metadata
+    generation_method: str = Field(max_length=50, default="automatic")
+    ai_prompt_used: Optional[str] = Field(default=None, max_length=2000)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Relationships
+    weekly_challenge: Optional[WeeklyChallenge] = Relationship(back_populates="claims")
+    user_responses: List["UserChallengeResponse"] = Relationship(back_populates="selected_claim")
+    source_article: Optional[Article] = Relationship(back_populates="challenge_claims")
+
+
+class UserChallengeResponse(SQLModel, table=True):
+    """User's response to a weekly challenge."""
+    __tablename__ = "user_challenge_responses"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    weekly_challenge_id: int = Field(foreign_key="weekly_challenges.id", index=True)
+    selected_claim_id: int = Field(foreign_key="challenge_claims.id", index=True)
+
+    # User's response
+    agreement_level: AgreementLevel = Field(
+        sa_column=Column(SQLEnum(AgreementLevel, values_callable=lambda x: [e.value for e in x]))
+    )
+
+    # Response timing and metadata
+    response_time_seconds: Optional[int] = Field(default=None)  # Time to complete form
+    status: ChallengeResponseStatus = Field(
+        default=ChallengeResponseStatus.PENDING,
+        sa_column=Column(SQLEnum(ChallengeResponseStatus, values_callable=lambda x: [e.value for e in x]), index=True)
+    )
+    responded_at: Optional[datetime] = Field(default=None)  # When user submitted response
+    response_source: str = Field(max_length=50, default="newsletter")  # newsletter, web_form, api
+
+    # Challenge timing
+    challenge_started_at: Optional[datetime] = Field(default=None)  # When 7-day article delivery started
+    challenge_completed_at: Optional[datetime] = Field(default=None)  # When all 7 articles delivered
+
+    # Article engagement tracking
+    articles_sent_count: int = Field(default=0)  # How many challenge articles sent (0-7)
+    articles_engaged_count: int = Field(default=0)  # How many articles user opened/clicked
+
+    # User feedback
+    found_valuable: Optional[bool] = Field(default=None)  # Did user find challenge valuable
+    feedback_text: Optional[str] = Field(default=None, max_length=1000)  # User comments
+    opted_out_future: bool = Field(default=False)  # Opt out of future challenges
+
+    # Relationships
+    user: Optional["User"] = Relationship(back_populates="challenge_responses")
+    weekly_challenge: Optional[WeeklyChallenge] = Relationship(back_populates="user_responses")
+    selected_claim: Optional[ChallengeClaim] = Relationship(back_populates="user_responses")
+    article_assignments: List["ChallengeArticleAssignment"] = Relationship(back_populates="user_response")
+
+
+class ChallengeArticleAssignment(SQLModel, table=True):
+    """Daily challenge article assigned to a user."""
+    __tablename__ = "challenge_article_assignments"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_challenge_response_id: int = Field(foreign_key="user_challenge_responses.id", index=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    article_id: int = Field(foreign_key="articles.id", index=True)
+
+    # Assignment details
+    day_number: int = Field(ge=1, le=7)  # Day 1-7 of challenge
+    assignment_date: datetime = Field(index=True)  # When this article should be sent
+
+    # Matching algorithm details
+    opposition_strength: float = Field(ge=0.0, le=1.0)  # How strongly this opposes user's stance
+    match_algorithm: str = Field(max_length=50)  # database, web_search, historical
+    match_reasoning: Optional[str] = Field(default=None, max_length=1000)  # Why this article was selected
+    quality_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+
+    # Delivery tracking
+    is_sent: bool = Field(default=False)  # Whether article has been sent
+    sent_at: Optional[datetime] = Field(default=None)
+    delivery_method: str = Field(max_length=50, default="newsletter")  # newsletter, email, push
+
+    # Engagement tracking
+    is_opened: bool = Field(default=False)  # Whether user opened the article
+    opened_at: Optional[datetime] = Field(default=None)
+    is_clicked: bool = Field(default=False)  # Whether user clicked to read full article
+    clicked_at: Optional[datetime] = Field(default=None)
+    time_to_click_seconds: Optional[int] = Field(default=None)  # Time from send to click
+
+    # User feedback
+    user_feedback_helpful: Optional[bool] = Field(default=None)
+    user_reported_inappropriate: bool = Field(default=False)
+
+    # Metadata
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Relationships
+    user_response: Optional[UserChallengeResponse] = Relationship(back_populates="article_assignments")
+    user: Optional["User"] = Relationship(back_populates="challenge_assignments")
+    article: Optional[Article] = Relationship(back_populates="challenge_assignments")
+    engagement_events: List["ChallengeEngagement"] = Relationship(back_populates="challenge_assignment")
+
+
+class ChallengeEngagement(SQLModel, table=True):
+    """Analytics tracking for challenge system engagement."""
+    __tablename__ = "challenge_engagements"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    challenge_assignment_id: int = Field(foreign_key="challenge_article_assignments.id", index=True)
+
+    # Engagement details
+    engagement_type: str = Field(max_length=50)  # open, click, share, feedback, etc.
+    engagement_value: Optional[str] = Field(default=None, max_length=1000)  # JSON or specific value
+    engagement_time_seconds: Optional[int] = Field(default=None)  # Time spent on engagement
+
+    # User context
+    device_type: Optional[str] = Field(default=None, max_length=50)  # mobile, desktop, tablet
+    referrer: Optional[str] = Field(default=None, max_length=200)  # Source of engagement
+    session_id: Optional[str] = Field(default=None, max_length=100)  # User session
+    ip_address_hash: Optional[str] = Field(default=None, max_length=64)  # Anonymized IP
+
+    # Metadata
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Relationships
+    user: Optional["User"] = Relationship(back_populates="challenge_engagement")
+    challenge_assignment: Optional[ChallengeArticleAssignment] = Relationship(back_populates="engagement_events")

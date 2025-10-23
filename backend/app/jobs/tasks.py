@@ -1105,3 +1105,118 @@ def analyze_single_article_viewpoints_job(article_id: int, session: Session = No
             "article_id": article_id,
             "error": str(e)
         }
+
+
+@track_job_execution("generate_weekly_challenges", "Generate Weekly Challenge Claims")
+def generate_weekly_challenges_job(session: Session = None) -> Dict[str, Any]:
+    """
+    Generate weekly challenge claims for the upcoming week.
+
+    This job runs every Wednesday at 2:00 PM PST to:
+    1. Analyze articles from the past 7 days
+    2. Generate 8-12 candidate ethical claims using AI
+    3. Select and balance 4 claims for the weekly challenge
+    4. Create the WeeklyChallenge and ChallengeClaim records
+    5. Flag for admin review if controversy score > 0.8
+
+    The challenge will be published on Friday (automatically or after admin review).
+    """
+    try:
+        logger.info("Starting weekly challenge generation")
+
+        from ..services.challenge_manager import ChallengeManager
+        from ..database import get_session
+
+        # Use provided session or create new one
+        if session is None:
+            session = next(get_session())
+            should_close_session = True
+        else:
+            should_close_session = False
+
+        try:
+            # Create weekly challenge
+            manager = ChallengeManager(session)
+            challenge = manager.create_weekly_challenge()
+
+            if challenge:
+                needs_review = challenge.needs_admin_review
+                logger.info(f"Successfully created weekly challenge {challenge.id} for week {challenge.week_start_date}")
+
+                if needs_review:
+                    logger.info(f"Challenge {challenge.id} flagged for admin review due to high controversy")
+
+                return {
+                    "success": True,
+                    "challenge_id": challenge.id,
+                    "week_start_date": challenge.week_start_date,
+                    "title": challenge.title,
+                    "needs_admin_review": needs_review,
+                    "claims_count": 4
+                }
+            else:
+                logger.error("Failed to create weekly challenge")
+                return {
+                    "success": False,
+                    "error": "Failed to create weekly challenge - insufficient claims or other error"
+                }
+
+        finally:
+            if should_close_session:
+                session.close()
+
+    except Exception as e:
+        logger.error(f"Weekly challenge generation failed: {e}", exc_info=True)
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@track_job_execution("assign_challenge_articles", "Assign Daily Challenge Articles")
+def assign_challenge_articles_job(session: Session = None) -> Dict[str, Any]:
+    """
+    Assign daily challenge articles to users who have responded to challenges.
+
+    This job runs daily at 6:00 AM PST to:
+    1. Find users who need today's challenge article
+    2. Find articles that oppose their selected claim stance
+    3. Assign the article for delivery
+    4. Track assignment and engagement metrics
+    """
+    try:
+        logger.info("Starting daily challenge article assignment")
+
+        from ..services.challenge_article_matcher import ChallengeArticleMatcher
+        from ..database import get_session
+
+        # Use provided session or create new one
+        if session is None:
+            session = next(get_session())
+            should_close_session = True
+        else:
+            should_close_session = False
+
+        try:
+            # Create matcher and process assignments
+            matcher = ChallengeArticleMatcher(session)
+            assignments_count = matcher.process_daily_assignments()
+
+            logger.info(f"Successfully assigned {assignments_count} challenge articles")
+
+            return {
+                "success": True,
+                "assignments_count": assignments_count,
+                "processed_date": datetime.utcnow()
+            }
+
+        finally:
+            if should_close_session:
+                session.close()
+
+    except Exception as e:
+        logger.error(f"Daily challenge article assignment failed: {e}", exc_info=True)
+        return {
+            "success": False,
+            "error": str(e)
+        }

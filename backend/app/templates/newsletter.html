@@ -271,6 +271,95 @@
             margin-top: 15px;
             font-size: 11px;
         }
+
+        /* Challenge Section Styles */
+        .challenge-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        }
+        .challenge-section .section-title {
+            color: white;
+            margin-bottom: 15px;
+            font-size: 22px;
+        }
+        .challenge-intro {
+            margin-bottom: 25px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        .challenge-intro em {
+            opacity: 0.9;
+            font-style: italic;
+        }
+        .claims-container {
+            margin-bottom: 25px;
+        }
+        .claim-option {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        .claim-option:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+        .claim-number {
+            font-size: 20px;
+            font-weight: bold;
+            color: #FFE082;
+            margin-bottom: 8px;
+        }
+        .claim-text {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+        .claim-type {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.8);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .challenge-cta {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .challenge-button {
+            display: inline-block;
+            background: #FFD54F;
+            color: #333;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 213, 79, 0.3);
+        }
+        .challenge-button:hover {
+            background: #FFC107;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 213, 79, 0.4);
+        }
+        .challenge-note {
+            text-align: center;
+            opacity: 0.8;
+        }
+        .challenge-note p {
+            margin: 0;
+            font-size: 13px;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -284,6 +373,41 @@
             <p>Hello {{ user_name }},</p>
             <p>Here's your personalized news digest featuring <strong>{{ article_count }}</strong> articles. Each article includes context about the underlying ethical debates to help you think critically while you read.</p>
         </div>
+
+        <!-- Challenge Section (Fridays only) -->
+        {% if challenge %}
+        <div class="section challenge-section">
+            <div class="section-title">🤔 Weekly Ethical Challenge</div>
+            <div class="challenge-intro">
+                <p>This week's ethical dilemma. Choose one claim that resonates with you:</p>
+                {% if challenge.description %}
+                <p><em>{{ challenge.description }}</em></p>
+                {% endif %}
+            </div>
+
+            <div class="claims-container">
+                {% for claim in challenge.claims %}
+                <div class="claim-option">
+                    <div class="claim-number">{{ claim.display_order }}.</div>
+                    <div class="claim-text">{{ claim.claim_text }}</div>
+                    <div class="claim-type">{{ claim.claim_type }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="challenge-cta">
+                <a href="{{ website_url }}/challenge/{{ challenge.week_start_date }}"
+                   class="challenge-button"
+                   target="_blank">
+                    Share Your Perspective →
+                </a>
+            </div>
+
+            <div class="challenge-note">
+                <p><small>This challenge helps you explore different ethical viewpoints. Your selection will guide a 7-day series of articles that broaden your perspective.</small></p>
+            </div>
+        </div>
+        {% endif %}
 
         <div class="section">
             <div class="section-title">📰 Today's Articles</div>
