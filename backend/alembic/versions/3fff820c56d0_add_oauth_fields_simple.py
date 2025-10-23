@@ -1,8 +1,8 @@
 """Add OAuth fields to users table only
 
-Revision ID: add_oauth_fields_simple
-Revises: 42b4c05de3af
-Create Date: 2025-10-22 08:30:00.000000
+Revision ID: 3fff820c56d0
+Revises: e7b694a129c8
+Create Date: 2025-10-22 10:00:00.000000
 
 """
 from typing import Sequence, Union
@@ -10,8 +10,9 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
+
 # revision identifiers, used by Alembic.
-revision: str = 'add_oauth_fields_simple'
+revision: str = '3fff820c56d0'
 down_revision: Union[str, None] = 'e7b694a129c8'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

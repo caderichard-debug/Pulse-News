@@ -13,7 +13,7 @@ import logging
 from ..database import get_session
 from ..models import User, OAuthAccount
 from ..services.oauth_service import OAuthService
-from ..utils.auth import get_current_user
+from .auth import get_current_user
 
 router = APIRouter(prefix="/auth/oauth", tags=["oauth authentication"])
 logger = logging.getLogger(__name__)
