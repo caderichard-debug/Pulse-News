@@ -1182,6 +1182,108 @@ class ApiClient {
       engaged_articles_count: number;
     }>>('/challenge/responses');
   }
+
+  async getChallengeAnalytics() {
+    return this.request<{
+      participation_metrics: {
+        total_challenges: number;
+        completed_challenges: number;
+        completion_rate: number;
+        current_streak: number;
+        longest_streak: number;
+        first_participation: string | null;
+        last_participation: string | null;
+      };
+      engagement_metrics: {
+        total_articles_assigned: number;
+        total_articles_engaged: number;
+        engagement_rate: number;
+        average_articles_per_challenge: number;
+        average_completion_time: number;
+      };
+      response_patterns: {
+        agreement_distribution: Record<string, number>;
+        claim_type_preferences: Record<string, any>;
+        temporal_patterns: Record<string, any>;
+        controversy_engagement: Record<string, any>;
+      };
+      quality_indicators: {
+        response_quality_score: number;
+        engagement_consistency: number;
+        perspective_diversity_score: number;
+        improvement_trend: string;
+      };
+      recent_performance: Array<{
+        week_start_date: string;
+        claim_type: string;
+        agreement_level: string;
+        articles_assigned: number;
+        articles_completed: number;
+        completion_rate: number;
+        status: string;
+      }>;
+      generated_at: string;
+    }>('/challenge/analytics');
+  }
+
+  async getChallengePerformanceAnalytics(challengeId: number) {
+    return this.request<{
+      challenge_info: {
+        id: number;
+        week_start_date: string;
+        title: string;
+        claim_count: number;
+      };
+      participation_metrics: {
+        total_responses: number;
+        eligible_users: number;
+        participation_rate: number;
+        completion_rate: number;
+        average_agreement_level: number;
+      };
+      claim_performance: Array<{
+        claim_id: number;
+        claim_text: string;
+        claim_type: string;
+        total_responses: number;
+        agreement_distribution: Record<string, number>;
+        total_assignments: number;
+        completed_assignments: number;
+        engagement_rate: number;
+      }>;
+      engagement_quality: {
+        justification_rate: number;
+        article_completion_rate: number;
+        thoughtful_responses: number;
+        overall_quality_score: number;
+      };
+      generated_at: string;
+    }>(`/challenge/analytics/performance/${challengeId}`);
+  }
+
+  async getChallengeParticipationTrends(weeks?: number) {
+    const params = weeks ? `?weeks=${weeks}` : '';
+    return this.request<{
+      trends: Array<{
+        week_start: string;
+        participated: boolean;
+        claim_type: string | null;
+        agreement_level: string | null;
+        assignments: {
+          assigned: number;
+          completed: number;
+        };
+        completion_rate: number;
+      }>;
+      summary: {
+        total_weeks: number;
+        participated_weeks: number;
+        participation_rate: number;
+        average_completion_rate: number;
+      };
+      generated_at: string;
+    }>(`/challenge/analytics/trends${params}`);
+  }
 }
 
 export { ApiClient };

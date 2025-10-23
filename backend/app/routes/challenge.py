@@ -19,6 +19,7 @@ from ..models import (
 from ..routes.auth import get_current_user
 from ..services.challenge_manager import ChallengeManager
 from ..services.challenge_article_matcher import ChallengeArticleMatcher
+from ..services.challenge_analytics import ChallengeAnalytics
 
 router = APIRouter(prefix="/challenge", tags=["challenge"])
 
@@ -695,6 +696,120 @@ def update_assignment(
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=500, detail=f"Error updating assignment: {str(e)}")
+
+
+@router.get("/analytics", response_model=Dict[str, Any])
+def get_challenge_analytics(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Get comprehensive challenge analytics for the current user.
+
+    Returns participation metrics, engagement patterns, and personalized insights.
+    """
+    try:
+        analytics = ChallengeAnalytics(session)
+        user_analytics = analytics.get_user_analytics(current_user.id)
+        return user_analytics
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting challenge analytics: {str(e)}")
+
+
+@router.get("/analytics/performance/{challenge_id}", response_model=Dict[str, Any])
+def get_challenge_performance_analytics(
+    challenge_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Get detailed performance analytics for a specific challenge.
+
+    Returns metrics on claim performance, participation rates, and engagement quality.
+    """
+    try:
+        analytics = ChallengeAnalytics(session)
+        performance = analytics.get_challenge_performance(challenge_id)
+        return performance
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting challenge performance: {str(e)}")
+
+
+@router.get("/analytics/trends", response_model=Dict[str, Any])
+def get_participation_trends(
+    weeks: int = Query(default=12, le=52, ge=1),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Get participation trends over time.
+
+    Returns weekly participation data for analyzing patterns and trends.
+    """
+    try:
+        # Get user's participation over specified weeks
+        trends = []
+        current_date = datetime.utcnow().date()
+
+        for week_offset in range(weeks - 1, -1, -1):
+            week_start = current_date - timedelta(weeks=week_offset, days=current_date.weekday())
+            week_start_str = week_start.strftime("%Y-%m-%d")
+
+            # Check if user responded to challenge that week
+            response = session.exec(
+                select(UserChallengeResponse)
+                .where(
+                    and_(
+                        UserChallengeResponse.user_id == current_user.id,
+                        UserChallengeResponse.week_start_date == week_start_str
+                    )
+                )
+            ).first()
+
+            # Get assignment data for that week
+            assignments_data = {"assigned": 0, "completed": 0}
+            if response:
+                assigned_count = session.exec(
+                    select(func.count(ChallengeArticleAssignment.id))
+                    .where(ChallengeArticleAssignment.challenge_response_id == str(response.id))
+                ).one() or 0
+
+                completed_count = session.exec(
+                    select(func.count(ChallengeArticleAssignment.id))
+                    .where(
+                        and_(
+                            ChallengeArticleAssignment.challenge_response_id == str(response.id),
+                            ChallengeArticleAssignment.is_completed == True
+                        )
+                    )
+                ).one() or 0
+
+                assignments_data = {"assigned": assigned_count, "completed": completed_count}
+
+            trends.append({
+                "week_start": week_start_str,
+                "participated": response is not None,
+                "claim_type": session.get(ChallengeClaim, response.claim_id).claim_type.value if response else None,
+                "agreement_level": response.agreement_level.value if response and response.agreement_level else None,
+                "assignments": assignments_data,
+                "completion_rate": round((assignments_data["completed"] / assignments_data["assigned"] * 100), 1) if assignments_data["assigned"] > 0 else 0
+            })
+
+        return {
+            "trends": trends,
+            "summary": {
+                "total_weeks": len(trends),
+                "participated_weeks": len([t for t in trends if t["participated"]]),
+                "participation_rate": round((len([t for t in trends if t["participated"]]) / len(trends)) * 100, 1),
+                "average_completion_rate": round(sum(t["completion_rate"] for t in trends if t["participated"]) / max(len([t for t in trends if t["participated"]]), 1), 1)
+            },
+            "generated_at": datetime.utcnow().isoformat()
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting participation trends: {str(e)}")
 
 
 @router.post("/feedback")

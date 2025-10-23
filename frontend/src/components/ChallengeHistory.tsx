@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import ChallengeAssignments from './ChallengeAssignments';
+import ChallengeAnalyticsDashboard from './ChallengeAnalyticsDashboard';
 
 interface ChallengeResponse {
   id: string;
@@ -36,6 +37,7 @@ export default function ChallengeHistory({ userId }: ChallengeHistoryProps) {
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [selectedResponse, setSelectedResponse] = useState<ChallengeResponse | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'history'>('overview');
 
   useEffect(() => {
     loadChallengeData();
@@ -137,163 +139,262 @@ export default function ChallengeHistory({ userId }: ChallengeHistoryProps) {
 
   return (
     <div className="space-y-6">
-      {/* Statistics Overview */}
-      {statistics && (
-        <div className="bg-card rounded-lg shadow-sm p-6">
-          <h3 className="text-xl font-semibold text-foreground mb-4">Your Challenge Insights</h3>
+      {/* Tab Navigation */}
+      <div className="bg-card rounded-lg shadow-sm p-6">
+        <div className="border-b border-border">
+          <nav className="flex space-x-8">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'overview'
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+              }`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'analytics'
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+              }`}
+            >
+              Detailed Analytics
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'history'
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+              }`}
+            >
+              Response History
+            </button>
+          </nav>
+        </div>
+      </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-                {statistics.total_participated}
+      {/* Tab Content */}
+      {activeTab === 'overview' && statistics && (
+        <div className="space-y-6">
+          {/* Statistics Overview */}
+          <div className="bg-card rounded-lg shadow-sm p-6">
+            <h3 className="text-xl font-semibold text-foreground mb-4">Your Challenge Insights</h3>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                  {statistics.total_participated}
+                </div>
+                <div className="text-sm text-muted-foreground">Challenges Completed</div>
               </div>
-              <div className="text-sm text-muted-foreground">Challenges Completed</div>
+
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  {statistics.participation_streak}
+                </div>
+                <div className="text-sm text-muted-foreground">Week Streak</div>
+              </div>
+
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                  {statistics.average_agreement_level.toFixed(1)}/5.0
+                </div>
+                <div className="text-sm text-muted-foreground">Avg Agreement</div>
+              </div>
+
+              <div className="text-center">
+                <div className={`text-2xl font-bold ${
+                  statistics.current_week_responded
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-orange-600 dark:text-orange-400'
+                }`}>
+                  {statistics.current_week_responded ? '✓' : '○'}
+                </div>
+                <div className="text-sm text-muted-foreground">This Week</div>
+              </div>
             </div>
 
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                {statistics.participation_streak}
+            {/* Claim Type Breakdown */}
+            {Object.keys(statistics.claim_type_breakdown).length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-foreground mb-2">Claim Type Preferences</h4>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(statistics.claim_type_breakdown).map(([type, count]) => (
+                    <span
+                      key={type}
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${getClaimTypeColor(type)}`}
+                    >
+                      {type.replace('_', ' ')} ({count})
+                    </span>
+                  ))}
+                </div>
               </div>
-              <div className="text-sm text-muted-foreground">Week Streak</div>
-            </div>
-
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                {statistics.average_agreement_level.toFixed(1)}/5.0
-              </div>
-              <div className="text-sm text-muted-foreground">Avg Agreement</div>
-            </div>
-
-            <div className="text-center">
-              <div className={`text-2xl font-bold ${
-                statistics.current_week_responded
-                  ? 'text-emerald-600 dark:text-emerald-400'
-                  : 'text-orange-600 dark:text-orange-400'
-              }`}>
-                {statistics.current_week_responded ? '✓' : '○'}
-              </div>
-              <div className="text-sm text-muted-foreground">This Week</div>
-            </div>
+            )}
           </div>
 
-          {/* Claim Type Breakdown */}
-          {Object.keys(statistics.claim_type_breakdown).length > 0 && (
-            <div>
-              <h4 className="text-sm font-medium text-foreground mb-2">Claim Type Preferences</h4>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(statistics.claim_type_breakdown).map(([type, count]) => (
-                  <span
-                    key={type}
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${getClaimTypeColor(type)}`}
-                  >
-                    {type.replace('_', ' ')} ({count})
-                  </span>
-                ))}
-              </div>
+          {/* Recent Response Preview */}
+          {responses.length > 0 && (
+            <div className="bg-card rounded-lg shadow-sm p-6">
+              <h3 className="text-xl font-semibold text-foreground mb-4">Recent Response</h3>
+              {(() => {
+                const recentResponse = responses[0];
+                return (
+                  <div className="border border-border rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${getClaimTypeColor(recentResponse.claim_type)}`}>
+                        {recentResponse.claim_type.replace('_', ' ')}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        {formatDate(recentResponse.week_start_date)}
+                      </span>
+                    </div>
+
+                    <p className="text-foreground font-medium mb-2">{recentResponse.claim_text}</p>
+
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className="flex items-center gap-1">
+                        <span className="text-muted-foreground">Your stance:</span>
+                        <span className={`font-medium ${getAgreementLevelColor(recentResponse.agreement_level)}`}>
+                          {getAgreementLevelText(recentResponse.agreement_level)}
+                        </span>
+                      </div>
+
+                      {recentResponse.assigned_articles_count > 0 && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-muted-foreground">Articles read:</span>
+                          <span className="font-medium text-foreground">
+                            {recentResponse.engaged_articles_count}/{recentResponse.assigned_articles_count}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {recentResponse.assigned_articles_count > 0 && (
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <button
+                          onClick={() => setActiveTab('history')}
+                          className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium"
+                        >
+                          View Full History →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
       )}
 
-      {/* Response History */}
-      <div className="bg-card rounded-lg shadow-sm p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold text-foreground">Your Recent Responses</h3>
-          {responses.length > 5 && (
-            <button
-              onClick={() => setShowAll(!showAll)}
-              className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
-            >
-              {showAll ? 'Show Less' : `Show All (${responses.length})`}
-            </button>
-          )}
-        </div>
+      {activeTab === 'analytics' && (
+        <ChallengeAnalyticsDashboard />
+      )}
 
-        {displayedResponses.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="text-gray-400 dark:text-gray-500 text-4xl mb-3">📝</div>
-            <p className="text-muted-foreground">
-              You haven't responded to any challenges yet.
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Check your Friday newsletter for this week's challenge!
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {displayedResponses.map((response) => (
-              <div
-                key={response.id}
-                className="border border-border rounded-lg p-4 hover:shadow-sm transition-shadow"
+      {activeTab === 'history' && (
+        <div className="bg-card rounded-lg shadow-sm p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-semibold text-foreground">Your Response History</h3>
+            {responses.length > 5 && (
+              <button
+                onClick={() => setShowAll(!showAll)}
+                className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
               >
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${getClaimTypeColor(response.claim_type)}`}>
-                        {response.claim_type.replace('_', ' ')}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {formatDate(response.week_start_date)}
-                      </span>
-                    </div>
+                {showAll ? 'Show Less' : `Show All (${responses.length})`}
+              </button>
+            )}
+          </div>
 
-                    <p className="text-foreground font-medium mb-2">{response.claim_text}</p>
-
-                    <div className="flex items-center gap-4 text-sm">
-                      <div className="flex items-center gap-1">
-                        <span className="text-muted-foreground">Your stance:</span>
-                        <span className={`font-medium ${getAgreementLevelColor(response.agreement_level)}`}>
-                          {getAgreementLevelText(response.agreement_level)}
+          {displayedResponses.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-gray-400 dark:text-gray-500 text-4xl mb-3">📝</div>
+              <p className="text-muted-foreground">
+                You haven't responded to any challenges yet.
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Check your Friday newsletter for this week's challenge!
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {displayedResponses.map((response) => (
+                <div
+                  key={response.id}
+                  className="border border-border rounded-lg p-4 hover:shadow-sm transition-shadow"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${getClaimTypeColor(response.claim_type)}`}>
+                          {response.claim_type.replace('_', ' ')}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          {formatDate(response.week_start_date)}
                         </span>
                       </div>
 
-                      {response.assigned_articles_count > 0 && (
+                      <p className="text-foreground font-medium mb-2">{response.claim_text}</p>
+
+                      <div className="flex items-center gap-4 text-sm">
                         <div className="flex items-center gap-1">
-                          <span className="text-muted-foreground">Articles read:</span>
-                          <span className="font-medium text-foreground">
-                            {response.engaged_articles_count}/{response.assigned_articles_count}
+                          <span className="text-muted-foreground">Your stance:</span>
+                          <span className={`font-medium ${getAgreementLevelColor(response.agreement_level)}`}>
+                            {getAgreementLevelText(response.agreement_level)}
                           </span>
                         </div>
-                      )}
+
+                        {response.assigned_articles_count > 0 && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-muted-foreground">Articles read:</span>
+                            <span className="font-medium text-foreground">
+                              {response.engaged_articles_count}/{response.assigned_articles_count}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
+
+                  {response.justification && (
+                    <div className="mt-3 p-3 bg-muted rounded-md">
+                      <p className="text-sm text-muted-foreground italic">
+                        "{response.justification}"
+                      </p>
+                    </div>
+                  )}
+
+                  {response.assigned_articles_count > 0 && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <button
+                        onClick={() => setSelectedResponse(
+                          selectedResponse?.id === response.id ? null : response
+                        )}
+                        className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium"
+                      >
+                        {selectedResponse?.id === response.id ? 'Hide' : 'View'} Assigned Articles
+                        ({response.engaged_articles_count}/{response.assigned_articles_count} read)
+                      </button>
+                    </div>
+                  )}
                 </div>
+              ))}
 
-                {response.justification && (
-                  <div className="mt-3 p-3 bg-muted rounded-md">
-                    <p className="text-sm text-muted-foreground italic">
-                      "{response.justification}"
-                    </p>
-                  </div>
-                )}
-
-                {response.assigned_articles_count > 0 && (
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <button
-                      onClick={() => setSelectedResponse(
-                        selectedResponse?.id === response.id ? null : response
-                      )}
-                      className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium"
-                    >
-                      {selectedResponse?.id === response.id ? 'Hide' : 'View'} Assigned Articles
-                      ({response.engaged_articles_count}/{response.assigned_articles_count} read)
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {selectedResponse && (
-              <div className="mt-6 pt-6 border-t border-border">
-                <ChallengeAssignments
-                  responseId={selectedResponse.id}
-                  weekStartDate={selectedResponse.week_start_date}
-                />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+              {selectedResponse && (
+                <div className="mt-6 pt-6 border-t border-border">
+                  <ChallengeAssignments
+                    responseId={selectedResponse.id}
+                    weekStartDate={selectedResponse.week_start_date}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
