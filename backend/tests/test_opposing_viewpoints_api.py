@@ -17,13 +17,13 @@ from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
 import json
 
-from ..main import app
-from ..models import (
+from backend.main import app
+from backend.models import (
     User, Article, ArticleAnalysis, Source, ViewpointRelationship,
     Framework, ArticleFrameworkLink, PoliticalLean
 )
-from ..database import get_session
-from ..routes.auth import create_access_token
+from backend.database import get_session
+from backend.routes.auth import create_access_token
 
 
 @pytest.fixture
@@ -36,7 +36,7 @@ def client():
 def session():
     """Create test database session"""
     engine = create_engine("sqlite:///:memory:")
-    from ..models import SQLModel
+    from backend.models import SQLModel
     SQLModel.metadata.create_all(engine)
     SessionLocal = sessionmaker(bind=engine)
     session = SessionLocal()

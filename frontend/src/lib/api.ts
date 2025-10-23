@@ -1105,21 +1105,11 @@ class ApiClient {
 
   async getChallengeStatistics() {
     return this.request<{
-      total_responses: number;
-      completed_challenges: number;
-      completion_rate: number;
-      articles_received: number;
-      articles_engaged: number;
-      engagement_rate: number;
-      agreement_distribution: Array<{
-        level: string;
-        count: number;
-      }>;
-      most_engaged_claims: Array<{
-        claim_text: string;
-        claim_type: string;
-        engagement_count: number;
-      }>;
+      total_participated: number;
+      average_agreement_level: number;
+      claim_type_breakdown: Record<string, number>;
+      participation_streak: number;
+      current_week_responded: boolean;
     }>('/challenge/statistics');
   }
 
@@ -1136,27 +1126,61 @@ class ApiClient {
     });
   }
 
-  async getChallengeAssignments(limit?: number) {
-    const params = limit ? `?limit=${limit}` : '';
+  async getChallengeAssignments(responseId?: string, limit?: number) {
+    const params = new URLSearchParams();
+    if (responseId) params.append('response_id', responseId);
+    if (limit) params.append('limit', limit.toString());
+
     return this.request<Array<{
-      id: number;
-      day_number: number;
-      assignment_date: string;
-      opposition_strength: number;
-      is_sent: boolean;
-      is_opened: boolean;
-      is_clicked: boolean;
+      id: string;
+      challenge_response_id: string;
+      article_id: number;
+      sequence_day: number;
       article: {
         id: number;
         title: string;
         url: string;
-        source_name: string;
+        source: {
+          name: string;
+          organizational_bias: string;
+        };
         published_at: string;
         summary?: string;
         sentiment_score?: number;
         political_lean?: string;
+        opposition_score?: number;
       };
-    }>>(`/challenge/assignments${params}`);
+      is_completed: boolean;
+      completed_at?: string;
+      engagement_score?: number;
+    }>>(`/challenge/assignments?${params.toString()}`);
+  }
+
+  async updateChallengeAssignment(assignmentId: string, data: {
+    is_completed: boolean;
+  }) {
+    return this.request<{
+      success: boolean;
+      message: string;
+    }>(`/challenge/assignments/${assignmentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getChallengeResponses() {
+    return this.request<Array<{
+      id: string;
+      week_start_date: string;
+      claim_id: string;
+      claim_text: string;
+      claim_type: string;
+      agreement_level: number;
+      justification?: string;
+      submitted_at: string;
+      assigned_articles_count: number;
+      engaged_articles_count: number;
+    }>>('/challenge/responses');
   }
 }
 

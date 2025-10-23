@@ -409,95 +409,104 @@ def get_challenge_statistics(
     """
     try:
         # Get total responses
-        total_responses = session.exec(
+        total_participated = session.exec(
             select(func.count(UserChallengeResponse.id))
             .where(UserChallengeResponse.user_id == current_user.id)
         ).one()
 
-        if total_responses == 0:
+        if total_participated == 0:
             return {
-                "total_responses": 0,
-                "completed_challenges": 0,
-                "completion_rate": 0.0,
-                "articles_received": 0,
-                "articles_engaged": 0,
-                "engagement_rate": 0.0,
-                "favorite_agreement_levels": [],
-                "most_engaged_claims": []
+                "total_participated": 0,
+                "average_agreement_level": 0.0,
+                "claim_type_breakdown": {},
+                "participation_streak": 0,
+                "current_week_responded": False
             }
 
-        # Get completed challenges
-        completed_challenges = session.exec(
-            select(func.count(UserChallengeResponse.id))
-            .where(
-                and_(
-                    UserChallengeResponse.user_id == current_user.id,
-                    UserChallengeResponse.status == ChallengeResponseStatus.COMPLETED
-                )
-            )
-        ).one()
+        # Get average agreement level (convert text to number)
+        agreement_map = {
+            "STRONGLY_DISAGREE": 1,
+            "DISAGREE": 2,
+            "NEUTRAL": 3,
+            "AGREE": 4,
+            "STRONGLY_AGREE": 5
+        }
 
-        # Get total articles received and engaged
-        articles_stats = session.exec(
-            select(
-                func.sum(UserChallengeResponse.articles_sent_count),
-                func.sum(UserChallengeResponse.articles_engaged_count)
-            )
+        avg_agreement_result = session.exec(
+            select(func.avg(UserChallengeResponse.agreement_level))
             .where(UserChallengeResponse.user_id == current_user.id)
         ).first()
 
-        total_articles_received = articles_stats[0] or 0
-        total_articles_engaged = articles_stats[1] or 0
+        average_agreement_level = 0.0
+        if avg_agreement_result:
+            # Convert text agreement to numeric average
+            text_responses = session.exec(
+                select(UserChallengeResponse.agreement_level)
+                .where(UserChallengeResponse.user_id == current_user.id)
+            ).all()
 
-        # Get agreement level distribution
-        agreement_dist = session.exec(
+            numeric_values = [agreement_map.get(response, 3) for response in text_responses]
+            average_agreement_level = sum(numeric_values) / len(numeric_values) if numeric_values else 0.0
+
+        # Get claim type breakdown
+        claim_type_stats = session.exec(
             select(
-                UserChallengeResponse.agreement_level,
+                ChallengeClaim.claim_type,
                 func.count(UserChallengeResponse.id)
             )
+            .join(ChallengeClaim, UserChallengeResponse.claim_id == ChallengeClaim.id)
             .where(UserChallengeResponse.user_id == current_user.id)
-            .group_by(UserChallengeResponse.agreement_level)
+            .group_by(ChallengeClaim.claim_type)
         ).all()
 
-        # Get most engaged claims (where user actually engaged with articles)
-        engaged_claims_query = session.exec(
-            select(
-                ChallengeClaim.claim_text,
-                ChallengeClaim.claim_type,
-                func.count(UserChallengeResponse.id).label('engagement_count')
-            )
-            .join(UserChallengeResponse, ChallengeClaim.id == UserChallengeResponse.selected_claim_id)
+        claim_type_breakdown = {
+            claim_type: count for claim_type, count in claim_type_stats
+        }
+
+        # Calculate participation streak
+        responses_with_dates = session.exec(
+            select(UserChallengeResponse.week_start_date)
+            .where(UserChallengeResponse.user_id == current_user.id)
+            .order_by(UserChallengeResponse.week_start_date.desc())
+            .limit(10)  # Check last 10 responses for streak
+        ).all()
+
+        participation_streak = 0
+        if responses_with_dates:
+            current_streak = 1
+            for i in range(1, len(responses_with_dates)):
+                prev_date = datetime.strptime(responses_with_dates[i-1], "%Y-%m-%d").date()
+                curr_date = datetime.strptime(responses_with_dates[i], "%Y-%m-%d").date()
+
+                # Check if dates are exactly 7 days apart (consecutive weeks)
+                if (prev_date - curr_date).days == 7:
+                    current_streak += 1
+                else:
+                    break
+            participation_streak = current_streak
+
+        # Check if user responded to current week
+        current_week_start = datetime.now().date() - timedelta(days=datetime.now().weekday())
+        current_week_start_str = current_week_start.strftime("%Y-%m-%d")
+
+        current_response = session.exec(
+            select(UserChallengeResponse.id)
             .where(
                 and_(
                     UserChallengeResponse.user_id == current_user.id,
-                    UserChallengeResponse.articles_engaged_count > 0
+                    UserChallengeResponse.week_start_date == current_week_start_str
                 )
             )
-            .group_by(ChallengeClaim.id, ChallengeClaim.claim_text, ChallengeClaim.claim_type)
-            .order_by(func.count(UserChallengeResponse.id).desc())
-            .limit(5)
-        ).all()
+        ).first()
+
+        current_week_responded = current_response is not None
 
         return {
-            "total_responses": total_responses,
-            "completed_challenges": completed_challenges,
-            "completion_rate": round((completed_challenges / total_responses) * 100, 1),
-            "articles_received": total_articles_received,
-            "articles_engaged": total_articles_engaged,
-            "engagement_rate": round(
-                (total_articles_engaged / total_articles_received * 100) if total_articles_received > 0 else 0, 1
-            ),
-            "agreement_distribution": [
-                {"level": level.value, "count": count} for level, count in agreement_dist
-            ],
-            "most_engaged_claims": [
-                {
-                    "claim_text": claim.claim_text,
-                    "claim_type": claim.claim_type.value,
-                    "engagement_count": claim.engagement_count
-                }
-                for claim in engaged_claims_query
-            ]
+            "total_participated": total_participated,
+            "average_agreement_level": average_agreement_level,
+            "claim_type_breakdown": claim_type_breakdown,
+            "participation_streak": participation_streak,
+            "current_week_responded": current_week_responded
         }
 
     except Exception as e:
@@ -506,7 +515,8 @@ def get_challenge_statistics(
 
 @router.get("/assignments", response_model=List[Dict[str, Any]])
 def get_user_assignments(
-    limit: int = Query(default=20, le=50, ge=1),
+    response_id: str = Query(default=None),
+    limit: int = Query(default=50, le=100, ge=1),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
@@ -514,17 +524,177 @@ def get_user_assignments(
     Get user's challenge article assignments.
 
     Returns the articles assigned for active challenges with engagement data.
+    Can filter by specific response ID.
     """
     try:
         from ..services.challenge_article_matcher import ChallengeArticleMatcher
 
         matcher = ChallengeArticleMatcher(session)
-        assignments = matcher.get_user_assignments(current_user.id, limit)
 
-        return assignments
+        if response_id:
+            # Get assignments for specific response
+            assignments = session.exec(
+                select(ChallengeArticleAssignment)
+                .where(ChallengeArticleAssignment.challenge_response_id == response_id)
+                .order_by(ChallengeArticleAssignment.sequence_day)
+                .limit(limit)
+            ).all()
+        else:
+            # Get all user assignments
+            assignments = session.exec(
+                select(ChallengeArticleAssignment)
+                .join(UserChallengeResponse, ChallengeArticleAssignment.challenge_response_id == UserChallengeResponse.id)
+                .where(UserChallengeResponse.user_id == current_user.id)
+                .order_by(ChallengeArticleAssignment.sequence_day.desc())
+                .limit(limit)
+            ).all()
+
+        result = []
+        for assignment in assignments:
+            # Get article details with opposition score
+            article_query = session.exec(
+                select(Article, Source)
+                .join(Source, Article.source_id == Source.id)
+                .where(Article.id == assignment.article_id)
+            ).first()
+
+            if article_query:
+                article, source = article_query
+
+                # Get opposition score if available
+                opposition_score = None
+                if hasattr(assignment, 'opposition_score'):
+                    opposition_score = assignment.opposition_score
+
+                result.append({
+                    "id": str(assignment.id),
+                    "challenge_response_id": str(assignment.challenge_response_id),
+                    "article_id": article.id,
+                    "sequence_day": assignment.sequence_day,
+                    "article": {
+                        "id": article.id,
+                        "title": article.title,
+                        "url": article.url,
+                        "source": {
+                            "name": source.name,
+                            "organizational_bias": source.organizational_bias
+                        },
+                        "published_at": article.published_at.isoformat(),
+                        "summary": article.summary,
+                        "sentiment_score": None,  # Would need to join with ArticleAnalysis
+                        "political_lean": None,  # Would need to join with ArticleAnalysis
+                        "opposition_score": opposition_score
+                    },
+                    "is_completed": assignment.is_completed,
+                    "completed_at": assignment.completed_at.isoformat() if assignment.completed_at else None,
+                    "engagement_score": assignment.engagement_score
+                })
+
+        return result
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting assignments: {str(e)}")
+
+
+@router.get("/responses", response_model=List[Dict[str, Any]])
+def get_challenge_responses(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Get user's challenge responses with detailed information.
+
+    Returns all challenge responses with claim details and article counts.
+    """
+    try:
+        responses = session.exec(
+            select(UserChallengeResponse, ChallengeClaim)
+            .join(ChallengeClaim, UserChallengeResponse.claim_id == ChallengeClaim.id)
+            .where(UserChallengeResponse.user_id == current_user.id)
+            .order_by(UserChallengeResponse.submitted_at.desc())
+        ).all()
+
+        result = []
+        for response, claim in responses:
+            # Get assignment counts
+            assigned_count = session.exec(
+                select(func.count(ChallengeArticleAssignment.id))
+                .where(ChallengeArticleAssignment.challenge_response_id == str(response.id))
+            ).one() or 0
+
+            engaged_count = session.exec(
+                select(func.count(ChallengeArticleAssignment.id))
+                .where(
+                    and_(
+                        ChallengeArticleAssignment.challenge_response_id == str(response.id),
+                        ChallengeArticleAssignment.is_completed == True
+                    )
+                )
+            ).one() or 0
+
+            result.append({
+                "id": str(response.id),
+                "week_start_date": response.week_start_date,
+                "claim_id": str(response.claim_id),
+                "claim_text": claim.claim_text,
+                "claim_type": claim.claim_type.value,
+                "agreement_level": int(response.agreement_level.value.split('_')[1]) if response.agreement_level else 3,
+                "justification": response.justification,
+                "submitted_at": response.submitted_at.isoformat() if response.submitted_at else None,
+                "assigned_articles_count": assigned_count,
+                "engaged_articles_count": engaged_count
+            })
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting challenge responses: {str(e)}")
+
+
+@router.put("/assignments/{assignment_id}", response_model=Dict[str, Any])
+def update_assignment(
+    assignment_id: str,
+    update_data: Dict[str, Any],
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Update a challenge assignment (e.g., mark as completed).
+
+    Users can update their assignment status and engagement.
+    """
+    try:
+        # Get the assignment with user verification
+        assignment = session.exec(
+            select(ChallengeArticleAssignment)
+            .join(UserChallengeResponse, ChallengeArticleAssignment.challenge_response_id == UserChallengeResponse.id)
+            .where(
+                and_(
+                    ChallengeArticleAssignment.id == assignment_id,
+                    UserChallengeResponse.user_id == current_user.id
+                )
+            )
+        ).first()
+
+        if not assignment:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+
+        # Update assignment
+        if "is_completed" in update_data:
+            assignment.is_completed = update_data["is_completed"]
+            if update_data["is_completed"] and not assignment.completed_at:
+                assignment.completed_at = datetime.utcnow()
+
+        session.commit()
+
+        return {
+            "success": True,
+            "message": "Assignment updated successfully"
+        }
+
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"Error updating assignment: {str(e)}")
 
 
 @router.post("/feedback")
