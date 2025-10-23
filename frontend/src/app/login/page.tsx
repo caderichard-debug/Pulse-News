@@ -70,6 +70,7 @@ export default function LoginPage() {
         {/* Google Sign-In Button */}
         <div className="mb-6">
           <button
+            type="button"
             onClick={handleGoogleSignIn}
             disabled={oauthLoading || loading}
             className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
