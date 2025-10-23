@@ -492,15 +492,19 @@ function AnalyzePageContent() {
                         {fw.left_position && fw.right_position && fw.position_on_axis !== null && fw.position_on_axis !== undefined && (
                           <>
                             <div className="flex items-center gap-3 text-sm mb-3">
-                              <span className="font-medium">{fw.left_position}</span>
-                              <div className="flex-1 h-2 bg-card/30 rounded-full relative overflow-hidden">
+                              <div className="flex-1 min-w-[80px] max-w-[120px]">
+                                <span className="font-medium text-wrap break-words">{fw.left_position}</span>
+                              </div>
+                              <div className="w-32 h-2 bg-card/30 rounded-full relative overflow-hidden flex-shrink-0">
                                 <div className="absolute inset-0 bg-gradient-to-r from-red-400 via-white to-blue-400 opacity-60"></div>
                                 <div
                                   className="absolute top-0 h-4 w-4 -mt-1 bg-card rounded-full shadow-lg transform -translate-x-1/2 border-2 border-purple-300"
                                   style={{ left: `${((fw.position_on_axis + 10) / 20) * 100}%` }}
                                 ></div>
                               </div>
-                              <span className="font-medium">{fw.right_position}</span>
+                              <div className="flex-1 min-w-[80px] max-w-[120px]">
+                                <span className="font-medium text-wrap break-words">{fw.right_position}</span>
+                              </div>
                             </div>
 
                             <div className="text-center">

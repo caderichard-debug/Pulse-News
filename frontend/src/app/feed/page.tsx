@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
@@ -8,6 +8,147 @@ import SourceBiasBadge from '@/components/SourceBiasBadge';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
 import FavoriteButton from '@/components/FavoriteButton';
 import Footer from '@/components/Footer';
+
+// Multi-select component
+interface MultiSelectProps<T extends string | number> {
+  options: Array<{ value: T; label: string; count?: number }>;
+  selected: T[];
+  onChange: (selected: T[]) => void;
+  placeholder: string;
+  className?: string;
+}
+
+function MultiSelect<T extends string | number>({ options, selected, onChange, placeholder, className = "" }: MultiSelectProps<T>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter options based on search
+  const filteredOptions = options.filter(option =>
+    option.label.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Get display name for selected values
+  const getSelectedLabel = (value: T) => {
+    const option = options.find(opt => opt.value === value);
+    return option ? option.label : value.toString();
+  };
+
+  const handleToggle = (value: T) => {
+    const newSelected = selected.includes(value)
+      ? selected.filter(item => item !== value)
+      : [...selected, value];
+    onChange(newSelected);
+  };
+
+  const handleRemove = (value: T, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newSelected = selected.filter(item => item !== value);
+    onChange(newSelected);
+  };
+
+  const handleClear = () => {
+    onChange([]);
+  };
+
+  return (
+    <div className={`relative ${className}`} ref={dropdownRef}>
+      <div
+        className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground cursor-text min-h-[38px] flex items-center gap-1 flex-wrap"
+        onClick={() => setIsOpen(true)}
+      >
+        {selected.length === 0 ? (
+          <span className="text-muted-foreground">{placeholder}</span>
+        ) : (
+          <>
+            {selected.map((value) => (
+              <span
+                key={value.toString()}
+                className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded text-sm"
+              >
+                {getSelectedLabel(value)}
+                <button
+                  onClick={(e) => handleRemove(value, e)}
+                  className="hover:text-primary/80"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </>
+        )}
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-60 overflow-hidden">
+          {/* Search input */}
+          <div className="p-2 border-b border-border">
+            <input
+              type="text"
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full px-2 py-1 border border-border rounded text-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              autoFocus
+            />
+          </div>
+
+          {/* Clear all button */}
+          {selected.length > 0 && (
+            <div className="p-2 border-b border-border">
+              <button
+                onClick={handleClear}
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Clear all ({selected.length})
+              </button>
+            </div>
+          )}
+
+          {/* Options list */}
+          <div className="max-h-48 overflow-y-auto">
+            {filteredOptions.length === 0 ? (
+              <div className="p-2 text-sm text-muted-foreground">No options found</div>
+            ) : (
+              filteredOptions.map((option) => {
+                const isSelected = selected.includes(option.value);
+                return (
+                  <label
+                    key={option.value.toString()}
+                    className="flex items-center gap-2 p-2 hover:bg-secondary cursor-pointer text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => handleToggle(option.value)}
+                      className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
+                    />
+                    <span className="flex-1">{option.label}</span>
+                    {option.count !== undefined && (
+                      <span className="text-muted-foreground text-xs">({option.count})</span>
+                    )}
+                  </label>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface Article {
   id: number;
@@ -57,9 +198,9 @@ export default function FeedPage() {
 
   // Filters
   const [searchQuery, setSearchQuery] = useState<string>(storedFilters?.searchQuery || '');
-  const [selectedTopic, setSelectedTopic] = useState<string>(storedFilters?.selectedTopic || '');
-  const [selectedSource, setSelectedSource] = useState<number | null>(storedFilters?.selectedSource || null);
-  const [selectedLean, setSelectedLean] = useState<string>(storedFilters?.selectedLean || '');
+  const [selectedTopics, setSelectedTopics] = useState<string[]>(storedFilters?.selectedTopics || []);
+  const [selectedSources, setSelectedSources] = useState<number[]>(storedFilters?.selectedSources || []);
+  const [selectedLeans, setSelectedLeans] = useState<string[]>(storedFilters?.selectedLeans || []);
   const [dateRange, setDateRange] = useState<string>(storedFilters?.dateRange || '');
   const [sortBy, setSortBy] = useState(storedFilters?.sortBy || 'newest');
   const [onlyAnalyzed, setOnlyAnalyzed] = useState(storedFilters?.onlyAnalyzed ?? true);
@@ -74,9 +215,9 @@ export default function FeedPage() {
     if (typeof window !== 'undefined') {
       const filters = {
         searchQuery,
-        selectedTopic,
-        selectedSource,
-        selectedLean,
+        selectedTopics,
+        selectedSources,
+        selectedLeans,
         dateRange,
         sortBy,
         onlyAnalyzed,
@@ -87,7 +228,7 @@ export default function FeedPage() {
       };
       localStorage.setItem('feedFilters', JSON.stringify(filters));
     }
-  }, [searchQuery, selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, hasOpposingViewpoints, page]);
+  }, [searchQuery, selectedTopics, selectedSources, selectedLeans, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, hasOpposingViewpoints, page]);
 
   const loadFeedData = useCallback(async () => {
     try {
@@ -96,9 +237,9 @@ export default function FeedPage() {
         page,
         page_size: 20,
         search: searchQuery || undefined,
-        topic: selectedTopic || undefined,
-        source_id: selectedSource || undefined,
-        political_lean: selectedLean || undefined,
+        topics: selectedTopics.length > 0 ? selectedTopics : undefined,
+        source_ids: selectedSources.length > 0 ? selectedSources : undefined,
+        political_leans: selectedLeans.length > 0 ? selectedLeans : undefined,
         date_range: dateRange || undefined,
         sort_by: sortBy,
         only_analyzed: onlyAnalyzed,
@@ -115,12 +256,12 @@ export default function FeedPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, searchQuery, selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, hasOpposingViewpoints]);
+  }, [page, searchQuery, selectedTopics, selectedSources, selectedLeans, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, hasOpposingViewpoints]);
 
   useEffect(() => {
     loadFeedData();
     loadFilters();
-  }, [searchQuery, selectedTopic, selectedSource, selectedLean, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, hasOpposingViewpoints, page, loadFeedData]);
+  }, [searchQuery, selectedTopics, selectedSources, selectedLeans, dateRange, sortBy, onlyAnalyzed, onlyVerifiedStats, favoritesOnly, hasOpposingViewpoints, page, loadFeedData]);
 
   async function loadFilters() {
     try {
@@ -233,51 +374,47 @@ export default function FeedPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
           {/* Topic filter */}
           <div>
-            <label className="block text-sm font-medium text-card-foreground mb-1">Topic</label>
-            <select
-              value={selectedTopic}
-              onChange={(e) => { setSelectedTopic(e.target.value); setPage(1); }}
-              className="w-full px-3 py-2 border border-border rounded-md text-foreground"
-            >
-              <option value="">All Topics</option>
-              {topics.map((topic) => (
-                <option key={topic.name} value={topic.name}>
-                  {topic.name} ({topic.article_count})
-                </option>
-              ))}
-            </select>
+            <label className="block text-sm font-medium text-card-foreground mb-1">Topics</label>
+            <MultiSelect
+              options={topics.map((topic) => ({
+                value: topic.name,
+                label: topic.name,
+                count: topic.article_count
+              }))}
+              selected={selectedTopics}
+              onChange={(topics) => { setSelectedTopics(topics); setPage(1); }}
+              placeholder="All Topics"
+            />
           </div>
 
           {/* Source filter */}
           <div>
-            <label className="block text-sm font-medium text-card-foreground mb-1">Source</label>
-            <select
-              value={selectedSource || ''}
-              onChange={(e) => { setSelectedSource(e.target.value ? Number(e.target.value) : null); setPage(1); }}
-              className="w-full px-3 py-2 border border-border rounded-md text-foreground"
-            >
-              <option value="">All Sources</option>
-              {sources.map((source) => (
-                <option key={source.id} value={source.id}>
-                  {source.name} ({source.article_count})
-                </option>
-              ))}
-            </select>
+            <label className="block text-sm font-medium text-card-foreground mb-1">Sources</label>
+            <MultiSelect
+              options={sources.map((source) => ({
+                value: source.id,
+                label: source.name,
+                count: source.article_count
+              }))}
+              selected={selectedSources}
+              onChange={(sources) => { setSelectedSources(sources); setPage(1); }}
+              placeholder="All Sources"
+            />
           </div>
 
           {/* Political lean filter */}
           <div>
-            <label className="block text-sm font-medium text-card-foreground mb-1">Political Lean</label>
-            <select
-              value={selectedLean}
-              onChange={(e) => { setSelectedLean(e.target.value); setPage(1); }}
-              className="w-full px-3 py-2 border border-border rounded-md text-foreground"
-            >
-              <option value="">All Leans</option>
-              <option value="left">Left</option>
-              <option value="center">Center</option>
-              <option value="right">Right</option>
-            </select>
+            <label className="block text-sm font-medium text-card-foreground mb-1">Political Leans</label>
+            <MultiSelect
+              options={[
+                { value: 'left', label: 'Left' },
+                { value: 'center', label: 'Center' },
+                { value: 'right', label: 'Right' }
+              ]}
+              selected={selectedLeans}
+              onChange={(leans) => { setSelectedLeans(leans); setPage(1); }}
+              placeholder="All Leans"
+            />
           </div>
 
           {/* Date range filter */}

@@ -109,9 +109,36 @@ def scrape_source(source: Source, session: Session) -> List[Article]:
     return new_articles
 
 
+def scrape_all_sources(session: Session) -> int:
+    """
+    Scrape all sources regardless of active status and return the total count of new articles.
+
+    Args:
+        session: Database session (injected for testing)
+
+    Returns:
+        Total number of new articles scraped
+    """
+    total_count = 0
+
+    # Get all sources (both active and inactive)
+    all_sources = session.exec(select(Source)).all()
+
+    logger.info(f"Starting scrape of {len(all_sources)} sources")
+
+    for source in all_sources:
+        new_articles = scrape_source(source, session)
+        total_count += len(new_articles)
+
+    logger.info(f"Scraping complete. Total new articles: {total_count}")
+
+    return total_count
+
+
 def scrape_all_active_sources(session: Session) -> int:
     """
     Scrape all active sources and return the total count of new articles.
+    (Legacy function maintained for backward compatibility)
 
     Args:
         session: Database session (injected for testing)
@@ -140,5 +167,5 @@ def scrape_all_active_sources(session: Session) -> int:
 if __name__ == "__main__":
     # Test the scraper
     with Session(engine) as session:
-        count = scrape_all_active_sources(session)
-        print(f"Scraped {count} new articles")
+        count = scrape_all_sources(session)
+        print(f"Scraped {count} new articles from all sources")

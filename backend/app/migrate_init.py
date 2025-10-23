@@ -110,8 +110,11 @@ def init_migrations():
         logger.info(f"Alembic version tracking exists (current: {current_version})")
         logger.info("Running normal migration upgrade...")
 
+        # Try normal upgrade first, if it fails due to multiple heads, upgrade all heads
         if not run_command(["alembic", "upgrade", "head"], "Upgrading to latest migration"):
-            sys.exit(1)
+            logger.warning("Multiple migration heads detected, upgrading all heads...")
+            if not run_command(["alembic", "upgrade", "heads"], "Upgrading all migration heads"):
+                sys.exit(1)
 
     elif has_topics_table:
         # Production case: Tables exist but no alembic_version

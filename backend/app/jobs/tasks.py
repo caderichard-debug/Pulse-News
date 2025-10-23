@@ -7,7 +7,7 @@ All jobs are wrapped with execution tracking that creates JobExecutionHistory re
 
 from sqlmodel import Session
 from ..database import engine
-from ..services.rss_scraper import scrape_all_active_sources
+from ..services.rss_scraper import scrape_all_sources
 from ..services.article_extractor import process_pending_articles
 from ..models import JobExecutionHistory
 from datetime import datetime
@@ -154,12 +154,12 @@ def scrape_job(session: Session = None, chain_extraction: bool = True):
 
         if session is None:
             with Session(engine) as session:
-                count = scrape_all_active_sources(session)
+                count = scrape_all_sources(session)
         else:
-            count = scrape_all_active_sources(session)
+            count = scrape_all_sources(session)
 
         logger.info("=" * 60)
-        logger.info(f"RSS scrape job completed: {count} new articles")
+        logger.info(f"RSS scrape job completed: {count} new articles from all sources")
         logger.info("=" * 60)
 
         # Chain extraction job if new articles were found
