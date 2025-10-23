@@ -1135,6 +1135,29 @@ class ApiClient {
       body: JSON.stringify(feedback),
     });
   }
+
+  async getChallengeAssignments(limit?: number) {
+    const params = limit ? `?limit=${limit}` : '';
+    return this.request<Array<{
+      id: number;
+      day_number: number;
+      assignment_date: string;
+      opposition_strength: number;
+      is_sent: boolean;
+      is_opened: boolean;
+      is_clicked: boolean;
+      article: {
+        id: number;
+        title: string;
+        url: string;
+        source_name: string;
+        published_at: string;
+        summary?: string;
+        sentiment_score?: number;
+        political_lean?: string;
+      };
+    }>>(`/challenge/assignments${params}`);
+  }
 }
 
 export { ApiClient };

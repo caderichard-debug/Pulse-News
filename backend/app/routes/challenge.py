@@ -18,6 +18,7 @@ from ..models import (
 )
 from ..routes.auth import get_current_user
 from ..services.challenge_manager import ChallengeManager
+from ..services.challenge_article_matcher import ChallengeArticleMatcher
 
 router = APIRouter(prefix="/challenge", tags=["challenge"])
 
@@ -310,21 +311,28 @@ def submit_challenge_response(
 
         # Update claim selection count
         selected_claim.selection_count += 1
-        session.commit()
 
-        # TODO: Trigger article assignment for next 7 days
-        # This will be implemented in Phase 5
+        # Create 7-day article assignments for the user
+        article_matcher = ChallengeArticleMatcher(session)
+        assignments = article_matcher.create_challenge_articles_for_user(user_response)
+
+        # Update user response with assignment count
+        user_response.articles_sent_count = len(assignments)
+        user_response.challenge_started_at = datetime.utcnow()
+
+        session.commit()
 
         return {
             "success": True,
             "response_id": user_response.id,
-            "message": "Your response has been recorded. You will receive challenge articles over the next 7 days.",
+            "message": f"Your response has been recorded. You will receive {len(assignments)} challenge articles over the next 7 days.",
             "selected_claim": {
                 "id": selected_claim.id,
                 "claim_text": selected_claim.claim_text
             },
             "agreement_level": response_data.agreement_level,
-            "challenge_started": True
+            "challenge_started": True,
+            "articles_assigned": len(assignments)
         }
 
     except HTTPException:
@@ -494,6 +502,29 @@ def get_challenge_statistics(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting challenge statistics: {str(e)}")
+
+
+@router.get("/assignments", response_model=List[Dict[str, Any]])
+def get_user_assignments(
+    limit: int = Query(default=20, le=50, ge=1),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Get user's challenge article assignments.
+
+    Returns the articles assigned for active challenges with engagement data.
+    """
+    try:
+        from ..services.challenge_article_matcher import ChallengeArticleMatcher
+
+        matcher = ChallengeArticleMatcher(session)
+        assignments = matcher.get_user_assignments(current_user.id, limit)
+
+        return assignments
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting assignments: {str(e)}")
 
 
 @router.post("/feedback")
