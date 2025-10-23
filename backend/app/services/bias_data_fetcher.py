@@ -7,7 +7,7 @@ Fallback: Manual lookup table for common sources
 """
 
 import logging
-from typing import Optional, Dict
+from typing import Optional, Dict, Tuple
 from urllib.parse import urlparse
 import httpx
 
@@ -281,7 +281,7 @@ async def fetch_source_bias(url: str) -> Dict:
     }
 
 
-async def get_bias_for_source(url: str) -> tuple[Optional[OrganizationalBias], Optional[str]]:
+async def get_bias_for_source(url: str) -> Tuple[Optional[OrganizationalBias], Optional[str]]:
     """
     Simplified interface to get bias and description for a source.
 

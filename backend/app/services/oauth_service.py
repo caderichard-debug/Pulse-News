@@ -4,7 +4,7 @@ Supports Google OAuth provider.
 """
 
 from sqlmodel import Session, select
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 import json
 import logging
 from datetime import datetime
@@ -29,7 +29,7 @@ class OAuthService:
         name: Optional[str] = None,
         avatar_url: Optional[str] = None,
         provider_data: Optional[Dict[str, Any]] = None
-    ) -> tuple[User, bool]:
+    ) -> Tuple[User, bool]:
         """
         Find existing OAuth user or create new one.
 
