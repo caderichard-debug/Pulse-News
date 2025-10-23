@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Eye, EyeOff, RefreshCw, Filter, X } from 'lucide-react'
 import { api } from '@/lib/api'
@@ -62,13 +62,7 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
     { value: 'temporal_evolution', label: 'Coverage Evolution', description: 'How coverage evolved over time' }
   ]
 
-  useEffect(() => {
-    if (expanded && articleId) {
-      fetchViewpoints()
-    }
-  }, [expanded, articleId, selectedRelationshipType])
-
-  const fetchViewpoints = async () => {
+  const fetchViewpoints = useCallback(async () => {
     setLoading(true)
     setError(null)
     setHasTriedAnalysis(true)
@@ -110,7 +104,13 @@ export function OpposingViewpoints({ articleId }: OpposingViewpointsProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [articleId, selectedRelationshipType])
+
+  useEffect(() => {
+    if (expanded && articleId) {
+      fetchViewpoints()
+    }
+  }, [expanded, articleId, selectedRelationshipType, fetchViewpoints])
 
   const triggerOnDemandAnalysis = async () => {
     setLoading(true)

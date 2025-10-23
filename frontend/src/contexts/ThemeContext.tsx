@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 
 type Theme = 'light' | 'dark' | 'auto';
@@ -26,9 +26,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Resolve 'auto' to actual theme
-  const resolveTheme = (themeValue: Theme): ResolvedTheme => {
+  const resolveTheme = useCallback((themeValue: Theme): ResolvedTheme => {
     return themeValue === 'auto' ? getSystemTheme() : themeValue;
-  };
+  }, []);
 
   // Initialize theme from localStorage or default to 'auto'
   useEffect(() => {

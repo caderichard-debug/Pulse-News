@@ -1,4 +1,4 @@
-import { api, ApiClient } from '../api';
+import { ApiClient } from '../api';
 
 // Mock fetch
 global.fetch = jest.fn();
