@@ -32,6 +32,7 @@ interface Settings {
   article_order_preference: string;
   articles_per_topic_default: number;
   newsletter_enabled: boolean;
+  challenge_participation_enabled: boolean;
 }
 
 // Delete Account Button Component
@@ -153,6 +154,7 @@ function PreferencesContent() {
     article_order_preference: 'mixed',
     articles_per_topic_default: 5,
     newsletter_enabled: true,
+    challenge_participation_enabled: true,
   });
   const [userInfo, setUserInfo] = useState<{ name: string; email: string }>({
     name: '',
@@ -916,6 +918,49 @@ function PreferencesContent() {
                     <div className="mt-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
                       <p className="text-sm text-yellow-800 dark:text-yellow-200">
                         ⚠️ You won&apos;t receive daily newsletters while this is disabled. You can still access all articles in your feed.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Challenge Participation Toggle */}
+                <div className="pt-6 border-t border-border">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        🤔 Weekly Ethical Challenges
+                      </label>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Participate in weekly ethical dilemmas to explore different viewpoints. Available on Fridays in your newsletter.
+                      </p>
+                    </div>
+                    <div className="flex items-center ml-4">
+                      <span className="mr-3 text-sm font-medium text-foreground">
+                        {settings.challenge_participation_enabled ? 'Enabled' : 'Disabled'}
+                      </span>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={settings.challenge_participation_enabled}
+                        onClick={() => setSettings({ ...settings, challenge_participation_enabled: !settings.challenge_participation_enabled })}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
+                          settings.challenge_participation_enabled
+                            ? 'bg-purple-600'
+                            : 'bg-gray-300 dark:bg-gray-600'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            settings.challenge_participation_enabled ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                  {!settings.challenge_participation_enabled && (
+                    <div className="mt-3 bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-800 rounded-lg p-3">
+                      <p className="text-sm text-gray-800 dark:text-gray-200">
+                        ℹ️ You won&apos;t receive weekly challenges while this is disabled. You can still access all articles in your feed.
                       </p>
                     </div>
                   )}

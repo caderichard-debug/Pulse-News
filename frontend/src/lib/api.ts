@@ -1002,6 +1002,139 @@ class ApiClient {
       method: 'POST'
     });
   }
+
+  // Challenge System API Methods
+  async getCurrentChallenge() {
+    return this.request<{
+      challenge: {
+        id: number;
+        week_start_date: string;
+        title: string;
+        description?: string;
+        challenge_date: string;
+        claims: Array<{
+          id: number;
+          display_order: number;
+          claim_text: string;
+          claim_type: string;
+          background_context?: string;
+        }>;
+      } | null;
+      user_response: {
+        id: number;
+        selected_claim_id: number;
+        agreement_level: string;
+        status: string;
+        responded_at?: string;
+      } | null;
+      can_respond: boolean;
+      reason: string;
+    }>('/challenge/current');
+  }
+
+  async getChallengeByDate(weekDate: string) {
+    return this.request<{
+      challenge: {
+        id: number;
+        week_start_date: string;
+        title: string;
+        description?: string;
+        challenge_date: string;
+        week_end_date: string;
+        claims: Array<{
+          id: number;
+          display_order: number;
+          claim_text: string;
+          claim_type: string;
+          background_context?: string;
+        }>;
+      };
+      user_response: {
+        id: number;
+        selected_claim_id: number;
+        agreement_level: string;
+        status: string;
+        responded_at?: string;
+      } | null;
+      can_respond: boolean;
+      reason: string;
+      user_name: string;
+    }>(`/challenge/${weekDate}`);
+  }
+
+  async submitChallengeResponse(weekDate: string, data: {
+    selected_claim_id: number;
+    agreement_level: string;
+  }) {
+    return this.request<{
+      success: boolean;
+      response_id: number;
+      message: string;
+      selected_claim: {
+        id: number;
+        claim_text: string;
+      };
+      agreement_level: string;
+      challenge_started: boolean;
+    }>(`/challenge/${weekDate}/respond`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getUserChallengeHistory(limit?: number) {
+    const params = limit ? `?limit=${limit}` : '';
+    return this.request<Array<{
+      id: number;
+      week_start_date: string;
+      challenge_title: string;
+      selected_claim: {
+        id: number;
+        claim_text: string;
+        claim_type: string;
+      };
+      agreement_level: string;
+      status: string;
+      responded_at: string;
+      challenge_completed_at?: string;
+      articles_sent_count: number;
+      articles_engaged_count: number;
+      found_valuable?: boolean;
+    }>>(`/challenge/my-responses${params}`);
+  }
+
+  async getChallengeStatistics() {
+    return this.request<{
+      total_responses: number;
+      completed_challenges: number;
+      completion_rate: number;
+      articles_received: number;
+      articles_engaged: number;
+      engagement_rate: number;
+      agreement_distribution: Array<{
+        level: string;
+        count: number;
+      }>;
+      most_engaged_claims: Array<{
+        claim_text: string;
+        claim_type: string;
+        engagement_count: number;
+      }>;
+    }>('/challenge/statistics');
+  }
+
+  async submitChallengeFeedback(responseId: number, feedback: {
+    found_valuable?: boolean;
+    feedback_text?: string;
+  }) {
+    return this.request<{
+      success: boolean;
+      message: string;
+    }>(`/challenge/feedback?response_id=${responseId}`, {
+      method: 'POST',
+      body: JSON.stringify(feedback),
+    });
+  }
 }
 
 export { ApiClient };
