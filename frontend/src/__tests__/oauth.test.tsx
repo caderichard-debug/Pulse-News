@@ -2,17 +2,16 @@
  * @jest-environment jsdom
  */
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import LoginPage from '@/app/login/page'
 import SignupPage from '@/app/signup/page'
-import { signIn } from 'next-auth/react'
 
-// Mock NextAuth.js
-jest.mock('next-auth/react', () => ({
-  signIn: jest.fn(),
-  useSession: jest.fn(),
-  SessionProvider: ({ children }: { children: React.ReactNode }) => children,
-}))
+// Mock window.location.href
+const mockLocation = { href: '' }
+Object.defineProperty(window, 'location', {
+  value: mockLocation,
+  writable: true,
+})
 
 // Mock API
 jest.mock('@/lib/api', () => ({
@@ -35,19 +34,23 @@ jest.mock('@/components/BrandCard', () => {
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: jest.fn(),
+    replace: jest.fn(),
+  }),
+  useSearchParams: () => ({
+    get: jest.fn(),
   }),
 }))
 
 describe('OAuth Authentication', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    ;(signIn as jest.Mock).mockResolvedValue({
-      ok: true,
-      error: null,
-    })
+    mockLocation.href = ''
     // Mock getTopics to return an empty array by default
     const { api } = jest.requireMock('@/lib/api')
     api.getTopics.mockResolvedValue([])
+
+    // Mock environment variable
+    process.env.NEXT_PUBLIC_API_URL = 'http://localhost:8000'
   })
 
   describe('Google Sign-In Button', () => {
@@ -60,55 +63,30 @@ describe('OAuth Authentication', () => {
     })
 
     test('shows loading state when Google sign-in is in progress', async () => {
-      ;(signIn as jest.Mock).mockImplementation(() => new Promise(() => {})) // Never resolves
-
       render(<LoginPage />)
 
       const googleButton = screen.getByRole('button', { name: /continue with google/i })
 
+      // Simulate the click that sets loading state
       fireEvent.click(googleButton)
 
-      await waitFor(() => {
-        expect(googleButton).toBeDisabled()
-        expect(screen.getByText('Signing in with Google...')).toBeInTheDocument()
-      })
+      // Note: Since we're testing window.location.href redirect,
+      // we won't see the loading state in the test as the redirect happens immediately
+      expect(googleButton).toBeDisabled()
+      expect(screen.getByText('Signing in with Google...')).toBeInTheDocument()
     })
 
-    test('calls signIn with Google provider when button clicked', async () => {
+    test('redirects to Google OAuth endpoint when button clicked', async () => {
       render(<LoginPage />)
 
       const googleButton = screen.getByRole('button', { name: /continue with google/i })
 
       fireEvent.click(googleButton)
 
-      await waitFor(() => {
-        expect(signIn).toHaveBeenCalledWith('google', {
-          redirect: false,
-          callbackUrl: '/feed',
-        })
-      })
-    })
-
-    test('displays error message when Google sign-in fails', async () => {
-      ;(signIn as jest.Mock).mockResolvedValue({
-        ok: false,
-        error: 'OAuthSignin',
-      })
-
-      render(<LoginPage />)
-
-      const googleButton = screen.getByRole('button', { name: /continue with google/i })
-
-      fireEvent.click(googleButton)
-
-      await waitFor(() => {
-        expect(screen.getByText(/Google sign-in failed: OAuthSignin/)).toBeInTheDocument()
-      })
+      expect(mockLocation.href).toBe('http://localhost:8000/auth/oauth/google')
     })
 
     test('disables all buttons during OAuth loading', async () => {
-      ;(signIn as jest.Mock).mockImplementation(() => new Promise(() => {})) // Never resolves
-
       render(<LoginPage />)
 
       const googleButton = screen.getByRole('button', { name: /continue with google/i })
@@ -117,11 +95,9 @@ describe('OAuth Authentication', () => {
       fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
       fireEvent.click(googleButton)
 
-      await waitFor(() => {
-        const submitButton = screen.getByRole('button', { name: /log in/i })
-        expect(submitButton).toBeDisabled()
-        expect(googleButton).toBeDisabled()
-      })
+      expect(googleButton).toBeDisabled()
+      const submitButton = screen.getByRole('button', { name: /log in/i })
+      expect(submitButton).toBeDisabled()
     })
   })
 
@@ -135,55 +111,27 @@ describe('OAuth Authentication', () => {
     })
 
     test('shows loading state when Google sign-up is in progress', async () => {
-      ;(signIn as jest.Mock).mockImplementation(() => new Promise(() => {})) // Never resolves
-
       render(<SignupPage />)
 
       const googleButton = screen.getByRole('button', { name: /sign up with google/i })
 
       fireEvent.click(googleButton)
 
-      await waitFor(() => {
-        expect(googleButton).toBeDisabled()
-        expect(screen.getByText('Creating account with Google...')).toBeInTheDocument()
-      })
+      expect(googleButton).toBeDisabled()
+      expect(screen.getByText('Creating account with Google...')).toBeInTheDocument()
     })
 
-    test('calls signIn with Google provider when sign-up button clicked', async () => {
+    test('redirects to Google OAuth endpoint when sign-up button clicked', async () => {
       render(<SignupPage />)
 
       const googleButton = screen.getByRole('button', { name: /sign up with google/i })
 
       fireEvent.click(googleButton)
 
-      await waitFor(() => {
-        expect(signIn).toHaveBeenCalledWith('google', {
-          redirect: false,
-          callbackUrl: '/preferences',
-        })
-      })
-    })
-
-    test('displays error message when Google sign-up fails', async () => {
-      ;(signIn as jest.Mock).mockResolvedValue({
-        ok: false,
-        error: 'OAuthSignin',
-      })
-
-      render(<SignupPage />)
-
-      const googleButton = screen.getByRole('button', { name: /sign up with google/i })
-
-      fireEvent.click(googleButton)
-
-      await waitFor(() => {
-        expect(screen.getByText(/Google sign-up failed: OAuthSignin/)).toBeInTheDocument()
-      })
+      expect(mockLocation.href).toBe('http://localhost:8000/auth/oauth/google')
     })
 
     test('disables form buttons during OAuth loading', async () => {
-      ;(signIn as jest.Mock).mockImplementation(() => new Promise(() => {})) // Never resolves
-
       render(<SignupPage />)
 
       const googleButton = screen.getByRole('button', { name: /sign up with google/i })
@@ -192,11 +140,9 @@ describe('OAuth Authentication', () => {
       fireEvent.change(nameInput, { target: { value: 'Test User' } })
       fireEvent.click(googleButton)
 
-      await waitFor(() => {
-        const submitButton = screen.getByRole('button', { name: /continue/i })
-        expect(submitButton).toBeDisabled()
-        expect(googleButton).toBeDisabled()
-      })
+      const submitButton = screen.getByRole('button', { name: /continue/i })
+      expect(submitButton).toBeDisabled()
+      expect(googleButton).toBeDisabled()
     })
   })
 
