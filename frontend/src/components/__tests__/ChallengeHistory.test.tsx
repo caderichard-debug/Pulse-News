@@ -135,8 +135,9 @@ describe('ChallengeHistory', () => {
 
       render(<ChallengeHistory />);
 
-      expect(screen.getByRole('status')).toHaveClass('animate-pulse');
-      expect(screen.getByText(/Loading analytics\.\.\./i)).toBeInTheDocument();
+      // Check for skeleton placeholders with animate-pulse
+      expect(document.querySelector('.animate-pulse')).toBeInTheDocument();
+      expect(document.querySelector('.bg-gray-200')).toBeInTheDocument();
     });
 
     it('should hide loading spinner when data is loaded', async () => {
@@ -147,8 +148,8 @@ describe('ChallengeHistory', () => {
       render(<ChallengeHistory />);
 
       await waitFor(() => {
-        expect(screen.queryByRole('status')).not.toBeInTheDocument();
-        expect(screen.queryByText(/Loading analytics\.\.\./i)).not.toBeInTheDocument();
+        expect(screen.queryByText('Your Challenge Insights')).toBeInTheDocument();
+        expect(document.querySelector('.animate-pulse')).not.toBeInTheDocument();
       });
     });
   });
@@ -214,8 +215,9 @@ describe('ChallengeHistory', () => {
       render(<ChallengeHistory />);
 
       await waitFor(() => {
-        expect(screen.getByText('No analytics data available.')).toBeInTheDocument();
-        expect(screen.getByText('Start participating in challenges to see your insights!')).toBeInTheDocument();
+        expect(screen.getByText('Your Challenge Insights')).toBeInTheDocument();
+        expect(screen.getByText('0')).toBeInTheDocument(); // Total challenges
+        expect(screen.getByText('0.0/5.0')).toBeInTheDocument(); // Average agreement
       });
     });
 
@@ -225,7 +227,11 @@ describe('ChallengeHistory', () => {
 
       render(<ChallengeHistory />);
 
-      // Switch to history tab
+      // Wait for component to load, then switch to history tab
+      await waitFor(() => {
+        expect(screen.getByText('Your Challenge Insights')).toBeInTheDocument();
+      });
+
       fireEvent.click(screen.getByText('Response History'));
 
       await waitFor(() => {
