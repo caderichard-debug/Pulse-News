@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
+import ExtensionBanner from '@/components/ExtensionBanner';
 import DarkModeToggle from '@/components/DarkModeToggle';
 import Footer from '@/components/Footer';
 
@@ -178,6 +179,11 @@ function PreferencesContent() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Search and filter state for sources
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCredibility, setSelectedCredibility] = useState<string>('');
+  const [selectedBias, setSelectedBias] = useState<string>('');
+
   useEffect(() => {
     let mounted = true;
     const load = async () => {
@@ -349,6 +355,47 @@ function PreferencesContent() {
     }
   };
 
+  // Filter sources by search query and filters
+  const filterSources = (sources: Source[]) => {
+    let filtered = sources;
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(source =>
+        source.name.toLowerCase().includes(query) ||
+        source.url.toLowerCase().includes(query) ||
+        source.description?.toLowerCase().includes(query)
+      );
+    }
+
+    // Filter by credibility (trust score)
+    if (selectedCredibility) {
+      filtered = filtered.filter(source => {
+        const trustScore = source.trust_score * 100;
+        switch (selectedCredibility) {
+          case 'high':
+            return trustScore >= 80;
+          case 'medium':
+            return trustScore >= 60 && trustScore < 80;
+          case 'low':
+            return trustScore < 60;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Filter by political bias
+    if (selectedBias) {
+      filtered = filtered.filter(source =>
+        source.organizational_bias === selectedBias
+      );
+    }
+
+    return filtered;
+  };
+
 
   if (loading) {
     return (
@@ -367,6 +414,7 @@ function PreferencesContent() {
   return (
     <>
       <Navbar />
+      <ExtensionBanner />
       <UnverifiedEmailAlert />
       <div className="min-h-screen bg-background transition-colors">
         <div className="max-w-6xl mx-auto px-4 py-8">
@@ -588,6 +636,77 @@ function PreferencesContent() {
               </div>
             </div>
 
+            {/* Search Bar and Filters (for Recommended and Community tabs) */}
+            {(sourcesSubTab === 'recommended' || sourcesSubTab === 'community') && (
+              <div className="mb-6">
+                {/* Search Bar */}
+                <div className="mb-4">
+                  <input
+                    type="text"
+                    placeholder="Search sources by name, URL, or description..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground placeholder-muted-foreground"
+                  />
+                </div>
+
+                {/* Filters */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  {/* Credibility Filter */}
+                  <div className="flex-1">
+                    <label htmlFor="credibility-filter-prefs" className="block text-sm font-medium text-foreground mb-2">
+                      Credibility
+                    </label>
+                    <select
+                      id="credibility-filter-prefs"
+                      value={selectedCredibility}
+                      onChange={(e) => setSelectedCredibility(e.target.value)}
+                      className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                    >
+                      <option value="">All Credibility Levels</option>
+                      <option value="high">High (80%+)</option>
+                      <option value="medium">Medium (60-79%)</option>
+                      <option value="low">Low (&lt;60%)</option>
+                    </select>
+                  </div>
+
+                  {/* Political Lean Filter */}
+                  <div className="flex-1">
+                    <label htmlFor="bias-filter-prefs" className="block text-sm font-medium text-foreground mb-2">
+                      Political Lean
+                    </label>
+                    <select
+                      id="bias-filter-prefs"
+                      value={selectedBias}
+                      onChange={(e) => setSelectedBias(e.target.value)}
+                      className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                    >
+                      <option value="">All Political Leans</option>
+                      <option value="left">Left</option>
+                      <option value="center-left">Center-Left</option>
+                      <option value="center">Center</option>
+                      <option value="center-right">Center-Right</option>
+                      <option value="right">Right</option>
+                    </select>
+                  </div>
+
+                  {/* Clear Filters */}
+                  <div className="flex items-end">
+                    <button
+                      onClick={() => {
+                        setSelectedCredibility('');
+                        setSelectedBias('');
+                        setSearchQuery('');
+                      }}
+                      className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors font-medium"
+                    >
+                      Clear Filters
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Recommended tab */}
             {sourcesSubTab === 'recommended' && (
               <>
@@ -600,7 +719,7 @@ function PreferencesContent() {
                   </p>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {sources.filter(s => s.is_recommended).map((source) => (
+                    {filterSources(sources.filter(s => s.is_recommended)).map((source) => (
                       <div
                         key={source.source_id}
                         className={`border rounded-lg p-4 cursor-pointer transition-all ${
@@ -681,13 +800,13 @@ function PreferencesContent() {
                     Community-submitted sources. Select which ones you want to receive articles from.
                   </p>
 
-                  {sources.filter(s => !s.is_recommended).length === 0 ? (
+                  {filterSources(sources.filter(s => !s.is_recommended)).length === 0 ? (
                     <p className="text-muted-foreground text-center py-8">
-                      No community sources found. Be the first to add one!
+                      No community sources found matching your criteria. Try adjusting your filters or add a new source!
                     </p>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {sources.filter(s => !s.is_recommended).map((source) => (
+                      {filterSources(sources.filter(s => !s.is_recommended)).map((source) => (
                         <div
                           key={source.source_id}
                           className={`border rounded-lg p-4 cursor-pointer transition-all ${

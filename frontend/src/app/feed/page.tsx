@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
+import ExtensionBanner from '@/components/ExtensionBanner';
 import FavoriteButton from '@/components/FavoriteButton';
 import Footer from '@/components/Footer';
 
@@ -335,6 +336,7 @@ export default function FeedPage() {
     return (
       <>
         <Navbar />
+        <ExtensionBanner />
         <div className="min-h-screen bg-background">
           <div className="max-w-7xl mx-auto px-4 py-8">
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
@@ -349,6 +351,7 @@ export default function FeedPage() {
   return (
     <>
       <Navbar />
+      <ExtensionBanner />
       <UnverifiedEmailAlert />
       <div className="min-h-screen bg-background">
         <div className="max-w-7xl mx-auto px-4 py-8">

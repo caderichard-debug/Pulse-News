@@ -360,6 +360,104 @@ export default function HowItWorksPage() {
             </div>
           </section>
 
+          {/* Chrome Extension */}
+          <section className="mb-16">
+            <div className="bg-card rounded-lg shadow-lg p-8">
+              <h2 className="text-3xl font-bold text-foreground mb-6 flex items-center gap-3">
+                <span className="text-4xl">🚀</span>
+                Chrome Extension: Instant Article Analysis
+              </h2>
+              <div className="space-y-4 text-card-foreground leading-relaxed">
+                <p>
+                  Our Chrome extension brings Pulse's powerful analysis directly to your browser, allowing you to analyze any article instantly while browsing.
+                </p>
+
+                <div className="bg-context-section border border-context rounded-lg p-6 my-6">
+                  <h3 className="font-semibold text-lg text-foreground mb-4">How It Works</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold text-sm">
+                        1
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-foreground">Click the Extension Icon</h4>
+                        <p className="text-sm text-muted-foreground">
+                          While reading any article on the web, click the Pulse extension icon in your browser toolbar.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold text-sm">
+                        2
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-foreground">Sidebar Opens</h4>
+                        <p className="text-sm text-muted-foreground">
+                          A convenient sidebar opens on the right side of your screen, showing the complete analysis without navigating away from the article.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold text-sm">
+                        3
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-foreground">Get Full Analysis</h4>
+                        <p className="text-sm text-muted-foreground">
+                          View the same comprehensive analysis as the main platform: summary, bias detection, statistics verification, and ethical framework mapping.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <h3 className="font-semibold text-lg text-foreground">What Problem It Solves</h3>
+                <p>
+                  The Chrome extension addresses a common problem: you come across interesting articles while browsing and want immediate analysis without leaving your reading flow.
+                </p>
+                <ul className="list-disc list-inside ml-4 space-y-2 mt-3">
+                  <li><strong>No Context Switching:</strong> Get insights without opening new tabs or navigating away from your article</li>
+                  <li><strong>Instant Credibility Check:</strong> Quickly assess if an article is trustworthy before sharing or believing it</li>
+                  <li><strong>Bias Awareness:</strong> Understand the political framing and emotional tone in real-time</li>
+                  <li><strong>Statistical Verification:</strong> Check if cited statistics have been verified and trace their sources</li>
+                  <li><strong>Ethical Context:</strong> See the deeper philosophical debates underlying the news story</li>
+                </ul>
+
+                <div className="bg-info border border-info rounded-lg p-4 mt-6">
+                  <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                    <span>⚡</span>
+                    <span>Use Cases</span>
+                  </h3>
+                  <ul className="text-sm text-card-foreground space-y-1">
+                    <li><strong>Social Media:</strong> Analyze articles shared on Twitter/X, Facebook, or LinkedIn before engaging</li>
+                    <li><strong>News Browsing:</strong> Get instant analysis while reading news on publisher websites</li>
+                    <li><strong>Research:</strong> Quickly evaluate sources for academic or professional research</li>
+                    <li><strong>Media Literacy:</strong> Build critical thinking skills by seeing bias and framing patterns</li>
+                  </ul>
+                </div>
+
+                <div className="text-center mt-8">
+                  <a
+                    href="https://chromewebstore.google.com/detail/gcfamjhnhdhoobgcmnkepjibcmhafpfp?utm_source=item-share-cb"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all font-medium shadow-lg"
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+                    </svg>
+                    Install Chrome Extension
+                  </a>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Other browsers coming soon!
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
           {/* Footer CTA */}
           <div className="text-center bg-gradient-to-r from-indigo-500 to-purple-600 dark:from-indigo-600 dark:to-purple-700 rounded-lg shadow-xl p-8 text-white">
             <h2 className="text-2xl font-bold mb-3">Have Questions?</h2>

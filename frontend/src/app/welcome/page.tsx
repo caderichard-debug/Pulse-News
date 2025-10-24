@@ -90,6 +90,56 @@ export default function WelcomePage() {
           </div>
         </div>
 
+        {/* Chrome Extension Section */}
+        <div className="bg-card border border-border rounded-lg shadow-lg p-8 mb-12 transition-colors">
+          <div className="text-center mb-6">
+            <h2 className="text-3xl font-bold text-foreground mb-4">
+              🚀 Chrome Extension Available
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6">
+              Analyze any article instantly while browsing with our Chrome extension. Get AI-powered insights, bias detection, and ethical framework analysis right in your browser.
+            </p>
+            <a
+              href="https://chromewebstore.google.com/detail/gcfamjhnhdhoobgcmnkepjibcmhafpfp?utm_source=item-share-cb"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all font-medium shadow-lg"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+              </svg>
+              Install Chrome Extension
+            </a>
+            <p className="text-sm text-muted-foreground mt-3">
+              Other browsers coming soon!
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6 mt-8">
+            <div className="bg-background border border-border rounded-lg p-6 text-center">
+              <div className="text-3xl mb-3">⚡</div>
+              <h4 className="font-semibold text-foreground mb-2">Instant Analysis</h4>
+              <p className="text-sm text-muted-foreground">
+                Click the extension icon while reading any article to get immediate AI-powered analysis.
+              </p>
+            </div>
+            <div className="bg-background border border-border rounded-lg p-6 text-center">
+              <div className="text-3xl mb-3">🔍</div>
+              <h4 className="font-semibold text-foreground mb-2">Sidebar Insights</h4>
+              <p className="text-sm text-muted-foreground">
+                Opens a convenient sidebar showing the complete analysis without leaving your article.
+              </p>
+            </div>
+            <div className="bg-background border border-border rounded-lg p-6 text-center">
+              <div className="text-3xl mb-3">🎯</div>
+              <h4 className="font-semibold text-foreground mb-2">Same Powerful Features</h4>
+              <p className="text-sm text-muted-foreground">
+                Get the same bias detection, summary, and framework analysis as the main platform.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Open Source Section */}
         <div className="bg-card border border-border rounded-lg shadow-lg p-8 mb-12 transition-colors">
           <div className="text-center mb-6">
