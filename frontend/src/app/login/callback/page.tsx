@@ -10,7 +10,6 @@ export default function LoginCallbackPage() {
 
   useEffect(() => {
     const token = searchParams.get('token');
-    const newUser = searchParams.get('new_user');
     const error = searchParams.get('error');
 
     if (error) {

@@ -50,15 +50,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     api.setToken(response.access_token)
     localStorage.setItem('access_token', response.access_token)
 
-    // Set user info from response
+    // Set user info from response with proper type casting
     setUser({
-      id: response.user.id,
-      email: response.user.email,
-      name: response.user.name,
-      email_verified: response.user.email_verified,
-      is_admin: response.user.is_admin,
-      oauth_provider: response.user.oauth_provider,
-      oauth_avatar_url: response.user.oauth_avatar_url,
+      id: String(response.user.id),
+      email: String(response.user.email),
+      name: String(response.user.name),
+      email_verified: Boolean(response.user.email_verified),
+      is_admin: Boolean(response.user.is_admin),
+      oauth_provider: response.user.oauth_provider ? String(response.user.oauth_provider) : undefined,
+      oauth_avatar_url: response.user.oauth_avatar_url ? String(response.user.oauth_avatar_url) : undefined,
     })
   }
 
@@ -66,7 +66,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(null)
     setToken(null)
     localStorage.removeItem('access_token')
-    api.setToken(null)
+    api.clearToken()
   }
 
   const saveToken = (newToken: string) => {
