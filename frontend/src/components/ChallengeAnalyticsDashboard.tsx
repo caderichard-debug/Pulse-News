@@ -358,6 +358,22 @@ export default function ChallengeAnalyticsDashboard() {
                   <span className="text-sm font-medium text-foreground">{count as number}</span>
                 </div>
               ))}
+              {analytics.response_patterns.claim_type_preferences.most_selected && (
+                <div className="pt-2 border-t border-border">
+                  <span className="text-sm font-medium text-foreground">Most Selected: </span>
+                  <span className="text-sm text-muted-foreground">
+                    {analytics.response_patterns.claim_type_preferences.most_selected.replace('_', ' ').toLowerCase()}
+                  </span>
+                </div>
+              )}
+              {analytics.response_patterns.claim_type_preferences.highest_engagement && (
+                <div>
+                  <span className="text-sm font-medium text-foreground">Highest Engagement: </span>
+                  <span className="text-sm text-muted-foreground">
+                    {analytics.response_patterns.claim_type_preferences.highest_engagement.replace('_', ' ').toLowerCase()}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
