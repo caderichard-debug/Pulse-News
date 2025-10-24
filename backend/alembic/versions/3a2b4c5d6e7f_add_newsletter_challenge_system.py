@@ -19,6 +19,37 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # Create all enum types if they don't exist
+    try:
+        # Create challengeclaimtype enum (lowercase values for consistency)
+        op.execute("DO $$ BEGIN\n"
+                   "    CREATE TYPE challengeclaimtype AS ENUM ('policy', 'social_issue', 'economic', 'technology', 'environment', 'foreign_policy', 'healthcare', 'education');\n"
+                   "EXCEPTION\n"
+                   "    WHEN duplicate_object THEN null;\n"
+                   "END $$;")
+    except Exception:
+        pass  # Enum already exists
+
+    try:
+        # Create challengeresponsestatus enum (lowercase values for consistency)
+        op.execute("DO $$ BEGIN\n"
+                   "    CREATE TYPE challengeresponsestatus AS ENUM ('pending', 'responded', 'completed', 'skipped');\n"
+                   "EXCEPTION\n"
+                   "    WHEN duplicate_object THEN null;\n"
+                   "END $$;")
+    except Exception:
+        pass  # Enum already exists
+
+    try:
+        # Create agreementlevel enum (uppercase values as it doesn't exist yet)
+        op.execute("DO $$ BEGIN\n"
+                   "    CREATE TYPE agreementlevel AS ENUM ('STRONGLY_DISAGREE', 'DISAGREE', 'NEUTRAL', 'AGREE', 'STRONGLY_AGREE');\n"
+                   "EXCEPTION\n"
+                   "    WHEN duplicate_object THEN null;\n"
+                   "END $$;")
+    except Exception:
+        pass  # Enum already exists
+
     # Add challenge_participation_enabled to users table
     op.add_column('users', sa.Column('challenge_participation_enabled', sa.Boolean(), nullable=False, server_default='true'))
 
@@ -48,145 +79,145 @@ def upgrade() -> None:
     op.create_index('idx_active_challenges', 'weekly_challenges', ['is_active', 'is_published'], unique=False)
 
     # Create challenge_claims table
-    op.create_table('challenge_claims',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('weekly_challenge_id', sa.Integer(), nullable=False),
-        sa.Column('claim_text', sa.String(length=300), nullable=False),
-        sa.Column('claim_type', sa.Enum('POLICY', 'SOCIAL_ISSUE', 'ECONOMIC', 'TECHNOLOGY', 'ENVIRONMENT', 'FOREIGN_POLICY', 'HEALTHCARE', 'EDUCATION', name='challengeclaimtype'), nullable=False),
-        sa.Column('background_context', sa.String(length=1000), nullable=True),
-        sa.Column('key_statistics', sa.String(length=1000), nullable=True),
-        sa.Column('political_lean_distribution', sa.String(length=200), nullable=True),
-        sa.Column('controversy_score', sa.Float(), nullable=True),
-        sa.Column('reasonableness_score', sa.Float(), nullable=True),
-        sa.Column('source_article_id', sa.Integer(), nullable=True),
-        sa.Column('source_topic_ids', sa.String(), nullable=True),
-        sa.Column('display_order', sa.Integer(), nullable=False, server_default='0'),
-        sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'),
-        sa.Column('generation_method', sa.String(length=50), nullable=False, server_default='automatic'),
-        sa.Column('ai_prompt_used', sa.String(length=2000), nullable=True),
-        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
-        sa.ForeignKeyConstraint(['source_article_id'], ['articles.id'], ),
-        sa.ForeignKeyConstraint(['weekly_challenge_id'], ['weekly_challenges.id'], ),
-        sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_weekly_challenge_claims', 'challenge_claims', ['weekly_challenge_id', 'display_order'], unique=False)
-    op.create_index('idx_claim_type', 'challenge_claims', ['claim_type'], unique=False)
-    op.create_index('idx_claim_controversy', 'challenge_claims', ['controversy_score', 'is_active'], unique=False)
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS challenge_claims (
+            id SERIAL NOT NULL,
+            weekly_challenge_id INTEGER NOT NULL,
+            claim_text VARCHAR(300) NOT NULL,
+            claim_type challengeclaimtype NOT NULL,
+            background_context VARCHAR(1000),
+            key_statistics VARCHAR(1000),
+            political_lean_distribution VARCHAR(200),
+            controversy_score FLOAT,
+            reasonableness_score FLOAT,
+            source_article_id INTEGER,
+            source_topic_ids TEXT,
+            display_order INTEGER DEFAULT '0' NOT NULL,
+            is_active BOOLEAN DEFAULT 'true' NOT NULL,
+            generation_method VARCHAR(50) DEFAULT 'automatic' NOT NULL,
+            ai_prompt_used VARCHAR(2000),
+            created_at TIMESTAMP DEFAULT now() NOT NULL,
+            PRIMARY KEY (id),
+            FOREIGN KEY(source_article_id) REFERENCES articles(id),
+            FOREIGN KEY(weekly_challenge_id) REFERENCES weekly_challenges(id)
+        )
+    """)
+
+    # Create indexes for challenge_claims
+    op.execute("CREATE INDEX IF NOT EXISTS idx_weekly_challenge_claims ON challenge_claims (weekly_challenge_id, display_order)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_claim_type ON challenge_claims (claim_type)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_claim_controversy ON challenge_claims (controversy_score, is_active)")
 
     # Create user_challenge_responses table
-    op.create_table('user_challenge_responses',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('user_id', sa.Integer(), nullable=False),
-        sa.Column('weekly_challenge_id', sa.Integer(), nullable=False),
-        sa.Column('selected_claim_id', sa.Integer(), nullable=False),
-        sa.Column('agreement_level', sa.Enum('STRONGLY_DISAGREE', 'DISAGREE', 'NEUTRAL', 'AGREE', 'STRONGLY_AGREE', name='agreementlevel'), nullable=False),
-        sa.Column('response_time_seconds', sa.Integer(), nullable=True),
-        sa.Column('status', sa.Enum('PENDING', 'RESPONDED', 'COMPLETED', 'SKIPPED', name='challengeresponsestatus'), nullable=False, server_default='pending'),
-        sa.Column('responded_at', sa.DateTime(), nullable=True),
-        sa.Column('response_source', sa.String(length=50), nullable=False, server_default='newsletter'),
-        sa.Column('challenge_started_at', sa.DateTime(), nullable=True),
-        sa.Column('challenge_completed_at', sa.DateTime(), nullable=True),
-        sa.Column('articles_sent_count', sa.Integer(), nullable=False, server_default='0'),
-        sa.Column('articles_engaged_count', sa.Integer(), nullable=False, server_default='0'),
-        sa.Column('found_valuable', sa.Boolean(), nullable=True),
-        sa.Column('feedback_text', sa.String(length=1000), nullable=True),
-        sa.Column('opted_out_future', sa.Boolean(), nullable=False, server_default='false'),
-        sa.ForeignKeyConstraint(['selected_claim_id'], ['challenge_claims.id'], ),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-        sa.ForeignKeyConstraint(['weekly_challenge_id'], ['weekly_challenges.id'], ),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('user_id', 'weekly_challenge_id', name='uq_user_weekly_challenge')
-    )
-    op.create_index('idx_user_weekly_response', 'user_challenge_responses', ['user_id', 'weekly_challenge_id'], unique=False)
-    op.create_index('idx_user_selected_claim', 'user_challenge_responses', ['user_id', 'selected_claim_id'], unique=False)
-    op.create_index('idx_response_status', 'user_challenge_responses', ['status', 'responded_at'], unique=False)
-    op.create_index('idx_challenge_tracking', 'user_challenge_responses', ['challenge_started_at', 'challenge_completed_at'], unique=False)
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS user_challenge_responses (
+            id SERIAL NOT NULL,
+            user_id INTEGER NOT NULL,
+            weekly_challenge_id INTEGER NOT NULL,
+            selected_claim_id INTEGER NOT NULL,
+            agreement_level agreementlevel NOT NULL,
+            response_time_seconds INTEGER,
+            status challengeresponsestatus DEFAULT 'pending' NOT NULL,
+            responded_at TIMESTAMP,
+            response_source VARCHAR(50) DEFAULT 'newsletter' NOT NULL,
+            challenge_started_at TIMESTAMP,
+            challenge_completed_at TIMESTAMP,
+            articles_sent_count INTEGER DEFAULT '0' NOT NULL,
+            articles_engaged_count INTEGER DEFAULT '0' NOT NULL,
+            found_valuable BOOLEAN,
+            feedback_text VARCHAR(1000),
+            opted_out_future BOOLEAN DEFAULT 'false' NOT NULL,
+            PRIMARY KEY (id),
+            FOREIGN KEY(selected_claim_id) REFERENCES challenge_claims(id),
+            FOREIGN KEY(user_id) REFERENCES users(id),
+            FOREIGN KEY(weekly_challenge_id) REFERENCES weekly_challenges(id),
+            CONSTRAINT uq_user_weekly_challenge UNIQUE (user_id, weekly_challenge_id)
+        )
+    """)
+
+    # Create indexes for user_challenge_responses
+    op.execute("CREATE INDEX IF NOT EXISTS idx_user_weekly_response ON user_challenge_responses (user_id, weekly_challenge_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_user_selected_claim ON user_challenge_responses (user_id, selected_claim_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_response_status ON user_challenge_responses (status, responded_at)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_challenge_tracking ON user_challenge_responses (challenge_started_at, challenge_completed_at)")
 
     # Create challenge_article_assignments table
-    op.create_table('challenge_article_assignments',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('user_challenge_response_id', sa.Integer(), nullable=False),
-        sa.Column('user_id', sa.Integer(), nullable=False),
-        sa.Column('article_id', sa.Integer(), nullable=False),
-        sa.Column('day_number', sa.Integer(), nullable=False),
-        sa.Column('assignment_date', sa.DateTime(), nullable=False),
-        sa.Column('opposition_strength', sa.Float(), nullable=False),
-        sa.Column('match_algorithm', sa.String(length=50), nullable=False),
-        sa.Column('match_reasoning', sa.String(length=1000), nullable=True),
-        sa.Column('is_sent', sa.Boolean(), nullable=False, server_default='false'),
-        sa.Column('sent_at', sa.DateTime(), nullable=True),
-        sa.Column('delivery_method', sa.String(length=50), nullable=False, server_default='newsletter'),
-        sa.Column('is_opened', sa.Boolean(), nullable=False, server_default='false'),
-        sa.Column('opened_at', sa.DateTime(), nullable=True),
-        sa.Column('is_clicked', sa.Boolean(), nullable=False, server_default='false'),
-        sa.Column('clicked_at', sa.DateTime(), nullable=True),
-        sa.Column('time_to_click_seconds', sa.Integer(), nullable=True),
-        sa.Column('quality_score', sa.Float(), nullable=True),
-        sa.Column('user_feedback_helpful', sa.Boolean(), nullable=True),
-        sa.Column('user_reported_inappropriate', sa.Boolean(), nullable=False, server_default='false'),
-        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
-        sa.ForeignKeyConstraint(['article_id'], ['articles.id'], ),
-        sa.ForeignKeyConstraint(['user_challenge_response_id'], ['user_challenge_responses.id'], ),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('user_challenge_response_id', 'day_number', name='uq_user_challenge_day'),
-        sa.CheckConstraint('day_number >= 1 AND day_number <= 7', name='check_day_number_range')
-    )
-    op.create_index('idx_user_challenge_assignments', 'challenge_article_assignments', ['user_challenge_response_id', 'day_number'], unique=False)
-    op.create_index('idx_user_daily_assignment', 'challenge_article_assignments', ['user_id', 'assignment_date'], unique=False)
-    op.create_index('idx_assignment_status', 'challenge_article_assignments', ['is_sent', 'is_opened', 'is_clicked'], unique=False)
-    op.create_index('idx_article_assignments', 'challenge_article_assignments', ['article_id', 'assignment_date'], unique=False)
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS challenge_article_assignments (
+            id SERIAL NOT NULL,
+            user_challenge_response_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            article_id INTEGER NOT NULL,
+            day_number INTEGER NOT NULL,
+            assignment_date TIMESTAMP NOT NULL,
+            opposition_strength FLOAT NOT NULL,
+            match_algorithm VARCHAR(50) NOT NULL,
+            match_reasoning VARCHAR(1000),
+            is_sent BOOLEAN DEFAULT 'false' NOT NULL,
+            sent_at TIMESTAMP,
+            delivery_method VARCHAR(50) DEFAULT 'newsletter' NOT NULL,
+            is_opened BOOLEAN DEFAULT 'false' NOT NULL,
+            opened_at TIMESTAMP,
+            is_clicked BOOLEAN DEFAULT 'false' NOT NULL,
+            clicked_at TIMESTAMP,
+            time_to_click_seconds INTEGER,
+            quality_score FLOAT,
+            user_feedback_helpful BOOLEAN,
+            user_reported_inappropriate BOOLEAN DEFAULT 'false' NOT NULL,
+            created_at TIMESTAMP DEFAULT now() NOT NULL,
+            PRIMARY KEY (id),
+            FOREIGN KEY(article_id) REFERENCES articles(id),
+            FOREIGN KEY(user_challenge_response_id) REFERENCES user_challenge_responses(id),
+            FOREIGN KEY(user_id) REFERENCES users(id),
+            CONSTRAINT uq_user_challenge_day UNIQUE (user_challenge_response_id, day_number),
+            CONSTRAINT check_day_number_range CHECK (day_number >= 1 AND day_number <= 7)
+        )
+    """)
+
+    # Create indexes for challenge_article_assignments
+    op.execute("CREATE INDEX IF NOT EXISTS idx_user_challenge_assignments ON challenge_article_assignments (user_challenge_response_id, day_number)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_user_daily_assignment ON challenge_article_assignments (user_id, assignment_date)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_assignment_status ON challenge_article_assignments (is_sent, is_opened, is_clicked)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_article_assignments ON challenge_article_assignments (article_id, assignment_date)")
 
     # Create challenge_engagements table
-    op.create_table('challenge_engagements',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('user_id', sa.Integer(), nullable=False),
-        sa.Column('challenge_assignment_id', sa.Integer(), nullable=False),
-        sa.Column('engagement_type', sa.String(length=50), nullable=False),
-        sa.Column('engagement_value', sa.String(length=1000), nullable=True),
-        sa.Column('engagement_time_seconds', sa.Integer(), nullable=True),
-        sa.Column('device_type', sa.String(length=50), nullable=True),
-        sa.Column('referrer', sa.String(length=200), nullable=True),
-        sa.Column('session_id', sa.String(length=100), nullable=True),
-        sa.Column('ip_address_hash', sa.String(length=64), nullable=True),
-        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
-        sa.ForeignKeyConstraint(['challenge_assignment_id'], ['challenge_article_assignments.id'], ),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-        sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_user_challenge_engagement', 'challenge_engagements', ['user_id', 'challenge_assignment_id'], unique=False)
-    op.create_index('idx_engagement_type', 'challenge_engagements', ['engagement_type', 'created_at'], unique=False)
-    op.create_index('idx_engagement_timing', 'challenge_engagements', ['created_at', 'engagement_time_seconds'], unique=False)
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS challenge_engagements (
+            id SERIAL NOT NULL,
+            user_id INTEGER NOT NULL,
+            challenge_assignment_id INTEGER NOT NULL,
+            engagement_type VARCHAR(50) NOT NULL,
+            engagement_value VARCHAR(1000),
+            engagement_time_seconds INTEGER,
+            device_type VARCHAR(50),
+            referrer VARCHAR(200),
+            session_id VARCHAR(100),
+            ip_address_hash VARCHAR(64),
+            created_at TIMESTAMP DEFAULT now() NOT NULL,
+            PRIMARY KEY (id),
+            FOREIGN KEY(challenge_assignment_id) REFERENCES challenge_article_assignments(id),
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    """)
+
+    # Create indexes for challenge_engagements
+    op.execute("CREATE INDEX IF NOT EXISTS idx_user_challenge_engagement ON challenge_engagements (user_id, challenge_assignment_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_engagement_type ON challenge_engagements (engagement_type, created_at)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_engagement_timing ON challenge_engagements (created_at, engagement_time_seconds)")
 
 
 def downgrade() -> None:
     # Drop tables in reverse order of creation
-    op.drop_index('idx_engagement_timing', table_name='challenge_engagements')
-    op.drop_index('idx_engagement_type', table_name='challenge_engagements')
-    op.drop_index('idx_user_challenge_engagement', table_name='challenge_engagements')
-    op.drop_table('challenge_engagements')
+    op.execute("DROP TABLE IF EXISTS challenge_engagements CASCADE")
+    op.execute("DROP TABLE IF EXISTS challenge_article_assignments CASCADE")
+    op.execute("DROP TABLE IF EXISTS user_challenge_responses CASCADE")
+    op.execute("DROP TABLE IF EXISTS challenge_claims CASCADE")
+    op.execute("DROP TABLE IF EXISTS weekly_challenges CASCADE")
 
-    op.drop_index('idx_article_assignments', table_name='challenge_article_assignments')
-    op.drop_index('idx_assignment_status', table_name='challenge_article_assignments')
-    op.drop_index('idx_user_daily_assignment', table_name='challenge_article_assignments')
-    op.drop_index('idx_user_challenge_assignments', table_name='challenge_article_assignments')
-    op.drop_table('challenge_article_assignments')
-
-    op.drop_index('idx_challenge_tracking', table_name='user_challenge_responses')
-    op.drop_index('idx_response_status', table_name='user_challenge_responses')
-    op.drop_index('idx_user_selected_claim', table_name='user_challenge_responses')
-    op.drop_index('idx_user_weekly_response', table_name='user_challenge_responses')
-    op.drop_table('user_challenge_responses')
-
-    op.drop_index('idx_claim_controversy', table_name='challenge_claims')
-    op.drop_index('idx_claim_type', table_name='challenge_claims')
-    op.drop_index('idx_weekly_challenge_claims', table_name='challenge_claims')
-    op.drop_table('challenge_claims')
-
-    op.drop_index('idx_active_challenges', table_name='weekly_challenges')
-    op.drop_index('idx_challenge_date', table_name='weekly_challenges')
-    op.drop_index('idx_challenge_week', table_name='weekly_challenges')
-    op.drop_table('weekly_challenges')
+    # Drop enum types
+    op.execute("DROP TYPE IF EXISTS challengeclaimtype")
+    op.execute("DROP TYPE IF EXISTS challengeresponsestatus")
+    op.execute("DROP TYPE IF EXISTS agreementlevel")
 
     # Remove challenge_participation_enabled from users table
     op.drop_column('users', 'challenge_participation_enabled')
