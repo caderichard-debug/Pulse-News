@@ -39,8 +39,8 @@ test.describe('Complete User Journey', () => {
     await expect(page).toHaveURL(/\/preferences/, { timeout: 10000 });
 
     // Step 2: Navigate to Analytics (via Insights dropdown)
-    await page.getByRole('button', { name: /insights/i }).click();
-    await page.getByRole('button', { name: /analytics/i }).click();
+    await page.getByRole('button', { name: /🔍.*insights.*▼/i }).click();
+    await page.getByRole('button', { name: '📊 Analytics' }).click();
     await expect(page).toHaveURL(/\/analytics/, { timeout: 10000 });
 
     // Wait for page to hydrate and render
@@ -49,7 +49,7 @@ test.describe('Complete User Journey', () => {
 
     // Verify analytics page elements
     await expect(page.getByRole('heading', { name: /data analysis/i })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(/explore sentiment trends and bias distribution/i)).toBeVisible();
+    await expect(page.getByText(/explore sentiment trends, bias distribution, and your challenge insights/i)).toBeVisible();
 
     // Verify chart sections are present
     await expect(page.getByRole('heading', { name: /sentiment over time/i })).toBeVisible();
@@ -91,7 +91,7 @@ test.describe('Complete User Journey', () => {
     await expect(page.getByRole('combobox').first()).toBeVisible({ timeout: 10000 }); // Topic filter
 
     // Step 3: Navigate to Sources (via Insights dropdown)
-    await page.getByRole('button', { name: /insights/i }).click();
+    await page.getByRole('button', { name: /🔍.*insights.*▼/i }).click();
     await page.getByRole('button', { name: /sources/i }).click();
     await expect(page).toHaveURL(/\/sources/, { timeout: 10000 });
 
@@ -103,8 +103,8 @@ test.describe('Complete User Journey', () => {
     await expect(page.getByRole('heading', { name: /supported news sources/i })).toBeVisible({ timeout: 10000 });
 
     // Step 4: Navigate to Analytics (via Insights dropdown)
-    await page.getByRole('button', { name: /insights/i }).click();
-    await page.getByRole('button', { name: /analytics/i }).click();
+    await page.getByRole('button', { name: /🔍.*insights.*▼/i }).click();
+    await page.getByRole('button', { name: '📊 Analytics' }).click();
     await expect(page).toHaveURL(/\/analytics/, { timeout: 10000 });
 
     // Wait for page to hydrate and render
@@ -253,8 +253,8 @@ test.describe('Navigation Flow', () => {
 
   test('should navigate between all main pages using navbar', async ({ page }) => {
     // Test Analytics button (via Insights dropdown)
-    await page.getByRole('button', { name: /insights/i }).click();
-    await page.getByRole('button', { name: /analytics/i }).click();
+    await page.getByRole('button', { name: /🔍.*insights.*▼/i }).click();
+    await page.getByRole('button', { name: '📊 Analytics' }).click();
     await expect(page).toHaveURL(/\/analytics/, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
     await page.waitForLoadState('networkidle');
@@ -266,29 +266,29 @@ test.describe('Navigation Flow', () => {
     await page.waitForLoadState('networkidle');
 
     // Test Sources button (via Insights dropdown)
-    await page.getByRole('button', { name: /insights/i }).click();
+    await page.getByRole('button', { name: /🔍.*insights.*▼/i }).click();
     await page.getByRole('button', { name: /sources/i }).click();
     await expect(page).toHaveURL(/\/sources/, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
     await page.waitForLoadState('networkidle');
 
     // Test Analytics button (via Insights dropdown)
-    await page.getByRole('button', { name: /insights/i }).click();
-    await page.getByRole('button', { name: /analytics/i }).click();
+    await page.getByRole('button', { name: /🔍.*insights.*▼/i }).click();
+    await page.getByRole('button', { name: '📊 Analytics' }).click();
     await expect(page).toHaveURL(/\/analytics/, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
     await page.waitForLoadState('networkidle');
 
     // Test Sources button (via Insights dropdown)
-    await page.getByRole('button', { name: /insights/i }).click();
+    await page.getByRole('button', { name: /🔍.*insights.*▼/i }).click();
     await page.getByRole('button', { name: /sources/i }).click();
     await expect(page).toHaveURL(/\/sources/, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
     await page.waitForLoadState('networkidle');
 
     // Test Analytics button (via Insights dropdown)
-    await page.getByRole('button', { name: /insights/i }).click();
-    await page.getByRole('button', { name: /analytics/i }).click();
+    await page.getByRole('button', { name: /🔍.*insights.*▼/i }).click();
+    await page.getByRole('button', { name: '📊 Analytics' }).click();
     await expect(page).toHaveURL(/\/analytics/, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
     await page.waitForLoadState('networkidle');
@@ -308,8 +308,8 @@ test.describe('Navigation Flow', () => {
 
   test('should highlight active page in navbar', async ({ page }) => {
     // Go to analytics (via Insights dropdown)
-    await page.getByRole('button', { name: /insights/i }).click();
-    await page.getByRole('button', { name: /analytics/i }).click();
+    await page.getByRole('button', { name: /🔍.*insights.*▼/i }).click();
+    await page.getByRole('button', { name: '📊 Analytics' }).click();
     await expect(page).toHaveURL(/\/analytics/, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
     await page.waitForLoadState('networkidle');

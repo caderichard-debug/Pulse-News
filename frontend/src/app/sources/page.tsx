@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
+import ExtensionBanner from '@/components/ExtensionBanner';
 import Footer from '@/components/Footer';
 
 interface Source {
@@ -44,8 +45,10 @@ function SourcesContent() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Search state
+  // Search and filter state
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCredibility, setSelectedCredibility] = useState<string>('');
+  const [selectedBias, setSelectedBias] = useState<string>('');
 
   // Add source state
   const [articleUrl, setArticleUrl] = useState('');
@@ -129,16 +132,45 @@ function SourcesContent() {
     }
   };
 
-  // Filter sources by search query
+  // Filter sources by search query and filters
   const filterSources = (sources: Source[]) => {
-    if (!searchQuery.trim()) return sources;
+    let filtered = sources;
 
-    const query = searchQuery.toLowerCase();
-    return sources.filter(source =>
-      source.name.toLowerCase().includes(query) ||
-      source.url.toLowerCase().includes(query) ||
-      source.description?.toLowerCase().includes(query)
-    );
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(source =>
+        source.name.toLowerCase().includes(query) ||
+        source.url.toLowerCase().includes(query) ||
+        source.description?.toLowerCase().includes(query)
+      );
+    }
+
+    // Filter by credibility (trust score)
+    if (selectedCredibility) {
+      filtered = filtered.filter(source => {
+        const trustScore = source.trust_score * 100;
+        switch (selectedCredibility) {
+          case 'high':
+            return trustScore >= 80;
+          case 'medium':
+            return trustScore >= 60 && trustScore < 80;
+          case 'low':
+            return trustScore < 60;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Filter by political bias
+    if (selectedBias) {
+      filtered = filtered.filter(source =>
+        source.organizational_bias === selectedBias
+      );
+    }
+
+    return filtered;
   };
 
   const filteredRecommended = filterSources(recommendedSources);
@@ -158,6 +190,7 @@ function SourcesContent() {
   return (
     <>
       <Navbar />
+      <ExtensionBanner />
       <UnverifiedEmailAlert />
       <div className="min-h-screen bg-background transition-colors">
         <div className="max-w-6xl mx-auto px-4 py-8">
@@ -220,16 +253,74 @@ function SourcesContent() {
             </div>
           )}
 
-          {/* Search Bar (for Recommended and Community tabs) */}
+          {/* Search Bar and Filters (for Recommended and Community tabs) */}
           {(activeTab === 'recommended' || activeTab === 'community') && (
             <div className="mb-6">
-              <input
-                type="text"
-                placeholder="Search sources by name, URL, or description..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground placeholder-muted-foreground"
-              />
+              {/* Search Bar */}
+              <div className="mb-4">
+                <input
+                  type="text"
+                  placeholder="Search sources by name, URL, or description..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground placeholder-muted-foreground"
+                />
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                {/* Credibility Filter */}
+                <div className="flex-1">
+                  <label htmlFor="credibility-filter" className="block text-sm font-medium text-foreground mb-2">
+                    Credibility
+                  </label>
+                  <select
+                    id="credibility-filter"
+                    value={selectedCredibility}
+                    onChange={(e) => setSelectedCredibility(e.target.value)}
+                    className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                  >
+                    <option value="">All Credibility Levels</option>
+                    <option value="high">High (80%+)</option>
+                    <option value="medium">Medium (60-79%)</option>
+                    <option value="low">Low (&lt;60%)</option>
+                  </select>
+                </div>
+
+                {/* Political Lean Filter */}
+                <div className="flex-1">
+                  <label htmlFor="bias-filter" className="block text-sm font-medium text-foreground mb-2">
+                    Political Lean
+                  </label>
+                  <select
+                    id="bias-filter"
+                    value={selectedBias}
+                    onChange={(e) => setSelectedBias(e.target.value)}
+                    className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                  >
+                    <option value="">All Political Leans</option>
+                    <option value="left">Left</option>
+                    <option value="center-left">Center-Left</option>
+                    <option value="center">Center</option>
+                    <option value="center-right">Center-Right</option>
+                    <option value="right">Right</option>
+                  </select>
+                </div>
+
+                {/* Clear Filters */}
+                <div className="flex items-end">
+                  <button
+                    onClick={() => {
+                      setSelectedCredibility('');
+                      setSelectedBias('');
+                      setSearchQuery('');
+                    }}
+                    className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors font-medium"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 

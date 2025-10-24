@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import SourceBiasBadge from '@/components/SourceBiasBadge';
+import ExtensionBanner from '@/components/ExtensionBanner';
 import { formatDate } from '@/lib/dateUtils';
 import Footer from '@/components/Footer';
 
@@ -170,6 +171,7 @@ function AnalyzePageContent() {
   return (
     <>
       {!isExtensionMode && <Navbar />}
+      {!isExtensionMode && <ExtensionBanner />}
       <div className="min-h-screen bg-background">
         <div className="max-w-4xl mx-auto px-4 py-8">
           {/* Extension Mode Header */}
@@ -686,6 +688,7 @@ export default function AnalyzePage() {
     <Suspense fallback={
       <>
         <Navbar />
+        <ExtensionBanner />
         <div className="min-h-screen bg-background">
           <div className="max-w-4xl mx-auto px-4 py-8">
             <div className="text-center">

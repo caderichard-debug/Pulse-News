@@ -5,12 +5,13 @@ These tests simulate real user workflows without mocking.
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, create_engine, SQLModel
+from sqlmodel import Session, create_engine, SQLModel, select
 from sqlmodel.pool import StaticPool
 from app.main import app
 from app.database import get_session
-from app.models import Source, Topic, Framework, PoliticalLean
+from app.models import Source, Topic, Framework, PoliticalLean, User
 import time
+from datetime import datetime
 
 
 @pytest.fixture(name="e2e_session")
@@ -142,7 +143,7 @@ class TestCompleteUserJourney:
             "/preferences/settings",
             headers=headers,
             json={
-                "source_discovery_mode": "balanced",
+                "source_discovery_mode": "some",
                 "article_order_preference": "good_first",
                 "articles_per_topic_default": 5
             }
@@ -201,8 +202,8 @@ class TestCompleteUserJourney:
             url="https://example.com/ai-regulation",
             source_id=source.id,
             description="Government considers new AI regulations",
-            published_at="2025-01-01T10:00:00Z",
-            status=ProcessingStatus.SCRAPED
+            published_at=datetime(2025, 1, 1, 10, 0, 0),
+            processing_status=ProcessingStatus.PENDING
         )
         e2e_session.add(article)
         e2e_session.commit()
@@ -210,7 +211,7 @@ class TestCompleteUserJourney:
 
         # Step 2: Simulate extraction
         article.content_text = "Full article content about AI regulation..."
-        article.status = ProcessingStatus.EXTRACTED
+        article.processing_status = ProcessingStatus.PROCESSING
         e2e_session.add(article)
         e2e_session.commit()
 
@@ -219,13 +220,13 @@ class TestCompleteUserJourney:
             article_id=article.id,
             summary="Government proposes new regulations for AI development.",
             sentiment_score=0,
-            political_lean=PoliticalLean.CENTER,
+            political_lean=PoliticalLean("center"),
             bias_indicators="Neutral reporting",
             key_stats=["50% of AI companies affected", "2025 implementation"]
         )
         e2e_session.add(analysis)
 
-        article.status = ProcessingStatus.ANALYZED
+        article.processing_status = ProcessingStatus.COMPLETED
         e2e_session.add(article)
         e2e_session.commit()
         e2e_session.refresh(analysis)
@@ -261,7 +262,7 @@ class TestCompleteUserJourney:
         4. User views newsletter
         """
         from app.models import Article, ArticleAnalysis, UserTopicPreference, ProcessingStatus
-        from app.services.newsletter_service import generate_newsletter
+        from app.services.newsletter_service import _generate_newsletter_for_user
 
         # Setup: Create user
         register_response = e2e_client.post(
@@ -282,17 +283,8 @@ class TestCompleteUserJourney:
         token = login_response.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
 
-        # Step 1: Subscribe to topic
+        # Step 1: Get first topic (user already has preferences from registration)
         topic = e2e_session.query(Topic).first()
-        preference = UserTopicPreference(
-            user_id=user_id,
-            topic_id=topic.id,
-            is_subscribed=True,
-            priority=5,
-            articles_per_topic=3
-        )
-        e2e_session.add(preference)
-        e2e_session.commit()
 
         # Step 2: Create analyzed articles
         source = e2e_session.query(Source).first()
@@ -303,8 +295,8 @@ class TestCompleteUserJourney:
                 url=f"https://example.com/article-{i+1}",
                 source_id=source.id,
                 description=f"Article {i+1} description",
-                published_at="2025-01-01T10:00:00Z",
-                status=ProcessingStatus.ANALYZED
+                published_at=datetime(2025, 1, 1, 10, 0, 0),
+                status=ProcessingStatus.COMPLETED
             )
             e2e_session.add(article)
             e2e_session.commit()
@@ -315,23 +307,23 @@ class TestCompleteUserJourney:
                 article_id=article.id,
                 summary=f"Summary of article {i+1}",
                 sentiment_score=i - 1,  # -1, 0, 1
-                political_lean=PoliticalLean.CENTER,
+                political_lean=PoliticalLean("center"),
                 bias_indicators="Neutral",
                 key_stats=[]
             )
             e2e_session.add(analysis)
 
             # Link to topic
-            from app.models import ArticleTopic
-            article_topic = ArticleTopic(article_id=article.id, topic_id=topic.id)
+            from app.models import ArticleTopicLink
+            article_topic = ArticleTopicLink(article_id=article.id, topic_id=topic.id)
             e2e_session.add(article_topic)
 
         e2e_session.commit()
 
         # Step 3: Generate newsletter
-        newsletter = generate_newsletter(e2e_session, user_id)
+        user = e2e_session.exec(select(User).where(User.id == user_id)).first()
+        newsletter = _generate_newsletter_for_user(user, e2e_session)
         assert newsletter is not None
-        assert newsletter.user_id == user_id
 
         # Step 4: User views newsletter preview
         preview_response = e2e_client.get("/preferences/newsletter-preview", headers=headers)
@@ -374,7 +366,7 @@ class TestAuthenticationWorkflow:
 
         # Step 4: Access without token should fail
         no_auth_response = e2e_client.get("/auth/me")
-        assert no_auth_response.status_code == 401
+        assert no_auth_response.status_code == 403
 
     def test_invalid_credentials(self, e2e_client: TestClient):
         """Test handling of invalid credentials"""

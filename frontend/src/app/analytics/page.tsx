@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import UnverifiedEmailAlert from '@/components/UnverifiedEmailAlert';
+import ExtensionBanner from '@/components/ExtensionBanner';
 import Footer from '@/components/Footer';
 import ChallengeHistory from '@/components/ChallengeHistory';
 import {
@@ -90,6 +91,7 @@ export default function AnalyticsPage() {
     return (
       <>
         <Navbar />
+        <ExtensionBanner />
         <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
@@ -103,6 +105,7 @@ export default function AnalyticsPage() {
   return (
     <>
       <Navbar />
+      <ExtensionBanner />
       <UnverifiedEmailAlert />
       <div className="min-h-screen bg-background">
         <div className="max-w-7xl mx-auto px-4 py-8">

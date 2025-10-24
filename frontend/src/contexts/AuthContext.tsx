@@ -34,8 +34,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Clear any stale access_token key (legacy cleanup)
+    const oldToken = localStorage.getItem('access_token')
+    if (oldToken) {
+      localStorage.removeItem('access_token')
+    }
+
     // Check for existing token on mount
-    const savedToken = localStorage.getItem('access_token')
+    const savedToken = localStorage.getItem('token')
     if (savedToken) {
       setToken(savedToken)
       api.setToken(savedToken)
@@ -48,7 +54,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const response = await api.login({ email, password })
     setToken(response.access_token)
     api.setToken(response.access_token)
-    localStorage.setItem('access_token', response.access_token)
+    localStorage.setItem('token', response.access_token)
 
     // Set user info from response with proper type casting
     setUser({
@@ -65,13 +71,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = () => {
     setUser(null)
     setToken(null)
-    localStorage.removeItem('access_token')
+    localStorage.removeItem('token')
     api.clearToken()
   }
 
   const saveToken = (newToken: string) => {
     setToken(newToken)
-    localStorage.setItem('access_token', newToken)
+    localStorage.setItem('token', newToken)
     api.setToken(newToken)
   }
 
