@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     openai_api_key: Optional[str] = None
     resend_api_key: Optional[str] = None
 
+    # OAuth Configuration
+    google_auth_client_id: Optional[str] = None
+    google_auth_client_secret: Optional[str] = None
+
     # Fact-checking APIs (V2)
     google_fact_check_api_key: Optional[str] = None
     google_search_engine_id: Optional[str] = None  # For Google Custom Search

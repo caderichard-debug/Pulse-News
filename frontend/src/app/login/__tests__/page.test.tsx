@@ -1,11 +1,12 @@
 import { render, screen, fireEvent, waitFor } from '@/__tests__/test-utils';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import LoginPage from '../page';
 import { api } from '@/lib/api';
 
 // Mock Next.js router
 jest.mock('next/navigation', () => ({
   useRouter: jest.fn(),
+  useSearchParams: jest.fn(),
 }));
 
 // Mock API
@@ -23,6 +24,10 @@ describe('LoginPage', () => {
     jest.clearAllMocks();
     (useRouter as jest.Mock).mockReturnValue({
       push: mockPush,
+      replace: jest.fn(),
+    });
+    (useSearchParams as jest.Mock).mockReturnValue({
+      get: jest.fn(),
     });
   });
 

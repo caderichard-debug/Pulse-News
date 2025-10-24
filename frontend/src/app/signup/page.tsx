@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
 import { api } from '@/lib/api';
 import BrandCard from '@/components/BrandCard';
 
@@ -88,20 +87,10 @@ export default function SignupPage() {
     setError('');
 
     try {
-      const result = await signIn('google', {
-        redirect: false,
-        callbackUrl: '/preferences',
-      });
-
-      if (result?.error) {
-        setError(`Google sign-up failed: ${result.error}`);
-      } else if (result?.ok) {
-        // Successfully signed up, NextAuth will handle redirect
-        router.push('/preferences');
-      }
+      // Redirect to backend OAuth endpoint (same flow as login)
+      window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/oauth/google`;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Google sign-up failed');
-    } finally {
       setOauthLoading(false);
     }
   };
