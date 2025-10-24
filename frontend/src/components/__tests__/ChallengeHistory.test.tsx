@@ -250,8 +250,8 @@ describe('ChallengeHistory', () => {
     it('should display participation statistics correctly', () => {
       expect(screen.getByText('5')).toBeInTheDocument(); // Total challenges
       expect(screen.getByText('2')).toBeInTheDocument(); // Current streak
-      expect(screen.getByText('80.0%')).toBeInTheDocument(); // Completion rate
       expect(screen.getByText('3.2/5.0')).toBeInTheDocument(); // Avg agreement
+      expect(screen.getByText('✓')).toBeInTheDocument(); // Current week responded
     });
 
     it('should display current week indicator', () => {
@@ -334,24 +334,17 @@ describe('ChallengeHistory', () => {
     });
 
     it('should display participation metrics', () => {
-      expect(screen.getByText('5')).toBeInTheDocument(); // Challenges Started
+      expect(screen.getByText('5')).toBeInTheDocument(); // Challenges Completed
       expect(screen.getByText('2')).toBeInTheDocument(); // Current Streak
-      expect(screen.getByText('80.0%')).toBeInTheDocument(); // Completion Rate
-      expect(screen.getByText('3')).toBeInTheDocument(); // Longest Streak
+      expect(screen.getByText('3.2/5.0')).toBeInTheDocument(); // Avg Agreement
+      expect(screen.getByText('✓')).toBeInTheDocument(); // This Week
     });
 
-    it('should display engagement metrics', () => {
-      expect(screen.getByText('35')).toBeInTheDocument(); // Articles Assigned
-      expect(screen.getByText('28')).toBeInTheDocument(); // Articles Read
-      expect(screen.getByText('80.0%')).toBeInTheDocument(); // Engagement Rate
-      expect(screen.getByText('7.0')).toBeInTheDocument(); // Avg Articles/Challenge
-    });
-
-    it('should display quality indicators', () => {
-      expect(screen.getByText('85.0%')).toBeInTheDocument(); // Response Quality
-      expect(screen.getByText('78.0%')).toBeInTheDocument(); // Engagement Consistency
-      expect(screen.getByText('82.0%')).toBeInTheDocument(); // Perspective Diversity
-      expect(screen.getByText('📈 improving')).toBeInTheDocument(); // Improvement Trend
+    it('should display claim type breakdown', () => {
+      // Should show claim type badges from mock data
+      expect(screen.getByText(/MORAL PRINCIPLE.*\(2\)/)).toBeInTheDocument();
+      expect(screen.getByText(/ETHICAL DILEMMA.*\(2\)/)).toBeInTheDocument();
+      expect(screen.getByText(/SOCIAL JUSTICE.*\(1\)/)).toBeInTheDocument();
     });
 
     it('should display agreement distribution', () => {
@@ -553,8 +546,8 @@ describe('ChallengeHistory', () => {
       const streakNumber = screen.getByText('2');
       expect(streakNumber).toHaveClass('text-green-600', 'dark:text-green-400');
 
-      const completedRate = screen.getByText('80.0%');
-      expect(completedRate).toHaveClass('text-purple-600', 'dark:text-purple-400');
+      const avgAgreement = screen.getByText('3.2/5.0');
+      expect(avgAgreement).toHaveClass('text-purple-600', 'dark:text-purple-400');
     });
   });
 

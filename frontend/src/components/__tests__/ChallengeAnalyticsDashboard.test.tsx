@@ -546,7 +546,7 @@ describe('ChallengeAnalyticsDashboard', () => {
       expect(timeRangeSelect).toHaveAttribute('tabindex', '0');
 
       // Should be able to focus on interactive elements
-      fireEvent.keyDown(timeRangeSelect, { key: ' 'ArrowDown' });
+      fireEvent.keyDown(timeRangeSelect, { key: 'ArrowDown' });
       // Should respond to arrow key presses (implementation may vary)
     });
   });
