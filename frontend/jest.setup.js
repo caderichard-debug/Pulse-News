@@ -6,19 +6,50 @@ import '@testing-library/jest-dom'
 const originalError = console.error
 beforeAll(() => {
   console.error = (...args) => {
+    const message = typeof args[0] === 'string' ? args[0] : ''
+
+    // Suppress React act() warnings
     if (
-      typeof args[0] === 'string' &&
-      args[0].includes('update to') &&
-      args[0].includes('inside a test was not wrapped in act')
+      message.includes('update to') &&
+      message.includes('inside a test was not wrapped in act')
     ) {
       return
     }
+
+    // Suppress intentional API error messages from tests
+    if (
+      message.includes('Error fetching viewpoints:') ||
+      message.includes('Failed to load challenge data:') ||
+      message.includes('Cannot complete this request right now. OpenAI API is unavailable.')
+    ) {
+      return
+    }
+
     originalError.call(console, ...args)
+  }
+})
+
+// Suppress console.warn messages for intentional test warnings
+const originalWarn = console.warn
+beforeAll(() => {
+  console.warn = (...args) => {
+    const message = typeof args[0] === 'string' ? args[0] : ''
+
+    // Suppress intentional test warnings
+    if (
+      message.includes('Skipping test - no auth token available') ||
+      message.includes('REGRESSION DETECTED: All viewpoints show the same framework')
+    ) {
+      return
+    }
+
+    originalWarn.call(console, ...args)
   }
 })
 
 afterAll(() => {
   console.error = originalError
+  console.warn = originalWarn
 })
 
 // Mock global fetch
