@@ -49,7 +49,7 @@ test.describe('Complete User Journey', () => {
 
     // Verify analytics page elements
     await expect(page.getByRole('heading', { name: /data analysis/i })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(/explore sentiment trends and bias distribution/i)).toBeVisible();
+    await expect(page.getByText(/explore sentiment trends, bias distribution, and your challenge insights/i)).toBeVisible();
 
     // Verify chart sections are present
     await expect(page.getByRole('heading', { name: /sentiment over time/i })).toBeVisible();
