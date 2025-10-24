@@ -8,7 +8,7 @@ from ..models import (
     User, Article, ArticleAnalysis, Framework, ArticleFrameworkLink,
     UserTopicPreference, Newsletter, NewsletterArticle, Topic,
     StatisticVerification, ArticleContext, ArticleCluster, ArticleClusterMember,
-    UserSourceSubscription
+    UserSourceSubscription, WeeklyChallenge, ChallengeClaim, UserChallengeResponse
 )
 from ..database import engine
 from ..config import settings
@@ -132,6 +132,64 @@ def generate_and_send_newsletters(session: Session = None) -> Dict[str, int]:
             return _generate(session)
 
 
+def _get_current_challenge(session: Session) -> Optional[Dict]:
+    """
+    Get the current week's published challenge for newsletter inclusion.
+
+    Returns:
+        Dict with challenge data or None if no active challenge
+    """
+    try:
+        # Get current week's Monday
+        today = datetime.utcnow().date()
+        monday = today - timedelta(days=today.weekday())
+
+        # Find published challenge for this week
+        challenge = session.exec(
+            select(WeeklyChallenge)
+            .where(
+                WeeklyChallenge.week_start_date == monday,
+                WeeklyChallenge.is_published == True
+            )
+        ).first()
+
+        if not challenge:
+            return None
+
+        # Get the 4 claims for this challenge
+        claims = session.exec(
+            select(ChallengeClaim)
+            .where(ChallengeClaim.weekly_challenge_id == challenge.id)
+            .order_by(ChallengeClaim.display_order)
+        ).all()
+
+        if len(claims) != 4:
+            logger.warning(f"Challenge {challenge.id} has {len(claims)} claims, expected 4")
+            return None
+
+        # Format challenge data for template
+        challenge_data = {
+            "id": challenge.id,
+            "week_start_date": challenge.week_start_date.strftime('%Y-%m-%d'),
+            "title": challenge.title,
+            "description": challenge.description,
+            "claims": [
+                {
+                    "display_order": claim.display_order,
+                    "claim_text": claim.claim_text,
+                    "claim_type": claim.claim_type.value.replace('_', ' ').title()
+                }
+                for claim in claims
+            ]
+        }
+
+        return challenge_data
+
+    except Exception as e:
+        logger.error(f"Error getting current challenge: {e}")
+        return None
+
+
 def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict]:
     """
     Generate newsletter content for a specific user based on their preferences.
@@ -237,6 +295,12 @@ def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict
 
     # Prepare template data
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+    # Add Friday challenge section if applicable
+    challenge = None
+    if datetime.utcnow().weekday() == 4 and user.challenge_participation_enabled:  # Friday and user opted in
+        challenge = _get_current_challenge(session)
+
     template_data = {
         "user_name": user.name or "there",
         "date": datetime.utcnow().strftime("%B %d, %Y"),
@@ -253,6 +317,7 @@ def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict
             for fw in top_frameworks
         ],
         "articles": [],
+        "challenge": challenge,  # Will be None except on Fridays for opted-in users
         "preferences_url": f"{frontend_url}/preferences?token={user.email}",  # TODO: Add real token
         "website_url": frontend_url,
         "unsubscribe_url": f"{frontend_url}/unsubscribe?token={user.email}"  # TODO: Add real token

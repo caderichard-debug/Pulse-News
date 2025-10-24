@@ -17,7 +17,9 @@ from ..jobs.tasks import (
     context_generation_job,
     process_articles_job,
     process_unprocessed_articles_job,
-    regenerate_viewpoints_job
+    regenerate_viewpoints_job,
+    generate_weekly_challenges_job,
+    assign_challenge_articles_job
 )
 from ..config import settings
 import logging
@@ -43,12 +45,16 @@ def start_scheduler():
     - Backup job (every 10 hours): Check for any missed/unprocessed articles
 
     - Newsletter job (daily at 10:20 AM PST): Send daily newsletters
+
+    - Challenge system jobs:
+      - Weekly challenge generation (Wednesday 2:00 PM PST): Create ethical claims
+      - Daily article assignment (6:00 AM PST): Send challenge articles
     """
     if scheduler.running:
         logger.warning("Scheduler is already running")
         return
 
-    logger.info("Initializing APScheduler with 3 scheduled jobs...")
+    logger.info("Initializing APScheduler with 6 scheduled jobs...")
 
     # Job 1: Main article pipeline - runs every 6 hours
     scheduler.add_job(
@@ -95,6 +101,30 @@ def start_scheduler():
     )
     logger.info("✓ Scheduled: Viewpoint regeneration daily at 3:00 AM PST")
     logger.info("  └─> Refreshes cached viewpoint relationships with fresh AI analysis")
+
+    # Job 5: Generate weekly challenges - Wednesdays at 2:00 PM PST
+    scheduler.add_job(
+        func=generate_weekly_challenges_job,
+        trigger=CronTrigger(day_of_week=2, hour=14, minute=0, timezone='America/Los_Angeles'),  # Wednesday
+        id='generate_weekly_challenges',
+        name='Generate Weekly Challenge Claims',
+        replace_existing=True,
+        max_instances=1,
+    )
+    logger.info("✓ Scheduled: Weekly challenge generation Wednesdays at 2:00 PM PST")
+    logger.info("  └─> Creates 4 ethical claims for Friday newsletter challenge")
+
+    # Job 6: Assign daily challenge articles - Daily at 6:00 AM PST
+    scheduler.add_job(
+        func=assign_challenge_articles_job,
+        trigger=CronTrigger(hour=6, minute=0, timezone='America/Los_Angeles'),
+        id='assign_challenge_articles',
+        name='Assign Daily Challenge Articles',
+        replace_existing=True,
+        max_instances=1,
+    )
+    logger.info("✓ Scheduled: Daily challenge article assignment at 6:00 AM PST")
+    logger.info("  └─> Sends opposing viewpoint articles to challenge participants")
 
     # Start the scheduler
     scheduler.start()
