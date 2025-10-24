@@ -271,7 +271,8 @@ describe('ChallengeAnalyticsDashboard', () => {
     it('should display participation dates when available', () => {
       const dateText = screen.getByText(/First participation:.*Most recent:/);
       expect(dateText).toBeInTheDocument();
-      expect(dateText).toHaveTextContent(/First participation: Dec 31, 2023.*Most recent: Jan 15, 2024/);
+      // Make date test flexible to handle timezone differences between local and CI environments
+      expect(dateText).toHaveTextContent(/First participation: (Dec 31, 2023|Jan 1, 2024).*Most recent: Jan 15, 2024/);
     });
   });
 
@@ -397,7 +398,8 @@ describe('ChallengeAnalyticsDashboard', () => {
 
     it('should display recent challenge performance', () => {
       // Should show at least one recent performance entry
-      expect(screen.getByText(/Jan 15, 2024/)).toBeInTheDocument(); // Formatted date
+      // Use getAllByText since the date appears in multiple places
+      expect(screen.getAllByText(/Jan 15, 2024/).length).toBeGreaterThan(0); // Formatted date
       expect(screen.getAllByText(/MORAL PRINCIPLE/)).toHaveLength(2); // Appears in both recent performance and trends
       expect(screen.getAllByText('5/7 articles')).toHaveLength(2); // Appears in both recent performance and trends
     });
