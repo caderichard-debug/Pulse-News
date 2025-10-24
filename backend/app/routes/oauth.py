@@ -1,14 +1,18 @@
 """
 OAuth authentication routes for Google sign-in.
-Handles OAuth callbacks, account linking, and token management.
+Handles OAuth initiation, callbacks, account linking, and token management.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.responses import RedirectResponse
 from sqlmodel import Session, select
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
 import logging
+import urllib.parse
+import requests
+from ..config import settings
 
 from ..database import get_session
 from ..models import User, OAuthAccount
@@ -17,6 +21,149 @@ from .auth import get_current_user
 
 router = APIRouter(prefix="/auth/oauth", tags=["oauth authentication"])
 logger = logging.getLogger(__name__)
+
+
+@router.get("/google")
+async def google_oauth_login():
+    """
+    Initiate Google OAuth flow.
+
+    Redirects user to Google OAuth consent screen.
+    """
+    try:
+        # Google OAuth configuration
+        client_id = settings.google_auth_client_id
+        redirect_uri = f"{settings.backend_url}/auth/oauth/google/callback"
+        scope = "openid email profile"
+
+        # Build Google OAuth URL
+        auth_url = "https://accounts.google.com/o/oauth2/v2/auth"
+        params = {
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
+            "scope": scope,
+            "response_type": "code",
+            "access_type": "offline",
+            "prompt": "consent",
+        }
+
+        # Construct full authorization URL
+        auth_url_with_params = f"{auth_url}?{urllib.parse.urlencode(params)}"
+
+        logger.info(f"Redirecting user to Google OAuth: {auth_url}")
+        return RedirectResponse(url=auth_url_with_params)
+
+    except Exception as e:
+        logger.error(f"Error initiating Google OAuth: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to initiate OAuth flow"
+        )
+
+
+@router.get("/google/callback")
+async def google_oauth_callback(
+    code: str,
+    state: Optional[str] = None,
+    session: Session = Depends(get_session)
+):
+    """
+    Handle Google OAuth callback.
+
+    Exchange authorization code for tokens and create/update user account.
+    """
+    try:
+        # Exchange authorization code for tokens
+        token_url = "https://oauth2.googleapis.com/token"
+        redirect_uri = f"{settings.backend_url}/auth/oauth/google/callback"
+
+        data = {
+            "client_id": settings.google_auth_client_id,
+            "client_secret": settings.google_auth_client_secret,
+            "code": code,
+            "grant_type": "authorization_code",
+            "redirect_uri": redirect_uri,
+        }
+
+        # Get tokens from Google
+        token_response = requests.post(token_url, data=data)
+        if not token_response.ok:
+            logger.error(f"Failed to exchange code for tokens: {token_response.text}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to exchange authorization code"
+            )
+
+        token_data = token_response.json()
+        access_token = token_data.get("access_token")
+        refresh_token = token_data.get("refresh_token")
+        expires_in = token_data.get("expires_in")
+
+        # Get user info from Google
+        user_info_url = "https://www.googleapis.com/oauth2/v2/userinfo"
+        headers = {"Authorization": f"Bearer {access_token}"}
+
+        user_response = requests.get(user_info_url, headers=headers)
+        if not user_response.ok:
+            logger.error(f"Failed to get user info: {user_response.text}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to retrieve user information"
+            )
+
+        user_info = user_response.json()
+
+        # Create or update user
+        oauth_service = OAuthService(session)
+        user, created = oauth_service.find_or_create_oauth_user(
+            provider="google",
+            provider_user_id=user_info["id"],
+            email=user_info["email"],
+            name=user_info.get("name"),
+            avatar_url=user_info.get("picture"),
+            provider_data={
+                "verified_email": user_info.get("verified_email", False),
+                "locale": user_info.get("locale"),
+            }
+        )
+
+        # Update OAuth tokens
+        token_expires_at = None
+        if expires_in:
+            token_expires_at = datetime.utcnow().timestamp() + expires_in
+            token_expires_at = datetime.fromtimestamp(token_expires_at)
+
+        oauth_service.update_oauth_tokens(
+            user_id=user.id,
+            provider="google",
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_expires_at=token_expires_at
+        )
+
+        # Update last login
+        user.last_login = datetime.utcnow()
+        session.add(user)
+        session.commit()
+
+        # Create JWT token for frontend
+        jwt_token = oauth_service.create_auth_token_for_user(user)
+
+        # Redirect to frontend with token
+        frontend_url = settings.frontend_url if settings.environment == "development" else settings.frontend_custom_url
+        redirect_url = f"{frontend_url}/login/callback?token={jwt_token}&new_user={created}"
+
+        logger.info(f"User {'created' if created else 'signed in'} via Google OAuth: {user.email}")
+        return RedirectResponse(url=redirect_url)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Google OAuth callback error: {str(e)}")
+        # Redirect to frontend with error
+        frontend_url = settings.frontend_url if settings.environment == "development" else settings.frontend_custom_url
+        error_url = f"{frontend_url}/login?error=oauth_failed"
+        return RedirectResponse(url=error_url)
 
 
 # Request/Response Models

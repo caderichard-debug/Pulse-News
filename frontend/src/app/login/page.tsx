@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import BrandCard from '@/components/BrandCard';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -15,6 +15,34 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Handle OAuth callback
+  useEffect(() => {
+    const token = searchParams.get('token');
+    const newUser = searchParams.get('new_user');
+
+    if (token) {
+      // Save token from OAuth callback
+      api.setToken(token);
+
+      // Show success message for new users
+      if (newUser === 'true') {
+        setError('');
+        // Could show a welcome message here if needed
+      }
+
+      // Redirect to feed
+      router.push('/feed');
+    }
+
+    // Handle OAuth errors
+    const oauthError = searchParams.get('error');
+    if (oauthError) {
+      setError('Google sign-in failed. Please try again.');
+      // Clean up the URL
+      router.replace('/login');
+    }
+  }, [searchParams, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,20 +68,10 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const result = await signIn('google', {
-        redirect: false,
-        callbackUrl: '/feed',
-      });
-
-      if (result?.error) {
-        setError(`Google sign-in failed: ${result.error}`);
-      } else if (result?.ok) {
-        // Successfully signed in, NextAuth will handle redirect
-        router.push('/feed');
-      }
+      // Redirect to backend OAuth endpoint
+      window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/oauth/google`;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Google sign-in failed');
-    } finally {
       setOauthLoading(false);
     }
   };
