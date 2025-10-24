@@ -20,6 +20,7 @@ beforeAll(() => {
     if (
       message.includes('Error fetching viewpoints:') ||
       message.includes('Failed to load challenge data:') ||
+      message.includes('Failed to load analytics data:') ||
       message.includes('Cannot complete this request right now. OpenAI API is unavailable.')
     ) {
       return
