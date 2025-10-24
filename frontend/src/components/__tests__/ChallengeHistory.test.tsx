@@ -276,7 +276,7 @@ describe('ChallengeHistory', () => {
     it('should show recent response preview', () => {
       expect(screen.getByText('Recent Response')).toBeInTheDocument();
       expect(screen.getByText('Economic growth should prioritized over environmental protection')).toBeInTheDocument();
-      expect(screen.getByText('AGREE')).toBeInTheDocument();
+      expect(screen.getByText('Agree')).toBeInTheDocument();
       expect(screen.getByText('5/7 articles read')).toBeInTheDocument();
     });
 
@@ -402,7 +402,7 @@ describe('ChallengeHistory', () => {
     it('should display all response history', () => {
       expect(screen.getByText('Economic growth should prioritized over environmental protection')).toBeInTheDocument();
       expect(screen.getByText('Free speech should have limits to prevent hate speech')).toBeInTheDocument();
-      expect(screen.getByText(/AGREE/)).toBeInTheDocument(); // First response
+      expect(screen.getByText(/Agree/)).toBeInTheDocument(); // First response
       expect(screen.getByText(/NEUTRAL/)).toBeInTheDocument(); // Second response
     });
 
