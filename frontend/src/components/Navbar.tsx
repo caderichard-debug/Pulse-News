@@ -28,9 +28,17 @@ export default function Navbar() {
         if (mounted && user && typeof user.name === 'string') {
           setUserName(user.name);
           setIsAdmin(user.is_admin || false);
+        } else if (mounted) {
+          // User is not authenticated, clear state
+          setUserName(null);
+          setIsAdmin(false);
         }
       } catch {
-        // Silently handle auth errors
+        // Silently handle auth errors - clear auth state
+        if (mounted) {
+          setUserName(null);
+          setIsAdmin(false);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -38,6 +46,23 @@ export default function Navbar() {
 
     checkAuth();
     return () => { mounted = false; };
+  }, [pathname]); // Re-check auth when pathname changes
+
+  // Listen for storage changes (in case token is cleared from another tab)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'token' && !e.newValue) {
+        // Token was cleared
+        setUserName(null);
+        setIsAdmin(false);
+        setLoading(false);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', handleStorageChange);
+      return () => window.removeEventListener('storage', handleStorageChange);
+    }
   }, []);
 
   // Close menu when clicking outside
@@ -96,8 +121,10 @@ export default function Navbar() {
     setInsightsDropdownOpen(false);
   }, [pathname]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     api.clearToken();
+    setUserName(null);
+    setIsAdmin(false);
     router.push('/');
   };
 

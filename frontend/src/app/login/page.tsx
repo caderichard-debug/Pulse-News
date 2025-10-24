@@ -117,6 +117,11 @@ export default function LoginPage() {
             )}
             {oauthLoading ? 'Signing in with Google...' : 'Continue with Google'}
           </button>
+
+          {/* Beta OAuth Notice */}
+          <p className="text-xs text-muted-foreground text-center mt-2">
+            Want to use Google OAuth? <a href="mailto:support@pulsenews.app" className="text-primary hover:underline">Contact me</a> to be added to the beta user list.
+          </p>
         </div>
 
         {/* Divider */}

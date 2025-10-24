@@ -10,21 +10,49 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
+    // Clear any legacy access_token keys that might be causing conflicts
+    if (typeof window !== 'undefined') {
+      const legacyToken = localStorage.getItem('access_token');
+      if (legacyToken) {
+        console.log('Clearing legacy access_token');
+        localStorage.removeItem('access_token');
+      }
+    }
+
     // Check if user is logged in and redirect to feed
     api.getCurrentUser()
       .then(user => {
+        console.log('Home page - Current user check:', user);
         if (user && user.id) {
+          console.log('User is authenticated, redirecting to feed');
           router.push('/feed'); // logged-in → feed
+        } else {
+          console.log('User is not authenticated, staying on landing page');
+          // Clear any stale token if user is null
+          if (typeof window !== 'undefined' && localStorage.getItem('token')) {
+            console.log('Clearing stale token');
+            api.clearToken();
+          }
         }
       })
       .catch(err => {
-      if (err.status === 403 || err.message === 'Not authenticated') {
-        // not logged in → stay on landing page (no need to log)
-        // Silently handle - this is expected behavior
-      } else {
-        console.error(err);
-      }
-    });
+        console.log('Home page - Auth check error:', err);
+        if (err.status === 403 || err.message === 'Not authenticated') {
+          // not logged in → stay on landing page
+          // Clear any stale token
+          if (typeof window !== 'undefined' && localStorage.getItem('token')) {
+            console.log('Clearing stale token due to 403 error');
+            api.clearToken();
+          }
+        } else {
+          console.error('Unexpected auth error:', err);
+          // Clear token on other errors too to be safe
+          if (typeof window !== 'undefined' && localStorage.getItem('token')) {
+            console.log('Clearing stale token due to unexpected error');
+            api.clearToken();
+          }
+        }
+      });
   }, [router]);
 
   return (

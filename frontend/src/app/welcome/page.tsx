@@ -1,9 +1,46 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { api } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
 export default function WelcomePage() {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const user = await api.getCurrentUser();
+        if (user && user.id) {
+          // User is authenticated, redirect to feed
+          window.location.href = '/feed';
+        } else {
+          // Clear any stale authentication data
+          api.clearToken();
+        }
+      } catch {
+        // User is not authenticated, clear any stale authentication data
+        api.clearToken();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 dark:from-gray-900 via-indigo-50 dark:via-gray-800 to-purple-50 dark:to-gray-900 transition-colors flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 dark:from-gray-900 via-indigo-50 dark:via-gray-800 to-purple-50 dark:to-gray-900 transition-colors">
       <Navbar />

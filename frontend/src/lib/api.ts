@@ -16,6 +16,12 @@ class ApiClient {
     this.baseUrl = baseUrl;
     // Load token from localStorage if available
     if (typeof window !== 'undefined') {
+      // Clear any legacy access_token
+      const legacyToken = localStorage.getItem('access_token');
+      if (legacyToken) {
+        localStorage.removeItem('access_token');
+      }
+      // Use the correct token key
       this.token = localStorage.getItem('token');
     }
   }
@@ -31,6 +37,8 @@ class ApiClient {
     this.token = null;
     if (typeof window !== 'undefined') {
       localStorage.removeItem('token');
+      // Also clear legacy access_token key
+      localStorage.removeItem('access_token');
     }
   }
 
