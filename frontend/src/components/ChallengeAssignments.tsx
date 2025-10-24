@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 
 interface ChallengeAssignment {
@@ -32,17 +32,13 @@ interface ChallengeAssignmentsProps {
   weekStartDate?: string;
 }
 
-export default function ChallengeAssignments({ responseId, weekStartDate }: ChallengeAssignmentsProps) {
+export default function ChallengeAssignments({ responseId }: ChallengeAssignmentsProps) {
   const [assignments, setAssignments] = useState<ChallengeAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
-  useEffect(() => {
-    loadAssignments();
-  }, [responseId]);
-
-  const loadAssignments = async () => {
+  const loadAssignments = useCallback(async () => {
     try {
       setLoading(true);
       const data = await api.getChallengeAssignments(responseId);
@@ -54,7 +50,11 @@ export default function ChallengeAssignments({ responseId, weekStartDate }: Chal
     } finally {
       setLoading(false);
     }
-  };
+  }, [responseId]);
+
+  useEffect(() => {
+    loadAssignments();
+  }, [loadAssignments]);
 
   const markAsCompleted = async (assignmentId: string) => {
     try {
@@ -186,7 +186,7 @@ export default function ChallengeAssignments({ responseId, weekStartDate }: Chal
       <div className="bg-card rounded-lg shadow-sm p-6">
         <h3 className="text-xl font-semibold text-foreground mb-4">Your 7-Day Perspective Journey</h3>
         <p className="text-muted-foreground mb-4">
-          Based on your challenge response, you've been assigned articles that provide diverse perspectives
+          Based on your challenge response, you&apos;ve been assigned articles that provide diverse perspectives
           on the topic. Each day explores different viewpoints to help you understand the full picture.
         </p>
 

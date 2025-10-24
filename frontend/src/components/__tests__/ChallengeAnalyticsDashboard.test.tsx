@@ -479,7 +479,7 @@ describe('ChallengeAnalyticsDashboard', () => {
     });
 
     it('should have proper time range options', () => {
-      const timeRangeSelect = screen.getByRole('combobox');
+      screen.getByRole('combobox'); // Verify time range select exists
       const options = screen.getAllByRole('option');
 
       expect(options).toHaveLength(4);

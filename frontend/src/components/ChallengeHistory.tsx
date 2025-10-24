@@ -12,7 +12,7 @@ interface ChallengeResponse {
   claim_text: string;
   claim_type: string;
   agreement_level: number;
-  justification: string;
+  justification?: string;
   submitted_at: string;
   assigned_articles_count: number;
   engaged_articles_count: number;
@@ -313,10 +313,10 @@ export default function ChallengeHistory({ userId }: ChallengeHistoryProps) {
             <div className="text-center py-8">
               <div className="text-gray-400 dark:text-gray-500 text-4xl mb-3">📝</div>
               <p className="text-muted-foreground">
-                You haven't responded to any challenges yet.
+                You haven&apos;t responded to any challenges yet.
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                Check your Friday newsletter for this week's challenge!
+                Check your Friday newsletter for this week&apos;s challenge!
               </p>
             </div>
           ) : (
@@ -362,7 +362,7 @@ export default function ChallengeHistory({ userId }: ChallengeHistoryProps) {
                   {response.justification && (
                     <div className="mt-3 p-3 bg-muted rounded-md">
                       <p className="text-sm text-muted-foreground italic">
-                        "{response.justification}"
+                        &ldquo;{response.justification}&rdquo;
                       </p>
                     </div>
                   )}

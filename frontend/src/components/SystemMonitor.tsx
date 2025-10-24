@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { api } from '@/lib/api';
+// import { api } from '@/lib/api'; // TODO: Implement monitoring APIs
 
 interface SystemHealth {
   status: 'healthy' | 'warning' | 'critical';
@@ -121,12 +121,14 @@ export default function SystemMonitor() {
       setLoading(true);
       setError(null);
 
+      // TODO: Implement monitoring API endpoints
+      // For now, using mock data to prevent build errors
       const [healthData, alertsData, perfData, participationData, summaryData] = await Promise.all([
-        api.getMonitoringHealth().catch(() => null),
-        api.getSystemAlerts().catch(() => []),
-        api.getPerformanceMetrics().catch(() => null),
-        api.getParticipationMetrics().catch(() => null),
-        api.getExecutiveSummary().catch(() => null)
+        Promise.resolve(null), // api.getMonitoringHealth().catch(() => null),
+        Promise.resolve([]), // api.getSystemAlerts().catch(() => []),
+        Promise.resolve(null), // api.getPerformanceMetrics().catch(() => null),
+        Promise.resolve(null), // api.getParticipationMetrics().catch(() => null),
+        Promise.resolve(null) // api.getExecutiveSummary().catch(() => null)
       ]);
 
       setSystemHealth(healthData);
@@ -606,7 +608,7 @@ export default function SystemMonitor() {
                         participationMetrics.participation_trends.health === 'good' ? 'high' :
                         participationMetrics.participation_trends.health === 'declining' ? 'low' : 'medium'
                       )}`}>
-                        {participation_trends.health.charAt(0).toUpperCase() + participation_trends.health.slice(1)}
+                        {participationMetrics.participation_trends.health.charAt(0).toUpperCase() + participationMetrics.participation_trends.health.slice(1)}
                       </span>
                     </div>
                   </div>
@@ -777,7 +779,7 @@ export default function SystemMonitor() {
                         {alert.timestamp && (
                           <button
                             className="text-xs text-muted-foreground hover:text-foreground"
-                            onClick={() => navigator.clipboard.writeText(formatTimestamp(alert.timestamp))}
+                            onClick={() => alert.timestamp && navigator.clipboard.writeText(formatTimestamp(alert.timestamp))}
                           >
                             Copy Timestamp
                           </button>

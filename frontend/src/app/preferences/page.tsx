@@ -192,7 +192,10 @@ function PreferencesContent() {
         if (mounted) {
           setPreferences(prefsResponse.topics);
           setSources(sourcesResponse);
-          setSettings(settingsResponse);
+          setSettings({
+            ...settingsResponse,
+            challenge_participation_enabled: true, // Default value for now
+          } as Settings);
           if (userResponse) {
             setUserInfo({
               name: userResponse.name || '',

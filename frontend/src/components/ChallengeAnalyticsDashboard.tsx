@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 
 interface ChallengeAnalyticsData {
@@ -72,11 +72,7 @@ export default function ChallengeAnalyticsDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState(12);
 
-  useEffect(() => {
-    loadAnalyticsData();
-  }, [timeRange]);
-
-  const loadAnalyticsData = async () => {
+  const loadAnalyticsData = useCallback(async () => {
     try {
       setLoading(true);
       const [analyticsData, trendsData] = await Promise.all([
@@ -93,7 +89,11 @@ export default function ChallengeAnalyticsDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [timeRange]);
+
+  useEffect(() => {
+    loadAnalyticsData();
+  }, [loadAnalyticsData]);
 
   const getImprovementTrendColor = (trend: string): string => {
     switch (trend) {
@@ -300,7 +300,7 @@ export default function ChallengeAnalyticsDashboard() {
             </div>
             <div className="text-sm text-muted-foreground">Perspective Diversity</div>
             <div className="text-xs text-muted-foreground mt-1">
-              Variety of political viewpoints you've been exposed to
+              Variety of political viewpoints you&apos;ve been exposed to
             </div>
           </div>
         </div>
@@ -385,7 +385,7 @@ export default function ChallengeAnalyticsDashboard() {
           <h3 className="text-xl font-semibold text-foreground mb-4">Recent Performance</h3>
 
           <div className="space-y-3">
-            {analytics.recent_performance.map((performance, index) => (
+            {analytics.recent_performance.map((performance) => (
               <div
                 key={performance.week_start_date}
                 className="flex items-center justify-between p-3 bg-muted rounded-lg"

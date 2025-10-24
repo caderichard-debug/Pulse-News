@@ -66,8 +66,7 @@ export default function ChallengePage() {
         setLoading(true);
         setError('');
 
-        const response = await api.get(`/challenge/${date}`);
-        const data = response.data;
+        const data = await api.getChallengeByDate(date);
 
         setChallenge(data.challenge);
         setUserResponse(data.user_response);
@@ -107,7 +106,7 @@ export default function ChallengePage() {
     setError('');
 
     try {
-      const response = await api.post(`/challenge/${date}/respond`, {
+      await api.submitChallengeResponse(date, {
         selected_claim_id: selectedClaim,
         agreement_level: agreementLevel,
       });
@@ -193,7 +192,7 @@ export default function ChallengePage() {
           </div>
           <h2 className="text-2xl font-bold text-foreground mb-2">Response Recorded!</h2>
           <p className="text-muted-foreground mb-4">
-            Thank you for participating in this week's challenge. You'll receive articles over the next 7 days that broaden your perspective.
+            Thank you for participating in this week&apos;s challenge. You&apos;ll receive articles over the next 7 days that broaden your perspective.
           </p>
           <p className="text-sm text-muted-foreground">Redirecting to dashboard...</p>
         </div>
@@ -216,7 +215,7 @@ export default function ChallengePage() {
             </div>
             <h2 className="text-2xl font-bold text-foreground mb-2">Challenge Completed</h2>
             <p className="text-muted-foreground mb-4">
-              You have already completed this week's challenge. Check your dashboard for more challenges or explore the latest articles.
+              You have already completed this week&apos;s challenge. Check your dashboard for more challenges or explore the latest articles.
             </p>
             <Link href="/dashboard" className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">
               Go to Dashboard
@@ -311,7 +310,7 @@ export default function ChallengePage() {
                                 {claim.display_order}.
                               </span>
                               <span className="text-sm px-2 py-1 bg-secondary text-secondary-foreground rounded">
-                                {claim.claim_type.replace('_', ' ').title()}
+                                {claim.claim_type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                               </span>
                             </div>
                             <p className="text-foreground leading-relaxed">
