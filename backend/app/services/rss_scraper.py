@@ -4,6 +4,7 @@ Stores: title, url, author, published_at, source_id
 """
 
 import feedparser
+import requests
 from sqlmodel import Session, select
 from ..models import Source, Article, ProcessingStatus
 from ..database import engine
@@ -31,12 +32,34 @@ def scrape_source(source: Source, session: Session) -> List[Article]:
     try:
         logger.info(f"Scraping {source.name} from {source.rss_feed_url}")
 
+        # First validate the URL is accessible
+        try:
+            response = requests.head(
+                source.rss_feed_url,
+                timeout=10,
+                allow_redirects=True,
+                headers={'User-Agent': 'Mozilla/5.0 (compatible; Pulse RSS Scraper)'}
+            )
+            if response.status_code != 200:
+                logger.warning(f"RSS feed URL returned {response.status_code} for {source.name}: {source.rss_feed_url}")
+                return new_articles
+        except requests.RequestException as e:
+            logger.warning(f"Failed to access RSS feed URL for {source.name}: {e}")
+            return new_articles
+
         # Parse RSS feed
         feed = feedparser.parse(source.rss_feed_url)
 
-        if feed.bozo:  # feedparser sets this flag if there was an error
-            logger.warning(f"Error parsing feed for {source.name}: {feed.bozo_exception}")
-            return new_articles
+        # More robust error handling for malformed feeds
+        if feed.bozo:
+            # Try to continue with the feed anyway, but log the issue
+            logger.warning(f"Feed parsing warning for {source.name}: {feed.bozo_exception}")
+            # Check if we still have entries despite the bozo flag
+            if not feed.entries:
+                logger.warning(f"No entries found in malformed feed for {source.name}")
+                return new_articles
+            else:
+                logger.info(f"Continuing with {len(feed.entries)} entries despite parsing warning for {source.name}")
 
         if not feed.entries:
             logger.warning(f"No entries found in feed for {source.name}")
