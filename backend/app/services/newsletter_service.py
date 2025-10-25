@@ -320,6 +320,7 @@ def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict
         "challenge": challenge,  # Will be None except on Fridays for opted-in users
         "preferences_url": f"{frontend_url}/preferences?token={user.email}",  # TODO: Add real token
         "website_url": frontend_url,
+        "documentation_url": os.getenv("DOCUMENTATION_URL", "https://docs.pulsenews.app"),
         "unsubscribe_url": f"{frontend_url}/unsubscribe?token={user.email}"  # TODO: Add real token
     }
 

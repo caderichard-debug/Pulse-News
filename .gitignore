@@ -70,6 +70,7 @@ postgres_data/
 
 # Claude environment files
 claude_code_zai_env.sh
+claude.md
 
 # React Component Preview
 previewConfig.json
