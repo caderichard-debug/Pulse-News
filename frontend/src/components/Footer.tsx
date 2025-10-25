@@ -56,6 +56,16 @@ export default function Footer() {
         {/* Links Row */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6 text-sm text-muted-foreground">
           <a
+            href={process.env.NEXT_PUBLIC_DOCUMENTATION_URL || "https://docs.pulsenews.app"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground transition-colors"
+          >
+            Documentation
+          </a>
+
+          <span className="hidden sm:inline">•</span>
+          <a
             href="mailto:support@pulsenews.app"
             className="hover:text-foreground transition-colors"
           >

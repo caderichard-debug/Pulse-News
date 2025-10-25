@@ -1,5 +1,11 @@
 # Testing Guide
 
+> **Related Documentation:**
+> - [Development Setup](../development/SETUP.md) - Set up the environment first
+> - [API Documentation](../api/API.md) - Understand what endpoints to test
+> - [HOW_TO_RUN_TESTS.md](HOW_TO_RUN_TESTS.md) - Quick test commands reference
+> - [E2E_TESTING_METHODOLOGY.md](E2E_TESTING_METHODOLOGY.md) - End-to-end testing approach
+
 ## Quick Start
 
 ### Run All Tests
