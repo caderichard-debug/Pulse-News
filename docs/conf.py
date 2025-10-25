@@ -39,6 +39,7 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
     'sphinx.ext.ifconfig',
+    'myst_parser',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -51,7 +52,7 @@ exclude_patterns = []
 # The suffix(es) of source filenames.
 source_suffix = {
     '.rst': None,
-    '.md': 'myst_parser',
+    '.md': None,
 }
 
 # The master toctree document.
@@ -168,6 +169,25 @@ rst_prolog = """
 .. role:: ghissue(text, raw)
    :raw:`raw`
 """
+
+# MyST Parser configuration
+myst_enable_extensions = [
+    "colon_fence",
+    "deflist",
+    "html_admonition",
+    "html_image",
+    "linkify",
+    "replacements",
+    "smartquotes",
+    "substitution",
+    "tasklist",
+]
+
+myst_substitutions = {
+    "project": project,
+    "version": version,
+    "release": release,
+}
 
 def setup(app):
     """Override the name for a custom role.
