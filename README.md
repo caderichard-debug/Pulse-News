@@ -293,7 +293,9 @@ This is a personal project, but feedback is welcome!
 
 ## 📝 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+This project is free for personal/non-commercial use under the [CC BY-NC 4.0 License](https://creativecommons.org/licenses/by-nc/4.0/).
+For commercial use, please contact [email] for a commercial license.
+
 
 ---
 
