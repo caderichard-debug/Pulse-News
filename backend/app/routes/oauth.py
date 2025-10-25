@@ -36,7 +36,9 @@ async def google_oauth_login(
     try:
         # Google OAuth configuration
         client_id = settings.google_auth_client_id
-        redirect_uri = f"{settings.backend_url}/auth/oauth/google/callback"
+        # Use auth_url for production, backend_url for development
+        base_url = settings.auth_url if settings.environment == "production" else settings.backend_url
+        redirect_uri = f"{base_url}/auth/oauth/google/callback"
         scope = "openid email profile"
 
         # Build Google OAuth URL with state parameter to track origin
@@ -108,7 +110,9 @@ async def google_oauth_callback(
 
         # Exchange authorization code for tokens
         token_url = "https://oauth2.googleapis.com/token"
-        redirect_uri = f"{settings.backend_url}/auth/oauth/google/callback"
+        # Use auth_url for production, backend_url for development
+        base_url = settings.auth_url if settings.environment == "production" else settings.backend_url
+        redirect_uri = f"{base_url}/auth/oauth/google/callback"
 
         data = {
             "client_id": settings.google_auth_client_id,

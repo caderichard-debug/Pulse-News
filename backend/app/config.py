@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:3000"
     frontend_custom_url: str = "https://pulsenews.app"
     backend_url: str = "http://localhost:8000"
+    auth_url: str = "https://auth.pulsenews.app"  # Dedicated OAuth/auth domain
 
     # Scraping Configuration
     scrape_interval_hours: int = 3

@@ -1,3 +1,33 @@
+## 2025-10-24 07:01
+
+**Updated OAuth Callback URI to auth.pulsenews.app** ✅
+
+### What Changed
+- **OAuth Configuration**: Added dedicated `AUTH_URL` environment variable for production OAuth domain in [`backend/app/config.py`](backend/app/config.py:43)
+- **Smart Callback Logic**: OAuth callback automatically uses correct domain based on environment:
+  - Development: Uses `BACKEND_URL` (localhost:8000)
+  - Production: Uses `AUTH_URL` (auth.pulsenews.app)
+- **OAuth Routes**: Updated both OAuth initiation and callback functions in [`backend/app/routes/oauth.py`](backend/app/routes/oauth.py:40-41, 114-115)
+- **Environment Variables**: Enhanced `.env.example` with OAuth configuration guidance in [`.env.example`](.env.example:18-24)
+- **Documentation**: Created comprehensive OAuth configuration guide in [`docs/OAUTH_CONFIGURATION.md`](docs/OAUTH_CONFIGURATION.md)
+
+### Configuration Details
+- Development Callback URI: `http://localhost:8000/auth/oauth/google/callback`
+- Production Callback URI: `https://auth.pulsenews.app/auth/oauth/google/callback`
+- Automatic switching based on `ENVIRONMENT` setting
+- Preserves local development workflow while supporting production auth domain
+
+### Setup Instructions
+1. Set `AUTH_URL=https://auth.pulsenews.app` in production environment
+2. Add `https://auth.pulsenews.app/auth/oauth/google/callback` to Google OAuth console
+3. Keep local development working with `localhost:8000` callback
+
+**Code References:**
+- Configuration: [`backend/app/config.py`](backend/app/config.py:43)
+- OAuth routes: [`backend/app/routes/oauth.py`](backend/app/routes/oauth.py:40-41)
+- Environment example: [`.env.example`](.env.example:18-24)
+- Documentation: [`docs/OAUTH_CONFIGURATION.md`](docs/OAUTH_CONFIGURATION.md)
+
 ## 2025-10-24 06:57
 
 **Fixed Google OAuth Access Denied Redirect** ✅
