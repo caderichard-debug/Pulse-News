@@ -32,7 +32,7 @@ services:
       - key: FRONTEND_URL
         value: "https://pulsenews.app"
       - key: DOCUMENTATION_URL
-        value: "https://docs.pulsenews.app"
+        value: "https://pulse-news.readthedocs.io/en/latest/"
       - key: CACHE_BUST
         value: "2025-10-10-v2"
       - key: ENVIRONMENT
