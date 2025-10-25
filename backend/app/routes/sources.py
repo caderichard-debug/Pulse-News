@@ -13,6 +13,11 @@ from app.database import get_session
 from app.models import Source, Article, OrganizationalBias
 from app.routes.auth import get_current_user
 from app.services.bias_data_fetcher import get_bias_for_source
+from app.services.source_management import (
+    RSSDiscoveryService,
+    consolidate_all_sources,
+    validate_and_fix_all_sources
+)
 
 router = APIRouter(prefix="/sources", tags=["sources"])
 
@@ -139,9 +144,10 @@ async def get_source(
 async def create_source(
     name: str,
     url: str,
-    rss_feed_url: str,
+    rss_feed_url: Optional[str] = None,
     description: Optional[str] = None,
     trust_score: float = 0.8,
+    auto_discover_rss: bool = Query(True, description="Automatically discover RSS feed if not provided"),
     fetch_bias: bool = Query(True, description="Automatically fetch bias data"),
     session: Session = Depends(get_session),
     current_user: dict = Depends(get_current_user)
@@ -149,8 +155,9 @@ async def create_source(
     """
     Create a new news source.
 
-    If fetch_bias=True, will attempt to automatically fetch organizational bias
-    from external APIs/databases. Otherwise, bias can be set manually later.
+    If auto_discover_rss=True and no rss_feed_url is provided, will automatically
+    discover RSS feeds for the given URL. If fetch_bias=True, will attempt to
+    automatically fetch organizational bias from external APIs/databases.
 
     Requires authentication.
     """
@@ -158,14 +165,43 @@ async def create_source(
     if not (0.0 <= trust_score <= 1.0):
         raise HTTPException(status_code=400, detail="trust_score must be between 0.0 and 1.0")
 
-    # Check if RSS feed URL already exists
+    discovery_service = RSSDiscoveryService()
+    errors = []
+
+    # Check for duplicate domains
+    existing_sources = session.exec(select(Source)).all()
+    for existing in existing_sources:
+        if discovery_service.normalize_domain(existing.url) == discovery_service.normalize_domain(url):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Source with domain '{discovery_service.normalize_domain(url)}' already exists: {existing.name}"
+            )
+
+    # Auto-discover RSS feed if needed
+    final_rss_url = rss_feed_url
+    if auto_discover_rss and not rss_feed_url:
+        discovered_feeds = discovery_service.discover_rss_feeds(url)
+        if discovered_feeds:
+            final_rss_url = discovered_feeds[0]
+            errors.append(f"Auto-discovered RSS feed: {final_rss_url}")
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="No RSS feeds found for this URL. Please provide an RSS feed URL manually."
+            )
+
+    # Validate provided RSS feed
+    if final_rss_url and not discovery_service.validate_rss_feed(final_rss_url):
+        errors.append(f"Warning: RSS feed may not be working: {final_rss_url}")
+
+    # Check if RSS feed URL already exists (excluding current domain)
     existing = session.exec(
-        select(Source).where(Source.rss_feed_url == rss_feed_url)
+        select(Source).where(Source.rss_feed_url == final_rss_url)
     ).first()
     if existing:
         raise HTTPException(
             status_code=400,
-            detail=f"Source with RSS feed URL '{rss_feed_url}' already exists"
+            detail=f"Source with RSS feed URL '{final_rss_url}' already exists: {existing.name}"
         )
 
     # Fetch bias data if requested
@@ -186,7 +222,7 @@ async def create_source(
     source = Source(
         name=name,
         url=url,
-        rss_feed_url=rss_feed_url,
+        rss_feed_url=final_rss_url,
         description=description,
         trust_score=trust_score,
         organizational_bias=organizational_bias,
@@ -202,7 +238,103 @@ async def create_source(
     return {
         "message": "Source created successfully",
         "source": SourceResponse(source, 0).__dict__,
-        "bias_auto_fetched": fetch_bias and organizational_bias is not None
+        "bias_auto_fetched": fetch_bias and organizational_bias is not None,
+        "rss_auto_discovered": auto_discover_rss and not rss_feed_url,
+        "warnings": errors
+    }
+
+
+@router.post("/discover-rss")
+async def discover_rss_feeds(
+    url: str,
+    session: Session = Depends(get_session),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Discover RSS feeds for a given URL without creating a source.
+
+    Useful for checking what RSS feeds are available before creating a source.
+    """
+    discovery_service = RSSDiscoveryService()
+
+    # Check for duplicates
+    existing_sources = session.exec(select(Source)).all()
+    for existing in existing_sources:
+        if discovery_service.normalize_domain(existing.url) == discovery_service.normalize_domain(url):
+            return {
+                "error": f"Source with domain '{discovery_service.normalize_domain(url)}' already exists: {existing.name}",
+                "existing_source": SourceResponse(existing, 0).__dict__
+            }
+
+    feeds = discovery_service.discover_rss_feeds(url)
+
+    return {
+        "url": url,
+        "feeds_found": len(feeds),
+        "feeds": feeds
+    }
+
+
+@router.post("/consolidate-duplicates")
+async def consolidate_duplicate_sources(
+    session: Session = Depends(get_session),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Find and consolidate duplicate sources based on domain similarity.
+
+    This will merge duplicate sources and migrate their articles to the primary source.
+    """
+    results = consolidate_all_sources(session)
+
+    return {
+        "message": "Source consolidation completed",
+        "results": results
+    }
+
+
+@router.post("/validate-fix-rss")
+async def validate_and_fix_rss_feeds(
+    session: Session = Depends(get_session),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Validate RSS feeds for all sources and attempt to fix broken ones.
+
+    This will test each source's RSS feed and try to find alternatives for broken feeds.
+    """
+    results = validate_and_fix_all_sources(session)
+
+    return {
+        "message": "RSS feed validation and fix completed",
+        "results": results
+    }
+
+
+@router.get("/duplicates")
+async def list_duplicate_sources(
+    session: Session = Depends(get_session),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    List potential duplicate sources based on domain similarity.
+    """
+    discovery_service = RSSDiscoveryService()
+    duplicates = discovery_service.find_duplicate_sources(session)
+
+    duplicate_groups = []
+    for source_group, domain in duplicates:
+        group_data = {
+            "domain": domain,
+            "sources": [SourceResponse(source, 0).__dict__ for source in source_group],
+            "count": len(source_group)
+        }
+        duplicate_groups.append(group_data)
+
+    return {
+        "duplicate_groups": duplicate_groups,
+        "total_duplicates": len(duplicate_groups),
+        "total_sources_affected": sum(len(group) for group, _ in duplicates)
     }
 
 
