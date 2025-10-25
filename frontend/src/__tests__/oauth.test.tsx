@@ -83,7 +83,7 @@ describe('OAuth Authentication', () => {
 
       fireEvent.click(googleButton)
 
-      expect(mockLocation.href).toBe('http://localhost:8000/auth/oauth/google')
+      expect(mockLocation.href).toBe('http://localhost:8000/auth/oauth/google?origin=login')
     })
 
     test('disables all buttons during OAuth loading', async () => {
@@ -128,7 +128,7 @@ describe('OAuth Authentication', () => {
 
       fireEvent.click(googleButton)
 
-      expect(mockLocation.href).toBe('http://localhost:8000/auth/oauth/google')
+      expect(mockLocation.href).toBe('http://localhost:8000/auth/oauth/google?origin=signup')
     })
 
     test('disables form buttons during OAuth loading', async () => {

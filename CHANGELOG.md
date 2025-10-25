@@ -1,3 +1,19 @@
+## 2025-10-24 07:05
+
+**Fixed Frontend OAuth Tests** ✅
+
+### What Changed
+- **OAuth Test Updates**: Updated test expectations in [`frontend/src/__tests__/oauth.test.tsx`](frontend/src/__tests__/oauth.test.tsx:86, 131) to include the new `origin` parameter
+- **Login Page Test**: Fixed test expectation from `http://localhost:8000/auth/oauth/google` to `http://localhost:8000/auth/oauth/google?origin=login`
+- **Signup Page Test**: Fixed test expectation from `http://localhost:8000/auth/oauth/google` to `http://localhost:8000/auth/oauth/google?origin=signup`
+- **Test Results**: All 367 frontend tests now pass (previously 2 failing)
+
+### Issue Resolution
+The tests were failing because they expected the old OAuth URLs without the `origin` parameter that was recently added to track user flow (login vs signup). The tests now correctly expect the updated URLs with appropriate origin parameters.
+
+**Code References:**
+- OAuth test fixes: [`frontend/src/__tests__/oauth.test.tsx`](frontend/src/__tests__/oauth.test.tsx:86, 131)
+
 ## 2025-10-24 07:01
 
 **Updated OAuth Callback URI to auth.pulsenews.app** ✅
