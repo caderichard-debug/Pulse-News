@@ -38,7 +38,11 @@ export default function LoginPage() {
     // Handle OAuth errors
     const oauthError = searchParams.get('error');
     if (oauthError) {
-      setError('Google sign-in failed. Please try again.');
+      if (oauthError === 'access_denied') {
+        setError('Google sign-in was cancelled. You can try again or continue with email.');
+      } else {
+        setError('Google sign-in failed. Please try again.');
+      }
       // Clean up the URL
       router.replace('/login');
     }
@@ -68,8 +72,8 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // Redirect to backend OAuth endpoint
-      window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/oauth/google`;
+      // Redirect to backend OAuth endpoint with origin parameter
+      window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/oauth/google?origin=login`;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Google sign-in failed');
       setOauthLoading(false);
