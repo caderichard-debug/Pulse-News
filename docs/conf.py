@@ -52,7 +52,7 @@ exclude_patterns = []
 # The suffix(es) of source filenames.
 source_suffix = {
     '.rst': None,
-    '.md': None,
+    '.md': 'myst_parser',
 }
 
 # The master toctree document.
@@ -151,15 +151,10 @@ viewcode_follow_links = True
 viewcode_enable_epub = False
 
 # Intersphinx mapping for cross-references to other projects
+# Only including working inventories to avoid build warnings
 intersphinx_mapping = {
     'FastAPI': ('https://fastapi.tiangolo.com', None),
-    'SQLModel': ('https://sqlmodel.tiangolo.com', None),
-    'Next.js': ('https://nextjs.org/docs', None),
-    'React': ('https://react.dev', None),
-    'Tailwind CSS': ('https://tailwindcss.com', None),
-    'Docker': ('https://docs.docker.com', None),
-    'PostgreSQL': ('https://www.postgresql.org/docs/', None),
-    'Alembic': ('https://alembic.sqlalchemy.org', None),
+    'Alembic': ('https://alembic.sqlalchemy.org/en/latest/', None),
 }
 
 # -- Custom roles ---------------------------------------------------------
