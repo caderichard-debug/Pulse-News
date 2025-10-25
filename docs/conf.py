@@ -39,6 +39,7 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
     'sphinx.ext.ifconfig',
+    'myst_parser',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -46,12 +47,12 @@ templates_path = ['_templates']
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '**/_static/**']
 
 # The suffix(es) of source filenames.
 source_suffix = {
     '.rst': None,
-    '.md': 'myst_parser',
+    '.md': None,
 }
 
 # The master toctree document.
@@ -67,16 +68,9 @@ html_theme = 'sphinx_rtd_theme'
 #
 html_theme_options = {
     'canonical_url': 'https://docs.pulsenews.app',
-    'analytics_id': 'G-XXXXXXXXXX',  # Replace with actual Google Analytics ID if needed
-    'logo_only': False,
     'display_version': True,
     'prev_next_buttons_location': 'bottom',
-    'style_external_links': False,
-    'vcs_pageview_mode': 'edit',
     'style_nav_header_background': '#2980b9',
-    # Tweak the logo and favicon
-    'logo': 'https://pulsenews.app/favicon.ico',
-    'favicon': 'https://pulsenews.app/favicon.ico',
     'navigation_depth': 4,
 }
 
@@ -106,10 +100,10 @@ html_sidebars = {
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-# Custom CSS overrides
-html_css_files = [
-    'css/custom.css',
-]
+# Custom CSS overrides - commented out to prevent build issues
+# html_css_files = [
+#     'css/custom.css',
+# ]
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'PulseNewsAggregatorDoc'
@@ -150,15 +144,10 @@ viewcode_follow_links = True
 viewcode_enable_epub = False
 
 # Intersphinx mapping for cross-references to other projects
+# Only including working inventories to avoid build warnings
 intersphinx_mapping = {
     'FastAPI': ('https://fastapi.tiangolo.com', None),
-    'SQLModel': ('https://sqlmodel.tiangolo.com', None),
-    'Next.js': ('https://nextjs.org/docs', None),
-    'React': ('https://react.dev', None),
-    'Tailwind CSS': ('https://tailwindcss.com', None),
-    'Docker': ('https://docs.docker.com', None),
-    'PostgreSQL': ('https://www.postgresql.org/docs/', None),
-    'Alembic': ('https://alembic.sqlalchemy.org', None),
+    'Alembic': ('https://alembic.sqlalchemy.org/en/latest/', None),
 }
 
 # -- Custom roles ---------------------------------------------------------
@@ -169,6 +158,18 @@ rst_prolog = """
    :raw:`raw`
 """
 
+# MyST Parser configuration
+myst_enable_extensions = [
+    "colon_fence",
+    "deflist",
+    "html_admonition",
+    "html_image",
+    "replacements",
+    "smartquotes",
+    "substitution",
+    "tasklist",
+]
+
 def setup(app):
     """Override the name for a custom role.
 
@@ -176,3 +177,9 @@ def setup(app):
     is the processed text of the role argument.
 
     """
+    # Add error handling for custom setup
+    try:
+        pass
+    except Exception as e:
+        print(f"Warning: Setup error {e}")
+        return
