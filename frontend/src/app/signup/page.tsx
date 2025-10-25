@@ -29,7 +29,20 @@ export default function SignupPage() {
   useEffect(() => {
     // Load available topics
     api.getTopics().then(setTopics).catch(console.error);
-  }, []);
+
+    // Handle OAuth errors
+    const urlParams = new URLSearchParams(window.location.search);
+    const oauthError = urlParams.get('error');
+    if (oauthError) {
+      if (oauthError === 'access_denied') {
+        setError('Google sign-up was cancelled. You can try again or continue with email.');
+      } else {
+        setError('Google sign-up failed. Please try again.');
+      }
+      // Clean up the URL
+      router.replace('/signup');
+    }
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,8 +100,8 @@ export default function SignupPage() {
     setError('');
 
     try {
-      // Redirect to backend OAuth endpoint (same flow as login)
-      window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/oauth/google`;
+      // Redirect to backend OAuth endpoint with origin parameter
+      window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/oauth/google?origin=signup`;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Google sign-up failed');
       setOauthLoading(false);

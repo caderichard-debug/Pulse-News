@@ -1,3 +1,32 @@
+## 2025-10-24 06:57
+
+**Fixed Google OAuth Access Denied Redirect** ✅
+
+### What Changed
+- **OAuth Callback Handler**: Fixed access_denied error handling in [`backend/app/routes/oauth.py`](backend/app/routes/oauth.py:68-200)
+  - Added optional `error` and `state` parameters to callback function
+  - Implemented proper error handling for `access_denied` and other OAuth errors
+  - Added logic to redirect users back to their origin page (login/signup) based on state parameter
+- **OAuth Initiation**: Added `origin` parameter support in [`backend/app/routes/oauth.py`](backend/app/routes/oauth.py:26-65)
+  - Modified OAuth initiation to accept optional `origin` parameter (defaults to "login")
+  - Added state parameter to Google OAuth URL to track user origin
+- **Frontend Integration**: Updated OAuth flow to track origin in both login and signup pages
+  - **Login Page**: Pass `origin=login` parameter in [`frontend/src/app/login/page.tsx`](frontend/src/app/login/page.tsx:72)
+  - **Signup Page**: Pass `origin=signup` parameter in [`frontend/src/app/signup/page.tsx`](frontend/src/app/signup/page.tsx:91)
+  - **Error Handling**: Enhanced error messages for `access_denied` vs general OAuth failures
+- **Improved User Experience**: Users who cancel OAuth flow now return to the page they started from with appropriate error messaging
+
+### Test Results
+- OAuth endpoints return correct HTTP 307 redirects
+- Backend compiles without syntax errors
+- Frontend TypeScript compilation successful
+- Error handling tested for both login and signup origins
+
+**Code References:**
+- Backend OAuth routes: [`backend/app/routes/oauth.py`](backend/app/routes/oauth.py)
+- Login page: [`frontend/src/app/login/page.tsx`](frontend/src/app/login/page.tsx)
+- Signup page: [`frontend/src/app/signup/page.tsx`](frontend/src/app/signup/page.tsx)
+
 ## 2025-10-24 06:50
 
 **Fixed E2E Test Failures** ✅

@@ -24,11 +24,14 @@ logger = logging.getLogger(__name__)
 
 
 @router.get("/google")
-async def google_oauth_login():
+async def google_oauth_login(
+    origin: Optional[str] = "login"
+):
     """
     Initiate Google OAuth flow.
 
     Redirects user to Google OAuth consent screen.
+    The origin parameter tracks where the user started (login/signup).
     """
     try:
         # Google OAuth configuration
@@ -36,7 +39,7 @@ async def google_oauth_login():
         redirect_uri = f"{settings.backend_url}/auth/oauth/google/callback"
         scope = "openid email profile"
 
-        # Build Google OAuth URL
+        # Build Google OAuth URL with state parameter to track origin
         auth_url = "https://accounts.google.com/o/oauth2/v2/auth"
         params = {
             "client_id": client_id,
@@ -45,12 +48,13 @@ async def google_oauth_login():
             "response_type": "code",
             "access_type": "offline",
             "prompt": "consent",
+            "state": origin,  # Pass origin (login/signup) in state parameter
         }
 
         # Construct full authorization URL
         auth_url_with_params = f"{auth_url}?{urllib.parse.urlencode(params)}"
 
-        logger.info(f"Redirecting user to Google OAuth: {auth_url}")
+        logger.info(f"Redirecting user to Google OAuth from {origin}: {auth_url}")
         return RedirectResponse(url=auth_url_with_params)
 
     except Exception as e:
@@ -63,16 +67,45 @@ async def google_oauth_login():
 
 @router.get("/google/callback")
 async def google_oauth_callback(
-    code: str,
-    state: Optional[str] = None,
+    request: Request,
+    code: Optional[str] = None,
+    error: Optional[str] = None,
+    state: Optional[str] = "login",
     session: Session = Depends(get_session)
 ):
     """
     Handle Google OAuth callback.
 
     Exchange authorization code for tokens and create/update user account.
+    Handle both successful callbacks and error callbacks (like access_denied).
     """
     try:
+        # Handle OAuth errors (e.g., user cancels authorization)
+        if error:
+            logger.info(f"Google OAuth error: {error}, state: {state}")
+
+            # Determine redirect URL based on origin (state parameter)
+            frontend_url = settings.frontend_url if settings.environment == "development" else settings.frontend_custom_url
+            origin_page = state if state in ["login", "signup"] else "login"
+
+            if error == "access_denied":
+                # User denied access - redirect back to origin page with error
+                error_url = f"{frontend_url}/{origin_page}?error=access_denied"
+                logger.info(f"Redirecting user to {origin_page} after access denied")
+                return RedirectResponse(url=error_url)
+            else:
+                # Other OAuth errors
+                error_url = f"{frontend_url}/{origin_page}?error=oauth_failed"
+                return RedirectResponse(url=error_url)
+
+        # If no code parameter, it's an error
+        if not code:
+            logger.error("No authorization code received in OAuth callback")
+            frontend_url = settings.frontend_url if settings.environment == "development" else settings.frontend_custom_url
+            origin_page = state if state in ["login", "signup"] else "login"
+            error_url = f"{frontend_url}/{origin_page}?error=oauth_failed"
+            return RedirectResponse(url=error_url)
+
         # Exchange authorization code for tokens
         token_url = "https://oauth2.googleapis.com/token"
         redirect_uri = f"{settings.backend_url}/auth/oauth/google/callback"
@@ -160,9 +193,10 @@ async def google_oauth_callback(
         raise
     except Exception as e:
         logger.error(f"Google OAuth callback error: {str(e)}")
-        # Redirect to frontend with error
+        # Redirect to frontend with error - use state to determine origin page
         frontend_url = settings.frontend_url if settings.environment == "development" else settings.frontend_custom_url
-        error_url = f"{frontend_url}/login?error=oauth_failed"
+        origin_page = state if state in ["login", "signup"] else "login"
+        error_url = f"{frontend_url}/{origin_page}?error=oauth_failed"
         return RedirectResponse(url=error_url)
 
 
