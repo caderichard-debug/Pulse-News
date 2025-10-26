@@ -15,6 +15,12 @@ class Settings(BaseSettings):
     openai_api_key: Optional[str] = None
     resend_api_key: Optional[str] = None
 
+    # Stripe Configuration
+    stripe_secret_key: Optional[str] = None
+    stripe_publishable_key: Optional[str] = None
+    stripe_webhook_secret: Optional[str] = None
+    stripe_webhook_endpoint_url: Optional[str] = None
+
     # OAuth Configuration
     google_auth_client_id: Optional[str] = None
     google_auth_client_secret: Optional[str] = None
@@ -58,6 +64,12 @@ class Settings(BaseSettings):
     max_audit_log_days: int = 90  # Keep audit logs for 90 days
     max_job_history_days: int = 30  # Keep job history for 30 days
     admin_token_rotation_days: int = 90  # Rotate admin token every 90 days
+
+    # Subscription Configuration
+    free_daily_analysis_limit: int = 10  # Free tier daily analysis limit
+    free_daily_api_limit: int = 100  # Free tier daily API limit
+    trial_period_days: int = 14  # Free trial period in days
+    subscription_webhook_path: str = "/webhooks/stripe"  # Webhook endpoint path
 
     model_config = {
         # Check for Render secret file first, then fall back to local .env
