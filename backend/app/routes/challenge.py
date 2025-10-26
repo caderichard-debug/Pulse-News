@@ -20,6 +20,8 @@ from ..routes.auth import get_current_user
 from ..services.challenge_manager import ChallengeManager
 from ..services.challenge_article_matcher import ChallengeArticleMatcher
 from ..services.challenge_analytics import ChallengeAnalytics
+from ..services.subscription_service import SubscriptionService
+from ..middleware.subscription_middleware import check_subscription_in_middleware
 
 router = APIRouter(prefix="/challenge", tags=["challenge"])
 
@@ -72,7 +74,8 @@ class ChallengeHistoryResponse(BaseModel):
 @router.get("/current", response_model=Dict[str, Any])
 def get_current_challenge(
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    _: bool = Depends(check_subscription_in_middleware("challenge_system"))
 ):
     """
     Get the current week's challenge for the logged-in user.
@@ -253,7 +256,8 @@ def submit_challenge_response(
     week_date: str,
     response_data: UserChallengeResponseCreate,
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    _: bool = Depends(check_subscription_in_middleware("challenge_system"))
 ):
     """
     Submit user's response to a weekly challenge.
@@ -347,7 +351,8 @@ def submit_challenge_response(
 def get_user_challenge_history(
     limit: int = Query(default=10, le=50, ge=1),
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    _: bool = Depends(check_subscription_in_middleware("challenge_system"))
 ):
     """
     Get user's challenge response history.

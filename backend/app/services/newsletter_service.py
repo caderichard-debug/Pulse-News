@@ -8,7 +8,8 @@ from ..models import (
     User, Article, ArticleAnalysis, Framework, ArticleFrameworkLink,
     UserTopicPreference, Newsletter, NewsletterArticle, Topic,
     StatisticVerification, ArticleContext, ArticleCluster, ArticleClusterMember,
-    UserSourceSubscription, WeeklyChallenge, ChallengeClaim, UserChallengeResponse
+    UserSourceSubscription, WeeklyChallenge, ChallengeClaim, UserChallengeResponse,
+    SubscriptionTier
 )
 from ..database import engine
 from ..config import settings
@@ -296,10 +297,17 @@ def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict
     # Prepare template data
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
-    # Add Friday challenge section if applicable
+    # Add Friday challenge section if applicable (premium users only)
     challenge = None
-    if datetime.utcnow().weekday() == 4 and user.challenge_participation_enabled:  # Friday and user opted in
+    is_premium = user.subscription_tier == SubscriptionTier.PREMIUM
+
+    if (datetime.utcnow().weekday() == 4 and
+        user.challenge_participation_enabled and
+        is_premium):  # Friday, user opted in, and has premium subscription
         challenge = _get_current_challenge(session)
+        logger.info(f"Including challenge in newsletter for premium user {user.email}")
+    elif datetime.utcnow().weekday() == 4 and user.challenge_participation_enabled:
+        logger.info(f"Excluding challenge from newsletter for free user {user.email} - requires premium subscription")
 
     template_data = {
         "user_name": user.name or "there",
