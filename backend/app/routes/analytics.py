@@ -2,14 +2,17 @@
 Analytics routes for dashboard data visualization.
 """
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlmodel import Session, select, func
 from ..database import get_session
 from ..models import (
     User, Article, ArticleAnalysis, ArticleFrameworkLink,
-    Framework, Topic, UserTopicPreference, PoliticalLean
+    Framework, Topic, UserTopicPreference, PoliticalLean, Source, OrganizationalBias,
+    UserSourceSubscription, ArticleTopicLink
 )
 from ..routes.auth import get_current_user
+from ..services.subscription_service import SubscriptionService
+from ..middleware.subscription_middleware import check_subscription_in_middleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict
 from datetime import datetime, timedelta
@@ -47,12 +50,36 @@ class FrameworkAxis(BaseModel):
     right_position: str
 
 
+class SourceAnalytics(BaseModel):
+    source_name: str
+    organizational_bias: Optional[str]
+    article_count: int
+    avg_sentiment: float
+    bias_distribution: Dict[str, int]
+
+
+class TopicAnalytics(BaseModel):
+    topic_name: str
+    article_count: int
+    avg_sentiment: float
+    political_lean_distribution: Dict[str, int]
+    top_sources: List[str]
+
+
+class PremiumAnalyticsResponse(BaseModel):
+    source_analytics: List[SourceAnalytics]
+    topic_analytics: List[TopicAnalytics]
+    custom_date_range: bool
+    export_available: bool
+
+
 @router.get("/sentiment-over-time")
 async def get_sentiment_over_time(
     current_user: User = Depends(get_current_user),
     days: int = Query(default=30, ge=1, le=90),
     topic_ids: Optional[str] = Query(default=None, description="Comma-separated topic IDs (currently unused)"),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    _: bool = Depends(check_subscription_in_middleware("advanced_analytics"))
 ):
     """
     Get daily average sentiment scores by political lean.
@@ -116,7 +143,8 @@ async def get_sentiment_over_time(
 async def get_bias_distribution(
     current_user: User = Depends(get_current_user),
     weeks: int = Query(default=4, ge=1, le=12),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    _: bool = Depends(check_subscription_in_middleware("advanced_analytics"))
 ):
     """
     Get weekly bias distribution (percentage of left/center/right articles).
@@ -182,7 +210,8 @@ async def get_framework_heatmap(
     framework2_id: int = Query(..., description="Secondary framework ID (Y-axis)"),
     days: int = Query(default=30, ge=1, le=90),
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    _: bool = Depends(check_subscription_in_middleware("advanced_analytics"))
 ):
     """
     Get heatmap data for two frameworks.
@@ -343,3 +372,181 @@ async def get_user_stats(
         "sources_subscribed": source_count,
         "views_changed": 0  # Will be implemented with challenge system
     }
+
+
+@router.get("/premium", response_model=PremiumAnalyticsResponse)
+async def get_premium_analytics(
+    current_user: User = Depends(get_current_user),
+    days: int = Query(default=30, ge=1, le=365),
+    source_ids: Optional[str] = Query(default=None, description="Comma-separated source IDs to filter by"),
+    topic_ids: Optional[str] = Query(default=None, description="Comma-separated topic IDs to filter by"),
+    session: Session = Depends(get_session),
+    _: bool = Depends(check_subscription_in_middleware("advanced_analytics"))
+):
+    """
+    Get advanced analytics for premium subscribers.
+
+    Features available only to premium users:
+    - Source-specific analytics with bias breakdown
+    - Topic-level sentiment and political lean distribution
+    - Custom date ranges (up to 1 year)
+    - Top sources by topic
+    - Export functionality
+    """
+    try:
+        # Parse filter parameters
+        source_filter = None
+        topic_filter = None
+
+        if source_ids:
+            source_filter = [int(id.strip()) for id in source_ids.split(",") if id.strip().isdigit()]
+
+        if topic_ids:
+            topic_filter = [int(id.strip()) for id in topic_ids.split(",") if id.strip().isdigit()]
+
+        # Calculate date range
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(days=days)
+
+        # Get source analytics
+        source_analytics = []
+        source_query = select(Source, ArticleAnalysis, Article).join(
+            Article, Source.id == Article.source_id
+        ).join(
+            ArticleAnalysis, Article.id == ArticleAnalysis.article_id
+        ).where(
+            Article.published_at >= start_date
+        )
+
+        if source_filter:
+            source_query = source_query.where(Source.id.in_(source_filter))
+
+        # Get user's subscribed sources
+        user_sources = session.exec(
+            select(UserSourceSubscription.source_id)
+            .where(UserSourceSubscription.user_id == current_user.id)
+            .where(UserSourceSubscription.subscribed == True)
+        ).all()
+
+        if user_sources:
+            user_source_ids = [sub.source_id for sub in user_sources]
+            source_query = source_query.where(Source.id.in_(user_source_ids))
+
+        source_results = session.exec(source_query).all()
+
+        # Group by source and calculate analytics
+        source_data = {}
+        for source, analysis, article in source_results:
+            if source.id not in source_data:
+                source_data[source.id] = {
+                    "source_name": source.name,
+                    "organizational_bias": source.organizational_bias.value if source.organizational_bias else None,
+                    "article_count": 0,
+                    "sentiment_total": 0,
+                    "bias_distribution": {"left": 0, "center": 0, "right": 0}
+                }
+
+            source_data[source.id]["article_count"] += 1
+            source_data[source.id]["sentiment_total"] += analysis.sentiment_score
+
+            # Count bias distribution
+            if analysis.political_lean == PoliticalLean.LEFT:
+                source_data[source.id]["bias_distribution"]["left"] += 1
+            elif analysis.political_lean == PoliticalLean.RIGHT:
+                source_data[source.id]["bias_distribution"]["right"] += 1
+            else:
+                source_data[source.id]["bias_distribution"]["center"] += 1
+
+        # Convert to response format
+        for source_id, data in source_data.items():
+            avg_sentiment = data["sentiment_total"] / data["article_count"] if data["article_count"] > 0 else 0
+
+            source_analytics.append(SourceAnalytics(
+                source_name=data["source_name"],
+                organizational_bias=data["organizational_bias"],
+                article_count=data["article_count"],
+                avg_sentiment=round(avg_sentiment, 2),
+                bias_distribution=data["bias_distribution"]
+            ))
+
+        # Get topic analytics
+        topic_analytics = []
+        topic_query = select(Topic, Article, ArticleAnalysis).join(
+            ArticleTopicLink, Topic.id == ArticleTopicLink.topic_id
+        ).join(
+            Article, ArticleTopicLink.article_id == Article.id
+        ).join(
+            ArticleAnalysis, Article.id == ArticleAnalysis.article_id
+        ).where(
+            Article.published_at >= start_date
+        )
+
+        if topic_filter:
+            topic_query = topic_query.where(Topic.id.in_(topic_filter))
+
+        # Filter by user's subscribed topics
+        user_topics = session.exec(
+            select(UserTopicPreference.topic_id)
+            .where(UserTopicPreference.user_id == current_user.id)
+        ).all()
+
+        if user_topics:
+            user_topic_ids = [pref.topic_id for pref in user_topics]
+            topic_query = topic_query.where(Topic.id.in_(user_topic_ids))
+
+        topic_results = session.exec(topic_query).all()
+
+        # Group by topic and calculate analytics
+        topic_data = {}
+        topic_sources = {}
+
+        for topic, article, analysis in topic_results:
+            if topic.id not in topic_data:
+                topic_data[topic.id] = {
+                    "topic_name": topic.name,
+                    "article_count": 0,
+                    "sentiment_total": 0,
+                    "political_lean_distribution": {"left": 0, "center": 0, "right": 0},
+                    "sources": set()
+                }
+
+            topic_data[topic.id]["article_count"] += 1
+            topic_data[topic.id]["sentiment_total"] += analysis.sentiment_score
+            topic_data[topic.id]["sources"].add(article.source.name)
+
+            # Count political lean distribution
+            if analysis.political_lean == PoliticalLean.LEFT:
+                topic_data[topic.id]["political_lean_distribution"]["left"] += 1
+            elif analysis.political_lean == PoliticalLean.RIGHT:
+                topic_data[topic.id]["political_lean_distribution"]["right"] += 1
+            else:
+                topic_data[topic.id]["political_lean_distribution"]["center"] += 1
+
+        # Convert to response format
+        for topic_id, data in topic_data.items():
+            avg_sentiment = data["sentiment_total"] / data["article_count"] if data["article_count"] > 0 else 0
+
+            # Get top 5 sources for this topic
+            top_sources = sorted(list(data["sources"]))[:5]
+
+            topic_analytics.append(TopicAnalytics(
+                topic_name=data["topic_name"],
+                article_count=data["article_count"],
+                avg_sentiment=round(avg_sentiment, 2),
+                political_lean_distribution=data["political_lean_distribution"],
+                top_sources=top_sources
+            ))
+
+        return PremiumAnalyticsResponse(
+            source_analytics=source_analytics,
+            topic_analytics=topic_analytics,
+            custom_date_range=True,
+            export_available=True
+        )
+
+    except Exception as e:
+        logger.error(f"Error getting premium analytics: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve premium analytics"
+        )
