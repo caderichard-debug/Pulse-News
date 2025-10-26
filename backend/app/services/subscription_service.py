@@ -57,6 +57,14 @@ class SubscriptionService:
         return db.exec(statement).first()
 
     @staticmethod
+    def get_subscription_by_stripe_id(db: Session, stripe_subscription_id: str) -> Optional[UserSubscription]:
+        """Get subscription by Stripe subscription ID"""
+        statement = select(UserSubscription).where(
+            UserSubscription.stripe_subscription_id == stripe_subscription_id
+        )
+        return db.exec(statement).first()
+
+    @staticmethod
     def create_subscription(
         db: Session,
         user: User,
