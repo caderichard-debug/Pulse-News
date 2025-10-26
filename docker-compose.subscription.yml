@@ -1,0 +1,53 @@
+# Docker Compose override for subscription/paywall features
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.subscription.yml up
+
+version: '3.8'
+
+services:
+  backend:
+    environment:
+      # Stripe configuration
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - STRIPE_WEBHOOK_ENDPOINT_URL=${STRIPE_WEBHOOK_ENDPOINT_URL}
+
+      # Subscription settings
+      - FREE_DAILY_ANALYSIS_LIMIT=${FREE_DAILY_ANALYSIS_LIMIT:-10}
+      - FREE_DAILY_API_LIMIT=${FREE_DAILY_API_LIMIT:-100}
+      - TRIAL_PERIOD_DAYS=${TRIAL_PERIOD_DAYS:-14}
+      - SUBSCRIPTION_WEBHOOK_PATH=${SUBSCRIPTION_WEBHOOK_PATH:-/api/webhooks/stripe}
+
+    volumes:
+      # Mount webhook configuration if needed
+      - ./webhook-config:/app/webhook-config:ro
+
+    ports:
+      # Expose webhook port for Stripe CLI forwarding
+      - "8000:8000"
+
+  frontend:
+    environment:
+      # Stripe public key for frontend
+      - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+
+      # Feature flags
+      - NEXT_PUBLIC_SUBSCRIPTIONS_ENABLED=true
+      - NEXT_PUBLIC_SHOW_PAYWALL=true
+
+    build:
+      args:
+        # Build with subscription features
+        - WITH_SUBSCRIPTIONS=true
+
+  # Add Redis for subscription caching (optional but recommended)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+volumes:
+  redis_data:
