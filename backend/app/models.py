@@ -336,6 +336,9 @@ class User(SQLModel, table=True):
         default=SubscriptionTier.FREE,
         sa_column=Column(SQLEnum(SubscriptionTier, values_callable=lambda x: [e.value for e in x]))
     )
+    stripe_customer_id: Optional[str] = Field(default=None, max_length=100, index=True)
+    trial_start: Optional[datetime] = Field(default=None)
+    trial_end: Optional[datetime] = Field(default=None)
     is_active: bool = Field(default=True)
 
     # Admin fields
@@ -366,6 +369,12 @@ class User(SQLModel, table=True):
     newsletters: List["Newsletter"] = Relationship(back_populates="user")
     password_reset_tokens: List["PasswordResetToken"] = Relationship(back_populates="user")
     oauth_accounts: List["OAuthAccount"] = Relationship(back_populates="user")
+
+    # Subscription system relationships
+    subscription: Optional["UserSubscription"] = Relationship(back_populates="user")
+    daily_usage_records: List["DailyUsage"] = Relationship(back_populates="user")
+    promo_code_uses: List["UserPromoCodeUse"] = Relationship(back_populates="user")
+    created_promo_codes: List["PromoCode"] = Relationship(back_populates="creator")
 
     # Challenge system relationships
     challenge_responses: List["UserChallengeResponse"] = Relationship(back_populates="user")
@@ -637,6 +646,158 @@ class ViewpointRelationship(SQLModel, table=True):
         Index("idx_strength_order", "opposition_strength", "created_at"),
         Index("idx_expiration", "expires_at", "is_active"),
     )
+
+
+# ============================================================================
+# SUBSCRIPTION SYSTEM MODELS
+# ============================================================================
+
+class SubscriptionPlan(SQLModel, table=True):
+    """Subscription plans available for users."""
+    __tablename__ = "subscription_plans"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str = Field(max_length=100, unique=True, index=True)
+    description: Optional[str] = Field(default=None, max_length=500)
+    stripe_price_id: str = Field(max_length=100, unique=True, index=True)
+    price: int = Field(ge=0)  # Price in cents
+    currency: str = Field(default="usd", max_length=3)
+    billing_interval: str = Field(max_length=10)  # "month" or "year"
+
+    # Plan features stored as JSON
+    features: Optional[str] = Field(default=None, max_length=2000)  # JSON string of features
+
+    # Display and ordering
+    is_active: bool = Field(default=True, index=True)
+    sort_order: int = Field(default=0)
+
+    # Trial settings
+    trial_period_days: Optional[int] = Field(default=None)
+
+    # Metadata
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Relationships
+    user_subscriptions: List["UserSubscription"] = Relationship(back_populates="plan")
+
+
+class UserSubscription(SQLModel, table=True):
+    """Active subscriptions for users."""
+    __tablename__ = "user_subscriptions"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    stripe_subscription_id: str = Field(max_length=100, unique=True, index=True)
+    stripe_customer_id: str = Field(max_length=100, index=True)
+    plan_id: int = Field(foreign_key="subscription_plans.id", index=True)
+
+    # Subscription status
+    status: str = Field(max_length=20, index=True)  # "active", "canceled", "past_due", "trialing", "incomplete"
+
+    # Billing period
+    current_period_start: datetime = Field(index=True)
+    current_period_end: datetime = Field(index=True)
+
+    # Trial information
+    trial_start: Optional[datetime] = Field(default=None)
+    trial_end: Optional[datetime] = Field(default=None)
+
+    # Cancellation
+    canceled_at: Optional[datetime] = Field(default=None)
+    cancel_at_period_end: bool = Field(default=False)
+
+    # Payment method
+    stripe_payment_method_id: Optional[str] = Field(default=None, max_length=100)
+
+    # Metadata
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Relationships
+    user: Optional["User"] = Relationship(back_populates="subscription")
+    plan: Optional["SubscriptionPlan"] = Relationship(back_populates="user_subscriptions")
+
+
+class DailyUsage(SQLModel, table=True):
+    """Daily usage tracking for users."""
+    __tablename__ = "daily_usage"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    date: datetime = Field(index=True)  # Date at midnight UTC
+
+    # Usage counters
+    analyses_count: int = Field(default=0, ge=0)
+    api_calls_count: int = Field(default=0, ge=0)
+
+    # Limits (can be adjusted per user)
+    daily_analysis_limit: int = Field(default=10)  # Free tier default
+    daily_api_limit: int = Field(default=100)  # Free tier default
+
+    # Metadata
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Relationships
+    user: Optional["User"] = Relationship(back_populates="daily_usage_records")
+
+
+class PromoCode(SQLModel, table=True):
+    """Promotional codes for discounts."""
+    __tablename__ = "promo_codes"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    code: str = Field(max_length=50, unique=True, index=True)
+    display_name: Optional[str] = Field(default=None, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=500)
+
+    # Stripe integration
+    stripe_coupon_id: str = Field(max_length=100, unique=True)
+
+    # Discount details
+    discount_type: str = Field(max_length=20)  # "percentage" or "fixed_amount"
+    discount_value: int = Field(ge=0)  # Percentage (0-100) or fixed amount in cents
+
+    # Usage limits
+    max_uses: Optional[int] = Field(default=None, ge=1)
+    used_count: int = Field(default=0, ge=0)
+    max_uses_per_user: Optional[int] = Field(default=None, ge=1)
+
+    # Validity period
+    expires_at: Optional[datetime] = Field(default=None)
+    is_active: bool = Field(default=True, index=True)
+
+    # Metadata
+    created_by: int = Field(foreign_key="users.id")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Relationships
+    creator: Optional["User"] = Relationship(back_populates="created_promo_codes")
+    user_uses: List["UserPromoCodeUse"] = Relationship(back_populates="promo_code")
+
+
+class UserPromoCodeUse(SQLModel, table=True):
+    """Track which users have used which promo codes."""
+    __tablename__ = "user_promo_code_uses"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    promo_code_id: int = Field(foreign_key="promo_codes.id", index=True)
+    subscription_id: Optional[int] = Field(foreign_key="user_subscriptions.id", index=True)
+
+    # Usage details
+    used_at: datetime = Field(default_factory=datetime.utcnow)
+    discount_applied: int = Field(ge=0)  # Amount of discount in cents
+
+    # Metadata
+    ip_address_hash: Optional[str] = Field(default=None, max_length=64)
+
+    # Relationships
+    user: Optional["User"] = Relationship(back_populates="promo_code_uses")
+    promo_code: Optional["PromoCode"] = Relationship(back_populates="user_uses")
+    subscription: Optional["UserSubscription"] = Relationship(back_populates="promo_code_uses")
 
 
 # ============================================================================
