@@ -29,8 +29,10 @@
 - **APScheduler** - Background jobs
 - **OpenAI GPT-4o-mini** - AI analysis
 
-**Frontend (Next.js):**
+**Frontend (TanStack Router + Vite):**
 - **TypeScript** - Type safety
+- **Vite** - Build tool and dev server
+- **TanStack Router** - File-based routing
 - **Tailwind CSS** - Utility-first styling
 - **React** - UI framework
 - **Recharts** - Data visualizations
@@ -93,6 +95,8 @@ This section helps you quickly find relevant files for any task.
 - `test_statistics_verifier.py` - V2 verification pipeline
 
 ### 📁 Frontend Structure (`/frontend/src/`)
+
+> NOTE: The frontend is route-driven via TanStack Router (`/frontend/src/routes/`) and generated route tree (`/frontend/src/routeTree.gen.ts`), not Next.js App Router.
 
 #### Pages (`/frontend/src/app/`)
 - **[page.tsx](frontend/src/app/page.tsx)** - Landing page (hero, features)

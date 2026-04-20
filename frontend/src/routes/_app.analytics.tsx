@@ -23,10 +23,14 @@ type SentimentPoint = { date: string; positive?: number; neutral?: number; negat
 type BiasBucket = { lean: string; count: number };
 type Stats = {
   articles_read?: number;
-  favorites?: number;
-  topics_followed?: number;
-  weekly_streak?: number;
+  newsletters_received?: number;
+  topics_tracked?: number;
+  sources_subscribed?: number;
+  views_changed?: number;
 };
+
+type SentimentApiPoint = { date: string; values?: { Left?: number; Center?: number; Right?: number } };
+type BiasApiPoint = { week: string; left: number; center: number; right: number };
 
 function AnalyticsPage() {
   const [stats, setStats] = useState<Stats>({});
@@ -35,15 +39,42 @@ function AnalyticsPage() {
 
   useEffect(() => {
     api<Stats>("/analytics/user-stats").then(setStats).catch(() => {});
-    api<{ data?: SentimentPoint[] } | SentimentPoint[]>("/analytics/sentiment-over-time", {
+    api<SentimentApiPoint[]>("/analytics/sentiment-over-time", {
       query: { days: 30 },
     })
-      .then((r) => setSentiment(Array.isArray(r) ? r : r?.data || []))
+      .then((r) =>
+        setSentiment(
+          (r || []).map((point) => ({
+            date: point.date,
+            positive: point.values?.Left ?? 0,
+            neutral: point.values?.Center ?? 0,
+            negative: point.values?.Right ?? 0,
+          })),
+        ),
+      )
       .catch(() => {});
-    api<{ data?: BiasBucket[] } | BiasBucket[]>("/analytics/bias-distribution", {
+    api<BiasApiPoint[]>("/analytics/bias-distribution", {
       query: { weeks: 4 },
     })
-      .then((r) => setBias(Array.isArray(r) ? r : r?.data || []))
+      .then((rows) => {
+        if (!rows || rows.length === 0) {
+          setBias([]);
+          return;
+        }
+        const totals = rows.reduce(
+          (acc, row) => ({
+            left: acc.left + row.left,
+            center: acc.center + row.center,
+            right: acc.right + row.right,
+          }),
+          { left: 0, center: 0, right: 0 },
+        );
+        setBias([
+          { lean: "Left", count: Number((totals.left / rows.length).toFixed(1)) },
+          { lean: "Center", count: Number((totals.center / rows.length).toFixed(1)) },
+          { lean: "Right", count: Number((totals.right / rows.length).toFixed(1)) },
+        ]);
+      })
       .catch(() => {});
   }, []);
 
@@ -54,12 +85,12 @@ function AnalyticsPage() {
 
       <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-4">
         <Stat label="Articles read" value={stats.articles_read ?? 0} />
-        <Stat label="Saved" value={stats.favorites ?? 0} />
-        <Stat label="Topics" value={stats.topics_followed ?? 0} />
-        <Stat label="Weekly streak" value={stats.weekly_streak ?? 0} />
+        <Stat label="Newsletters" value={stats.newsletters_received ?? 0} />
+        <Stat label="Topics" value={stats.topics_tracked ?? 0} />
+        <Stat label="Sources" value={stats.sources_subscribed ?? 0} />
       </div>
 
-      <Section title="Sentiment over time" subtitle="Tone of stories you've read in the last 30 days">
+      <Section title="Sentiment over time" subtitle="Average sentiment grouped by political lean">
         <div className="h-72">
           <ResponsiveContainer>
             <LineChart data={sentiment}>

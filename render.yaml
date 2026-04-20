@@ -29,6 +29,11 @@ services:
           type: web
           name: pulse-backend
           envVarKey: RENDER_EXTERNAL_URL
+      - key: AUTH_URL
+        fromService:
+          type: web
+          name: pulse-backend
+          envVarKey: RENDER_EXTERNAL_URL
       - key: FRONTEND_URL
         value: "https://pulsenews.app"
       - key: DOCUMENTATION_URL

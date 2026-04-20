@@ -11,6 +11,7 @@ from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
 import logging
 import urllib.parse
+import os
 import requests
 from ..config import settings
 
@@ -21,6 +22,23 @@ from .auth import get_current_user
 
 router = APIRouter(prefix="/auth/oauth", tags=["oauth authentication"])
 logger = logging.getLogger(__name__)
+
+
+def _get_oauth_backend_base_url() -> str:
+    """
+    Resolve callback base URL with a safe production fallback.
+
+    In production, AUTH_URL is optional. If it's not explicitly configured,
+    use BACKEND_URL so OAuth callbacks still resolve.
+    """
+    if settings.environment != "production":
+        return settings.backend_url
+
+    auth_url = os.getenv("AUTH_URL")
+    if auth_url:
+        return auth_url.rstrip("/")
+
+    return settings.backend_url.rstrip("/")
 
 
 @router.get("/google")
@@ -36,8 +54,7 @@ async def google_oauth_login(
     try:
         # Google OAuth configuration
         client_id = settings.google_auth_client_id
-        # Use auth_url for production, backend_url for development
-        base_url = settings.auth_url if settings.environment == "production" else settings.backend_url
+        base_url = _get_oauth_backend_base_url()
         redirect_uri = f"{base_url}/auth/oauth/google/callback"
         scope = "openid email profile"
 
@@ -110,8 +127,7 @@ async def google_oauth_callback(
 
         # Exchange authorization code for tokens
         token_url = "https://oauth2.googleapis.com/token"
-        # Use auth_url for production, backend_url for development
-        base_url = settings.auth_url if settings.environment == "production" else settings.backend_url
+        base_url = _get_oauth_backend_base_url()
         redirect_uri = f"{base_url}/auth/oauth/google/callback"
 
         data = {

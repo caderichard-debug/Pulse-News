@@ -11,7 +11,7 @@ from datetime import datetime
 
 from app.database import get_session
 from app.models import Source, Article, OrganizationalBias
-from app.routes.auth import get_current_user
+from app.routes.auth import get_current_user, get_optional_user
 from app.services.bias_data_fetcher import get_bias_for_source
 
 router = APIRouter(prefix="/sources", tags=["sources"])
@@ -48,7 +48,7 @@ async def list_sources(
     active_only: bool = Query(True, description="Show only active sources"),
     sort_by: str = Query("name", description="Sort by: name, trust_score, article_count"),
     session: Session = Depends(get_session),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_optional_user)
 ):
     """
     List all news sources with optional filtering and sorting.
@@ -118,7 +118,7 @@ async def list_sources(
 async def get_source(
     source_id: int,
     session: Session = Depends(get_session),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_optional_user)
 ):
     """
     Get detailed information about a specific source.

@@ -26,8 +26,10 @@ export type Source = {
   name: string;
   url?: string;
   bias?: "left" | "center-left" | "center" | "center-right" | "right" | string;
+  organizational_bias?: "left" | "center-left" | "center" | "center-right" | "right" | string;
   trust_score?: number;
   active?: boolean;
+  is_active?: boolean;
   description?: string;
 };
 
