@@ -447,6 +447,20 @@ DOCUMENTATION_URL=https://docs.pulsenews.app
 3. **Verify variables loaded** by checking logs
 4. **For production deployment**: Update render.yaml environment section
 
+### 🚨 Render Frontend Asset Guardrail
+For the `pulse-frontend` Render service, do **not** rely on `srvx --static dist/client`.
+In this runtime, SSR works but `/assets/*` can still 404 and render plain HTML.
+
+Known-good commands for production:
+- Build:
+  `NODE_ENV=development npm ci && npm run build`
+- Start:
+  `mkdir -p public && rm -rf public/assets && cp -R dist/client/assets public/assets && npx srvx serve --entry dist/server/index.js --port $PORT --prod`
+
+After deploy, always verify in logs:
+- `GET /` returns `200`
+- `GET /assets/*.css` and `GET /assets/*.js` return `200` (not `404`)
+
 ---
 
 ## 📞 Quick References
