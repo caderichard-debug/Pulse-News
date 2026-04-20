@@ -1,115 +1,44 @@
-'use client';
+import { Link } from "@tanstack/react-router";
 
-import { useEffect, useState } from 'react';
-import { api } from '@/lib/api';
+const DOCS_URL =
+  (import.meta.env.VITE_DOCUMENTATION_URL as string | undefined) ||
+  "https://docs.pulsenews.app";
 
-export default function Footer() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let mounted = true;
-
-    const checkAuth = async () => {
-      try {
-        const user = await api.getCurrentUser();
-        if (mounted && user) {
-          setIsAuthenticated(true);
-        }
-      } catch {
-        if (mounted) {
-          setIsAuthenticated(false);
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    // Wrap the async state updates in setTimeout to avoid React act() warnings in tests
-    const timer = setTimeout(() => {
-      checkAuth();
-    }, 0);
-
-    return () => {
-      mounted = false;
-      clearTimeout(timer);
-    };
-  }, []);
-
-  if (loading) {
-    return (
-      <footer className="mt-auto w-full border-t border-border bg-card">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="text-center text-xs text-muted-foreground">
-            © {new Date().getFullYear()} Pulse News. All rights reserved.
-          </div>
-        </div>
-      </footer>
-    );
-  }
-
+export function Footer() {
   return (
-    <footer className="mt-auto w-full border-t border-border bg-card">
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Links Row */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6 text-sm text-muted-foreground">
+    <footer className="border-t border-border mt-24">
+      <div className="max-w-[1100px] mx-auto px-6 py-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 text-sm text-muted-foreground">
+        <div className="flex items-baseline gap-3">
+          <span className="font-serif text-lg uppercase tracking-tight text-foreground">Pulse</span>
+          <span>News aggregation with ethical clarity.</span>
+        </div>
+        <div className="flex flex-wrap gap-6">
           <a
-            href={process.env.NEXT_PUBLIC_DOCUMENTATION_URL || "https://docs.pulsenews.app"}
+            href={DOCS_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-foreground transition-colors"
           >
             Documentation
           </a>
-
-          <span className="hidden sm:inline">•</span>
           <a
             href="mailto:support@pulsenews.app"
             className="hover:text-foreground transition-colors"
           >
-            Contact Us
+            Contact
           </a>
-
-          {isAuthenticated && (
-            <>
-              <span className="hidden sm:inline">•</span>
-              <a
-                href="/preferences?tab=account"
-                className="hover:text-foreground transition-colors"
-              >
-                Account Settings
-              </a>
-              <span className="hidden sm:inline">•</span>
-              <a
-                href="/preferences?tab=topics"
-                className="hover:text-foreground transition-colors"
-              >
-                Newsletter Preferences
-              </a>
-            </>
-          )}
-
-          <span className="hidden sm:inline">•</span>
-          <a
-            href="/how-it-works"
-            className="hover:text-foreground transition-colors"
-          >
-            How It Works
-          </a>
-          <span className="hidden sm:inline">•</span>
-          <a
-            href="/privacy-policy"
-            className="hover:text-foreground transition-colors"
-          >
-            Privacy Policy
-          </a>
-        </div>
-
-        {/* Copyright Row */}
-        <div className="text-center text-xs text-muted-foreground mt-4">
-          © {new Date().getFullYear()} Pulse News. All rights reserved.
+          <Link to="/how-it-works" className="hover:text-foreground transition-colors">
+            How it works
+          </Link>
+          <Link to="/insights" className="hover:text-foreground transition-colors">
+            Insights
+          </Link>
+          <Link to="/sources" className="hover:text-foreground transition-colors">
+            Sources
+          </Link>
+          <Link to="/privacy-policy" className="hover:text-foreground transition-colors">
+            Privacy
+          </Link>
         </div>
       </div>
     </footer>
