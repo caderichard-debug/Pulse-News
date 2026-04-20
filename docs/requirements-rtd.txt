@@ -1,0 +1,2 @@
+# Minimal deps for Read the Docs (MkDocs build)
+mkdocs>=1.6,<2
