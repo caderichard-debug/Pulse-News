@@ -26,8 +26,8 @@ function AnalyzePage() {
     setLoading(true);
     setResult(null);
     try {
-      const a = await api<Article>("/analyze/url", { method: "POST", body: { url } });
-      setResult(a);
+      const response = await api<{ data?: Article }>("/analyze/url", { method: "POST", body: { url } });
+      setResult(response.data ?? null);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Could not analyze that URL");
     } finally {

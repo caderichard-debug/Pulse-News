@@ -22,7 +22,7 @@ export const Route = createFileRoute("/_app/feed")({
     q: typeof search.q === "string" ? search.q : "",
     topic: typeof search.topic === "string" ? search.topic : "",
     lean: typeof search.lean === "string" ? search.lean : "",
-    sort: typeof search.sort === "string" ? search.sort : "recent",
+    sort: typeof search.sort === "string" ? search.sort : "newest",
     fav: search.fav === true || search.fav === "true",
   }),
   head: () => ({
@@ -52,8 +52,15 @@ function FeedPage() {
   }, [search.q]);
 
   useEffect(() => {
-    api<Topic[] | { items: Topic[] }>("/feed/topics", { auth: false })
-      .then((r) => setTopics(Array.isArray(r) ? r : r?.items || []))
+    api<Array<{ name: string; article_count: number }>>("/feed/topics", { auth: false })
+      .then((r) =>
+        setTopics(
+          (r ?? []).map((topic) => ({
+            id: topic.name,
+            name: topic.name,
+          })),
+        ),
+      )
       .catch(() => {});
     api<Source[] | { items: Source[] }>("/feed/sources", { auth: false })
       .then((r) => setSources(Array.isArray(r) ? r : r?.items || []))
@@ -73,10 +80,10 @@ function FeedPage() {
     if (search.topic) params.topics = [search.topic];
     if (search.lean) params.political_leans = [search.lean];
 
-    api<Paginated<Article> | Article[]>("/feed/articles", { query: params })
+    api<Paginated<Article> | { articles: Article[]; total_count: number } | Article[]>("/feed/articles", { query: params })
       .then((res) => {
         if (cancelled) return;
-        const items = Array.isArray(res) ? res : res.items || [];
+        const items = Array.isArray(res) ? res : "articles" in res ? res.articles : res.items || [];
         const count = Array.isArray(res) ? items.length : res.total_count || items.length;
         setArticles(items);
         setTotal(count);
@@ -183,8 +190,8 @@ function FeedPage() {
             {topics.slice(0, 8).map((t) => (
               <button
                 key={t.id}
-                onClick={() => update({ topic: String(t.slug || t.id) })}
-                className={chip(search.topic === String(t.slug || t.id))}
+                onClick={() => update({ topic: t.name })}
+                className={chip(search.topic === t.name)}
               >
                 {t.name}
               </button>
@@ -213,9 +220,10 @@ function FeedPage() {
                 onChange={(e) => update({ sort: e.target.value })}
                 className="bg-transparent border-b border-border pb-0.5 focus:outline-none text-foreground"
               >
-                <option value="recent">Most recent</option>
-                <option value="impact">Impact</option>
-                <option value="trending">Trending</option>
+                <option value="newest">Most recent</option>
+                <option value="oldest">Oldest first</option>
+                <option value="sentiment_high">Most positive</option>
+                <option value="sentiment_low">Most negative</option>
               </select>
             </label>
             {user && (

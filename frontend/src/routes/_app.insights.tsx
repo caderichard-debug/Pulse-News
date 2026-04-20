@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app/insights")({
   head: () => ({
@@ -26,9 +26,9 @@ function InsightsPage() {
         <p className="font-serif text-xl text-foreground mb-2">No insights published yet</p>
         <p className="text-sm">
           Check back next week — or read{" "}
-          <a href="/how-it-works" className="underline underline-offset-4 text-foreground">
+          <Link to="/how-it-works" className="underline underline-offset-4 text-foreground">
             how Pulse works
-          </a>{" "}
+          </Link>{" "}
           in the meantime.
         </p>
       </div>

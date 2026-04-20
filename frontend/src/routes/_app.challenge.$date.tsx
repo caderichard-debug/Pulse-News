@@ -6,17 +6,25 @@ import { Calendar, Check } from "lucide-react";
 
 type Claim = {
   id: string | number;
-  text: string;
+  claim_text: string;
   is_true?: boolean;
 };
 
 type Challenge = {
   id?: string | number;
-  date?: string;
+  week_start_date?: string;
   title?: string;
-  intro?: string;
+  description?: string;
   claims?: Claim[];
 };
+
+type ChallengePayload = {
+  challenge?: Challenge;
+  can_respond?: boolean;
+  reason?: string;
+};
+
+type AgreementLevel = "agree" | "disagree";
 
 export const Route = createFileRoute("/_app/challenge/$date")({
   head: () => ({ meta: [{ title: "Weekly challenge — Pulse" }] }),
@@ -26,25 +34,42 @@ export const Route = createFileRoute("/_app/challenge/$date")({
 function ChallengePage() {
   const { date } = useParams({ from: "/_app/challenge/$date" });
   const [challenge, setChallenge] = useState<Challenge | null>(null);
-  const [responses, setResponses] = useState<Record<string, boolean>>({});
+  const [canRespond, setCanRespond] = useState(true);
+  const [responseReason, setResponseReason] = useState<string | null>(null);
+  const [selectedClaimId, setSelectedClaimId] = useState<string | null>(null);
+  const [agreementLevel, setAgreementLevel] = useState<AgreementLevel | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    api<Challenge>(`/challenge/${date}`)
-      .then(setChallenge)
-      .catch(() => setChallenge(null))
+    api<ChallengePayload>(`/challenge/${date}`)
+      .then((payload) => {
+        setChallenge(payload.challenge ?? null);
+        setCanRespond(payload.can_respond ?? true);
+        setResponseReason(payload.reason ?? null);
+      })
+      .catch(() => {
+        setChallenge(null);
+        setCanRespond(false);
+        setResponseReason(null);
+      })
       .finally(() => setLoading(false));
   }, [date]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!challenge?.id) return;
+    if (!selectedClaimId || !agreementLevel) {
+      toast.error("Select a claim and whether you agree or disagree");
+      return;
+    }
     try {
-      await api(`/challenge/${challenge.id}/responses`, {
+      await api(`/challenge/${date}/respond`, {
         method: "POST",
-        body: { responses },
+        body: {
+          selected_claim_id: Number(selectedClaimId),
+          agreement_level: agreementLevel,
+        },
       });
       setSubmitted(true);
       toast.success("Answers submitted");
@@ -68,13 +93,13 @@ function ChallengePage() {
   return (
     <div className="max-w-[760px] mx-auto px-6 py-12">
       <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-muted-foreground mb-3">
-        <Calendar className="size-3.5" /> Week of {challenge.date || date}
+        <Calendar className="size-3.5" /> Week of {challenge.week_start_date || date}
       </div>
       <h1 className="font-serif text-4xl md:text-5xl font-medium tracking-tight leading-tight text-balance">
         {challenge.title || "Weekly news challenge"}
       </h1>
-      {challenge.intro && (
-        <p className="mt-4 text-lg text-muted-foreground leading-relaxed">{challenge.intro}</p>
+      {challenge.description && (
+        <p className="mt-4 text-lg text-muted-foreground leading-relaxed">{challenge.description}</p>
       )}
 
       <form onSubmit={onSubmit} className="mt-12 space-y-6">
@@ -83,47 +108,54 @@ function ChallengePage() {
             <legend className="px-2 text-xs uppercase tracking-wider text-muted-foreground">
               Claim
             </legend>
-            <p className="font-serif text-xl font-medium mb-4">{c.text}</p>
+            <p className="font-serif text-xl font-medium mb-4">{c.claim_text}</p>
             <div className="flex gap-3">
-              {([
-                { v: true, label: "True" },
-                { v: false, label: "False" },
-              ] as const).map((opt) => {
-                const selected = responses[String(c.id)] === opt.v;
-                return (
-                  <button
-                    type="button"
-                    key={String(opt.v)}
-                    onClick={() =>
-                      setResponses((prev) => ({ ...prev, [String(c.id)]: opt.v }))
-                    }
-                    className={`flex-1 py-2.5 rounded-md border transition-colors ${
-                      selected
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "border-border hover:bg-accent"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
-            {submitted && c.is_true !== undefined && (
-              <p
-                className={`mt-3 text-sm ${
-                  responses[String(c.id)] === c.is_true ? "text-sent-pos" : "text-sent-neg"
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedClaimId(String(c.id));
+                  setAgreementLevel("agree");
+                }}
+                className={`flex-1 py-2.5 rounded-md border transition-colors ${
+                  selectedClaimId === String(c.id) && agreementLevel === "agree"
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "border-border hover:bg-accent"
                 }`}
               >
+                I agree
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedClaimId(String(c.id));
+                  setAgreementLevel("disagree");
+                }}
+                className={`flex-1 py-2.5 rounded-md border transition-colors ${
+                  selectedClaimId === String(c.id) && agreementLevel === "disagree"
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "border-border hover:bg-accent"
+                }`}
+              >
+                I disagree
+              </button>
+            </div>
+            {submitted && selectedClaimId === String(c.id) && (
+              <p className="mt-3 text-sm text-sent-pos">
                 <Check className="inline size-4 mr-1" />
-                Correct answer: {c.is_true ? "True" : "False"}
+                Your response has been recorded.
               </p>
             )}
           </fieldset>
         ))}
-        {!submitted && (challenge.claims?.length ?? 0) > 0 && (
+        {!submitted && canRespond && (challenge.claims?.length ?? 0) > 0 && (
           <button className="px-5 py-3 rounded-md bg-primary text-primary-foreground font-medium">
             Submit answers
           </button>
+        )}
+        {!canRespond && (
+          <p className="text-sm text-muted-foreground">
+            {responseReason || "You cannot respond to this challenge right now."}
+          </p>
         )}
       </form>
     </div>

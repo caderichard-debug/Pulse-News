@@ -1,9 +1,11 @@
 // Pulse API client. Talks to a FastAPI backend.
 // Configure with VITE_API_URL in Project Settings → Environment variables.
 
+const configuredApiUrl = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "");
+
 export const API_BASE =
-  (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ||
-  "https://api.pulsenews.app";
+  configuredApiUrl ||
+  (import.meta.env.DEV ? "http://localhost:8000" : "https://api.pulsenews.app");
 
 const TOKEN_KEY = "token";
 
