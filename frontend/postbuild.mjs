@@ -1,5 +1,6 @@
 import { copyFile, access } from "node:fs/promises";
 import { constants } from "node:fs";
+import { cp, mkdir } from "node:fs/promises";
 
 async function exists(path) {
   try {
@@ -22,3 +23,11 @@ await copyIfMissing("dist/server/server.js", "dist/server/index.js");
 
 // Compatibility for generic static hosts that expect index.html fallback.
 await copyIfMissing("dist/client/_shell.html", "dist/client/index.html");
+
+// Some srvx runtimes resolve static files from dist/server/public.
+await mkdir("dist/server/public", { recursive: true });
+await cp("dist/client/assets", "dist/server/public/assets", {
+  recursive: true,
+  force: true,
+});
+console.log("[postbuild] synced dist/client/assets -> dist/server/public/assets");
