@@ -1,0 +1,90 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useState, type FormEvent } from "react";
+import { toast } from "sonner";
+import { api, ApiError } from "@/lib/api";
+import type { Article } from "@/lib/types";
+import { LeanMeter, SentimentDot, VerifiedBadge, FrameworkChip } from "@/components/Signals";
+import { Link2 } from "lucide-react";
+
+export const Route = createFileRoute("/_app/analyze")({
+  head: () => ({
+    meta: [
+      { title: "Analyze a URL — Pulse" },
+      { name: "description", content: "Paste any article URL — Pulse extracts and analyzes it on demand." },
+    ],
+  }),
+  component: AnalyzePage,
+});
+
+function AnalyzePage() {
+  const [url, setUrl] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<Article | null>(null);
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setResult(null);
+    try {
+      const a = await api<Article>("/analyze/url", { method: "POST", body: { url } });
+      setResult(a);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Could not analyze that URL");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="max-w-[760px] mx-auto px-6 py-12">
+      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-3">On-demand analysis</p>
+      <h1 className="font-serif text-4xl md:text-5xl font-medium tracking-tight">
+        Drop a URL. Get the receipts.
+      </h1>
+      <p className="mt-3 text-muted-foreground max-w-2xl">
+        Paste any article. Pulse will extract the text, summarize it, score sentiment and political
+        lean, and map it to ethical frameworks.
+      </p>
+
+      <form onSubmit={onSubmit} className="mt-8 flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <input
+            type="url"
+            required
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://example.com/news/story"
+            className="w-full pl-10 pr-3 py-3 bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="px-5 py-3 rounded-md bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
+        >
+          {loading ? "Analyzing…" : "Analyze"}
+        </button>
+      </form>
+
+      {result && (
+        <div className="mt-12 border-t-[3px] border-foreground pt-10">
+          <h2 className="font-serif text-3xl font-medium tracking-tight text-balance">
+            {result.title}
+          </h2>
+          {result.summary && (
+            <p className="mt-4 text-lg text-muted-foreground leading-relaxed">{result.summary}</p>
+          )}
+          <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3 pt-4 border-t border-border">
+            {result.has_verified_stats && <VerifiedBadge />}
+            <SentimentDot sentiment={result.sentiment} />
+            <LeanMeter score={result.political_lean} showLabel />
+            {result.frameworks?.slice(0, 3).map((fp, i) => (
+              <FrameworkChip key={i}>{fp.framework?.name}</FrameworkChip>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
