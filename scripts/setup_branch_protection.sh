@@ -75,9 +75,9 @@ please follow these steps in the GitHub web UI:
 
    - [x] Require status checks to pass before merging
        - [x] Require branches to be up to date before merging
-       - Search and add these required checks:
+       - Search and add these required checks (job IDs from CI Pipeline):
            • backend-tests
-           • frontend-tests
+           • security-scan
            • docker-build
 
    - [x] Require conversation resolution before merging
