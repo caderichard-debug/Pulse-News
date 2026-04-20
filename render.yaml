@@ -65,7 +65,7 @@ services:
         value: Pulse News
       # Secrets are loaded from /etc/secrets/.env (Secret File in Render dashboard)
 
-  # Frontend Static Site
+  # Frontend Vite Web Service
   - type: web
     name: pulse-frontend
     runtime: node
@@ -73,7 +73,7 @@ services:
     branch: main
     rootDir: frontend
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    startCommand: npm run preview -- --host 0.0.0.0 --port $PORT
     plan: free
     # Enable PR previews
     previews:
@@ -81,7 +81,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: NEXT_PUBLIC_API_URL
+      - key: VITE_API_URL
         fromService:
           type: web
           name: pulse-backend
