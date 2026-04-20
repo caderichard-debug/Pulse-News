@@ -76,8 +76,9 @@ services:
     # Use NODE_ENV=development only for `npm ci` — avoids `npm ci --include=dev`, which can segfault in
     # Render's npm wrapper on Node 22. `vite build` still runs with service NODE_ENV=production.
     buildCommand: NODE_ENV=development npm ci && npm run build
-    # Run TanStack Start server bundle with srvx (verified locally to return full HTML).
-    startCommand: npx srvx dist/server/index.js --port $PORT
+    # Run TanStack Start server with static assets from dist/client.
+    # Without --static, HTML renders but CSS/JS assets are not served.
+    startCommand: npx srvx serve --entry dist/server/index.js --static dist/client --port $PORT --prod
     plan: free
     # Enable PR previews
     previews:
