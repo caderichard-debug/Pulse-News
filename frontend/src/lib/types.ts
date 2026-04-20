@@ -5,6 +5,7 @@ export type User = {
   id: string | number;
   email: string;
   name?: string;
+  is_admin?: boolean;
   avatar_url?: string;
 };
 

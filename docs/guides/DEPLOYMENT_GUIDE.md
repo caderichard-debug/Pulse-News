@@ -277,6 +277,27 @@ From the Render Dashboard:
 1. Go to the service you want to redeploy
 2. Click **"Manual Deploy" → "Deploy latest commit"**
 
+### Frontend Route/Admin Guardrails (Anti-Regression)
+
+Treat these as mandatory checks on every frontend deploy:
+
+1. **Canonical dashboard route is `/analytics`**
+   - Do not switch primary links back to `/dashboard`.
+   - Keep backward compatibility by retaining `/dashboard` redirect to `/analytics`.
+
+2. **Admin dashboard route is `/admin`**
+   - Frontend admin page must exist at `frontend/src/routes/_app.admin.tsx`.
+   - It reads backend admin summary from `GET /admin-panel/dashboard`.
+
+3. **Admin visibility rule**
+   - Admin nav/button should only render for admin users (`is_admin`) and must not appear for regular users.
+
+4. **Release verification checklist**
+   - `/analytics` returns 200
+   - `/dashboard` redirects and resolves to `/analytics`
+   - Admin user can access `/admin` and receives data from `/admin-panel/dashboard`
+   - Non-admin user sees an access error (403-handled UI), not a blank screen
+
 ### Preventing Frontend Asset Regressions
 
 Use this checklist whenever frontend deploy/start commands change:
@@ -304,6 +325,21 @@ Use this checklist whenever frontend deploy/start commands change:
 4. **Know the failure signature**:
    - If logs show `Static files: (create public/ dir)` and `/assets/*` 404s, the service is not exposing built assets correctly.
    - Re-apply the known-good start command above and redeploy.
+
+5. **Mandatory verification before declaring success**:
+   - Confirm latest deploy status is `live`.
+   - Confirm startup log includes the actual static root being used.
+   - Confirm both conditions from real traffic:
+     - `GET /` or `HEAD /` returns `200`
+     - `GET /assets/*.css` and `GET /assets/*.js` return `200`
+   - Confirm at least one direct JS and CSS asset URL responds `200` from the public domain.
+
+6. **Migration safety rule (until static-site cutover is complete)**:
+   - Keep compatibility outputs in `frontend/postbuild.mjs`:
+     - `dist/server/index.js` copied from `dist/server/server.js`
+     - `dist/client/index.html` copied from `dist/client/_shell.html`
+     - `dist/client/assets` synced to `dist/server/public/assets`
+   - This prevents regressions when runtime static root resolution changes across Render instances.
 
 ---
 
