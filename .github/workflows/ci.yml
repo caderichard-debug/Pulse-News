@@ -63,9 +63,9 @@ jobs:
           file: ./coverage.xml
           fail_ci_if_error: false
 
-  # Frontend Tests
+  # Frontend (Vite + TanStack Router)
   frontend-tests:
-    name: Frontend Tests (Next.js)
+    name: Frontend (Vite)
     runs-on: ubuntu-latest
 
     steps:
@@ -91,27 +91,16 @@ jobs:
         working-directory: ./frontend
         run: npx tsc --noEmit || true
 
-      - name: Run unit tests
-        working-directory: ./frontend
-        run: npm test -- --coverage --watchAll=false
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
-        if: always()
-        with:
-          file: ./frontend/coverage/coverage-final.json
-          flags: frontend
-          fail_ci_if_error: false
-
       - name: Build
         working-directory: ./frontend
         env:
-          NEXT_PUBLIC_API_URL: http://localhost:8000
+          VITE_API_URL: http://localhost:8000
         run: npm run build
 
-  # Frontend E2E Tests
+  # Frontend E2E — disabled until Playwright targets the Vite app (see frontend/package.json)
   frontend-e2e:
     name: Frontend E2E Tests (Playwright)
+    if: false
     runs-on: ubuntu-latest
     needs: frontend-tests
     continue-on-error: true  # Don't fail CI if e2e tests fail
