@@ -63,6 +63,18 @@ jobs:
           file: ./coverage.xml
           fail_ci_if_error: false
 
+  # Legacy required status: branch protection may still expect this exact name from the
+  # old Next.js pipeline. It is a no-op; remove "Frontend Tests (Next.js)" from required
+  # checks in GitHub → Settings → Branches when you can.
+  frontend-tests:
+    name: Frontend Tests (Next.js)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip (frontend is Vite; no Jest job)
+        run: |
+          echo "No-op job so merge checks do not wait forever."
+          echo "Delete this job after removing the required check from branch protection."
+
   # Security Scan
   security-scan:
     name: Security Scan
@@ -116,13 +128,14 @@ jobs:
   all-checks:
     name: All Checks Passed
     runs-on: ubuntu-latest
-    needs: [backend-tests, security-scan, docker-build]
+    needs: [backend-tests, frontend-tests, security-scan, docker-build]
     if: always()
 
     steps:
       - name: Check if all jobs passed
         run: |
           if [[ "${{ needs.backend-tests.result }}" == "success" ]] && \
+             [[ "${{ needs.frontend-tests.result }}" == "success" ]] && \
              [[ "${{ needs.security-scan.result }}" == "success" ]] && \
              [[ "${{ needs.docker-build.result }}" == "success" ]]; then
             echo "✅ All checks passed! Safe to merge."

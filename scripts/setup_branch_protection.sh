@@ -79,6 +79,8 @@ please follow these steps in the GitHub web UI:
            • backend-tests
            • security-scan
            • docker-build
+           • (optional legacy) frontend-tests — no-op unless you still require
+             "Frontend Tests (Next.js)"; prefer removing that required check
 
    - [x] Require conversation resolution before merging
 
