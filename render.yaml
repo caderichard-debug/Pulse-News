@@ -72,7 +72,9 @@ services:
     repo: https://github.com/caderichard-debug/Pulse-News
     branch: main
     rootDir: frontend
-    buildCommand: npm install && npm run build
+    # NODE_ENV=production skips devDependencies; vite.config imports @lovable.dev/vite-tanstack-config (devDep).
+    # --include=dev ensures the Vite config loads. Use npm ci for reproducible installs (clear build cache if npm segfaults).
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm run preview -- --host 0.0.0.0 --port $PORT
     plan: free
     # Enable PR previews
