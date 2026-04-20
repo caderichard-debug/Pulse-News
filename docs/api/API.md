@@ -4,6 +4,11 @@ Base URL: `http://localhost:8000`
 
 Interactive docs: http://localhost:8000/docs
 
+> **Related Documentation:**
+> - [System Architecture](../architecture/ARCHITECTURE.md) - Understand the underlying system design
+> - [Development Setup](../development/SETUP.md) - Get the API server running locally
+> - [Testing Guide](../testing/TESTING.md) - Learn how to test these endpoints
+
 ## Authentication
 
 Most endpoints require JWT authentication. Include the token in the `Authorization` header:

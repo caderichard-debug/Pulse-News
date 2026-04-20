@@ -30,12 +30,9 @@ services:
           name: pulse-backend
           envVarKey: RENDER_EXTERNAL_URL
       - key: FRONTEND_URL
-        fromService:
-          type: web
-          name: pulse-frontend
-          envVarKey: RENDER_EXTERNAL_URL
-      - key: FRONTEND_CUSTOM_URL
         value: "https://pulsenews.app"
+      - key: DOCUMENTATION_URL
+        value: "https://pulse-news.readthedocs.io/en/latest/"
       - key: CACHE_BUST
         value: "2025-10-10-v2"
       - key: ENVIRONMENT

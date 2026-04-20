@@ -46,7 +46,8 @@ def send_password_reset_email(email: str, user_name: str, reset_token: str) -> b
         template = template_env.get_template("password_reset.html")
         html_content = template.render(
             user_name=user_name,
-            reset_link=reset_link
+            reset_link=reset_link,
+            documentation_url=os.getenv("DOCUMENTATION_URL", "https://docs.pulsenews.app")
         )
 
         # Send email via Resend
@@ -159,7 +160,8 @@ def send_welcome_email(email: str, user_name: str) -> bool:
             preferences_url=f"{frontend_url}/preferences",
             dashboard_url=f"{frontend_url}/dashboard",
             website_url=frontend_url,
-            how_it_works_url=f"{frontend_url}/how-it-works"
+            how_it_works_url=f"{frontend_url}/how-it-works",
+            documentation_url=os.getenv("DOCUMENTATION_URL", "https://docs.pulsenews.app")
         )
 
         # Send email via Resend

@@ -1,0 +1,41 @@
+/* Custom CSS for Pulse News documentation */
+
+/* Custom brand colors */
+.wy-side-nav-search {
+    background-color: #2980b9;
+}
+
+.wy-side-nav-search input[type=text] {
+    border-color: #2980b9;
+}
+
+.wy-nav-top {
+    background-color: #2980b9;
+}
+
+/* Improve readability */
+.rst-content .section {
+    margin-bottom: 2em;
+}
+
+/* Better code block styling */
+.rst-content .highlight {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 1em;
+    margin: 1em 0;
+}
+
+/* Custom admonition styling */
+.rst-content .admonition {
+    border-left: 4px solid #2980b9;
+    background-color: #f8f9fa;
+    padding: 1em;
+    margin: 1em 0;
+}
+
+.rst-content .admonition .admonition-title {
+    color: #2980b9;
+    font-weight: bold;
+}

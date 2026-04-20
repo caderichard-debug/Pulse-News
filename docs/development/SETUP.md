@@ -1,5 +1,11 @@
 # Setup Guide
 
+> **Related Documentation:**
+> - [System Architecture](../architecture/ARCHITECTURE.md) - Understand what you're setting up
+> - [API Documentation](../api/API.md) - Learn about the API endpoints available
+> - [Testing Guide](../testing/TESTING.md) - How to run tests after setup
+> - [Deployment Guide](../guides/DEPLOYMENT_GUIDE.md) - Production deployment instructions
+
 ## Prerequisites
 
 - **Docker & Docker Compose** - For containerized development

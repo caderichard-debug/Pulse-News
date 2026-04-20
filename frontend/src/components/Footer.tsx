@@ -1,5 +1,9 @@
 import { Link } from "@tanstack/react-router";
 
+const DOCS_URL =
+  (import.meta.env.VITE_DOCUMENTATION_URL as string | undefined) ||
+  "https://docs.pulsenews.app";
+
 export function Footer() {
   return (
     <footer className="border-t border-border mt-24">
@@ -9,6 +13,20 @@ export function Footer() {
           <span>News aggregation with ethical clarity.</span>
         </div>
         <div className="flex flex-wrap gap-6">
+          <a
+            href={DOCS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground transition-colors"
+          >
+            Documentation
+          </a>
+          <a
+            href="mailto:support@pulsenews.app"
+            className="hover:text-foreground transition-colors"
+          >
+            Contact
+          </a>
           <Link to="/how-it-works" className="hover:text-foreground transition-colors">
             How it works
           </Link>
