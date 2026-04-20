@@ -6,4 +6,13 @@
 // You can pass additional config via defineConfig({ vite: { ... } }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
-export default defineConfig();
+export default defineConfig({
+  vite: {
+    server: {
+      allowedHosts: ["pulsenews.app", "www.pulsenews.app", "pulse-frontend-pfrt.onrender.com"],
+    },
+    preview: {
+      allowedHosts: ["pulsenews.app", "www.pulsenews.app", "pulse-frontend-pfrt.onrender.com"],
+    },
+  },
+});
