@@ -277,6 +277,70 @@ From the Render Dashboard:
 1. Go to the service you want to redeploy
 2. Click **"Manual Deploy" → "Deploy latest commit"**
 
+### Frontend Route/Admin Guardrails (Anti-Regression)
+
+Treat these as mandatory checks on every frontend deploy:
+
+1. **Canonical dashboard route is `/analytics`**
+   - Do not switch primary links back to `/dashboard`.
+   - Keep backward compatibility by retaining `/dashboard` redirect to `/analytics`.
+
+2. **Admin dashboard route is `/admin`**
+   - Frontend admin page must exist at `frontend/src/routes/_app.admin.tsx`.
+   - It reads backend admin summary from `GET /admin-panel/dashboard`.
+
+3. **Admin visibility rule**
+   - Admin nav/button should only render for admin users (`is_admin`) and must not appear for regular users.
+
+4. **Release verification checklist**
+   - `/analytics` returns 200
+   - `/dashboard` redirects and resolves to `/analytics`
+   - Admin user can access `/admin` and receives data from `/admin-panel/dashboard`
+   - Non-admin user sees an access error (403-handled UI), not a blank screen
+
+### Preventing Frontend Asset Regressions
+
+Use this checklist whenever frontend deploy/start commands change:
+
+1. **Pin the known-good frontend commands** (dashboard and `render.yaml` must match exactly):
+   - Build:
+     ```bash
+     NODE_ENV=development npm ci && npm run build
+     ```
+   - Start:
+     ```bash
+     mkdir -p public && rm -rf public/assets && cp -R dist/client/assets public/assets && npx srvx serve --entry dist/server/index.js --port $PORT --prod
+     ```
+
+2. **Treat Render Dashboard settings as runtime truth**:
+   - `render.yaml` can drift from live service settings.
+   - After any dashboard tweak, sync the same commands back into `render.yaml` in git.
+
+3. **Run a post-deploy asset smoke test**:
+   - Open app in browser and verify styling.
+   - In Render logs, confirm:
+     - `GET /` is `200`
+     - `GET /assets/*.css` and `GET /assets/*.js` are `200` (not `404`)
+
+4. **Know the failure signature**:
+   - If logs show `Static files: (create public/ dir)` and `/assets/*` 404s, the service is not exposing built assets correctly.
+   - Re-apply the known-good start command above and redeploy.
+
+5. **Mandatory verification before declaring success**:
+   - Confirm latest deploy status is `live`.
+   - Confirm startup log includes the actual static root being used.
+   - Confirm both conditions from real traffic:
+     - `GET /` or `HEAD /` returns `200`
+     - `GET /assets/*.css` and `GET /assets/*.js` return `200`
+   - Confirm at least one direct JS and CSS asset URL responds `200` from the public domain.
+
+6. **Migration safety rule (until static-site cutover is complete)**:
+   - Keep compatibility outputs in `frontend/postbuild.mjs`:
+     - `dist/server/index.js` copied from `dist/server/server.js`
+     - `dist/client/index.html` copied from `dist/client/_shell.html`
+     - `dist/client/assets` synced to `dist/server/public/assets`
+   - This prevents regressions when runtime static root resolution changes across Render instances.
+
 ---
 
 ## Monitoring & Logs
@@ -325,6 +389,41 @@ Free tier databases do not include automatic backups. For production:
    - Ensure frontend URL is allowed
    - May need to add frontend URL to `FRONTEND_URL` env var
 3. Check backend health: Visit `/health` endpoint
+
+### Frontend Loads as Plain HTML (No CSS/JS)
+
+**Issue**: `pulsenews.app` renders content, but has no styling or interactivity.
+
+**Symptoms in Render logs**:
+- `GET /` returns `200`
+- `GET /assets/*.css` and `GET /assets/*.js` return `404`
+- `srvx` startup logs show `Static files: (create public/ dir)`
+
+**Root cause**:
+- SSR HTML is served correctly, but static client assets are not being served from the path `srvx` is actually using at runtime.
+- In this service, relying on `--static dist/client` was not sufficient in production; explicit runtime asset placement was required.
+
+**Final working fix (Render Dashboard service settings)**:
+
+Build command:
+```bash
+NODE_ENV=development npm ci && npm run build
+```
+
+Start command:
+```bash
+mkdir -p public && rm -rf public/assets && cp -R dist/client/assets public/assets && npx srvx serve --entry dist/server/index.js --port $PORT --prod
+```
+
+**Verification checklist**:
+1. Deploy completes and service is live.
+2. Render app logs show requests to `/assets/*` returning `200` (not `404`).
+3. Browser DevTools network confirms CSS and JS bundles are loaded successfully.
+4. UI renders with styling and client-side interactions.
+
+**Important note about config drift**:
+- `render.yaml` and Render Dashboard settings can diverge.
+- If behavior in production does not match repository config, treat dashboard `Build Command` and `Start Command` as the runtime source of truth, then sync validated values back to `render.yaml`.
 
 ### Database Migration Errors
 
@@ -454,6 +553,6 @@ If a deployment fails:
 
 ---
 
-**Last Updated**: 2025-10-09
+**Last Updated**: 2026-04-20
 **Blueprint Version**: 1.0
 **Maintained by**: Pulse Development Team

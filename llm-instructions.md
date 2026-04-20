@@ -29,8 +29,10 @@
 - **APScheduler** - Background jobs
 - **OpenAI GPT-4o-mini** - AI analysis
 
-**Frontend (Next.js):**
+**Frontend (TanStack Router + Vite):**
 - **TypeScript** - Type safety
+- **Vite** - Build tool and dev server
+- **TanStack Router** - File-based routing
 - **Tailwind CSS** - Utility-first styling
 - **React** - UI framework
 - **Recharts** - Data visualizations
@@ -93,6 +95,8 @@ This section helps you quickly find relevant files for any task.
 - `test_statistics_verifier.py` - V2 verification pipeline
 
 ### 📁 Frontend Structure (`/frontend/src/`)
+
+> NOTE: The frontend is route-driven via TanStack Router (`/frontend/src/routes/`) and generated route tree (`/frontend/src/routeTree.gen.ts`), not Next.js App Router.
 
 #### Pages (`/frontend/src/app/`)
 - **[page.tsx](frontend/src/app/page.tsx)** - Landing page (hero, features)
@@ -443,6 +447,60 @@ DOCUMENTATION_URL=https://docs.pulsenews.app
 3. **Verify variables loaded** by checking logs
 4. **For production deployment**: Update render.yaml environment section
 
+### 🚨 Render Frontend Asset Guardrail
+Current direction is TanStack Start **SPA mode** + Render static hosting.
+
+Migration notes:
+- `frontend/vite.config.ts` now sets:
+  - `cloudflare: false`
+  - `tanstackStart.spa.enabled: true`
+- `frontend/postbuild.mjs` creates compatibility outputs:
+  - `dist/server/index.js` (copied from `dist/server/server.js`)
+  - `dist/client/index.html` (copied from `dist/client/_shell.html`)
+
+Why compatibility exists:
+- The live Render frontend service is still configured as a web service in dashboard settings.
+- It currently runs:
+  `mkdir -p public && rm -rf public/assets && cp -R dist/client/assets public/assets && npx srvx serve --entry dist/server/index.js --port $PORT --prod`
+- The postbuild shim keeps this command working during migration.
+
+Target end state:
+- Convert `pulse-frontend` to a Render static site using `frontend/dist/client`.
+- Keep SPA fallback rewrite to `/_shell.html` (or `/index.html` if using the copied compatibility file).
+
+After deploy, always verify in logs:
+- `HEAD /` or `GET /` returns `200`
+- `GET /assets/*.css` and `GET /assets/*.js` return `200` (not `404`)
+
+### 🧭 Mandatory Agent Protocol (Render frontend)
+For any agent modifying frontend build/deploy behavior, treat this as required policy:
+
+1. **Do not trust config files alone**
+   - Treat live Render dashboard service settings as runtime truth.
+   - `render.yaml` can drift; sync validated runtime values back to git.
+
+2. **Do not claim "fixed" without runtime evidence**
+   - Required proof in this order:
+     - Latest deploy status is `live`
+     - Runtime logs show successful startup
+     - Runtime logs show `/assets/*` requests returning `200` (not `404`)
+     - At least one direct asset URL check returns `200` for JS and CSS
+
+3. **Preserve compatibility during migration**
+   - Until the service is fully converted to Render static site:
+     - Keep `frontend/postbuild.mjs` compatibility outputs in place
+     - Ensure assets are available for whichever static root `srvx` resolves (`public` vs `dist/server/public`)
+
+4. **Failure signature to recognize immediately**
+   - App route requests return `200` but `/assets/*.js` and `/assets/*.css` return `404`
+   - This means HTML is served but client bundle is missing from the active static root
+
+5. **Definition of done (frontend deploy changes)**
+   - Deploy is live
+   - Homepage renders styled UI
+   - Asset requests are `200`
+   - Guardrail docs are updated if deployment behavior changed
+
 ---
 
 ## 📞 Quick References
@@ -478,6 +536,18 @@ DOCUMENTATION_URL=https://docs.pulsenews.app
 ---
 
 ## 🚨 Important Conventions
+
+### Frontend Route + Admin Guardrails (Anti-Regression)
+- Frontend routing is **TanStack Router file routes** under `frontend/src/routes/`.
+- The user-facing dashboard route is **`/analytics`** (not `/dashboard`).
+- Keep the legacy alias route **`/dashboard -> /analytics`** in place to prevent broken CTA/bookmark links.
+- Admin UI route is **`/admin`** (`frontend/src/routes/_app.admin.tsx`).
+- Show admin nav only for users with `user.is_admin === true` (with temporary fallback for `cade.richard@gmail.com` while role data is reconciled).
+- Backend admin dashboard data source is `GET /admin-panel/dashboard`; if this endpoint contract changes, update `frontend/src/routes/_app.admin.tsx` in the same PR.
+- Before declaring dashboard/admin fixes complete, verify all of:
+  - `/analytics` loads
+  - `/dashboard` redirects to `/analytics`
+  - admin user can open `/admin` without 404
 
 ### Code Organization
 - **Services**: Pure business logic, no FastAPI dependencies

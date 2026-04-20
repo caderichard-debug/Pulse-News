@@ -15,6 +15,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as LoginCallbackRouteImport } from './routes/login.callback'
@@ -26,6 +27,7 @@ import { Route as AppHowItWorksRouteImport } from './routes/_app.how-it-works'
 import { Route as AppFeedRouteImport } from './routes/_app.feed'
 import { Route as AppAnalyzeRouteImport } from './routes/_app.analyze'
 import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
+import { Route as AppAdminRouteImport } from './routes/_app.admin'
 import { Route as AppChallengeDateRouteImport } from './routes/_app.challenge.$date'
 import { Route as AppArticleIdRouteImport } from './routes/_app.article.$id'
 
@@ -57,6 +59,11 @@ const LoginRoute = LoginRouteImport.update({
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -113,6 +120,11 @@ const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppChallengeDateRoute = AppChallengeDateRouteImport.update({
   id: '/challenge/$date',
   path: '/challenge/$date',
@@ -126,12 +138,14 @@ const AppArticleIdRoute = AppArticleIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/verify-email': typeof VerifyEmailRoute
   '/welcome': typeof WelcomeRoute
+  '/admin': typeof AppAdminRoute
   '/analytics': typeof AppAnalyticsRoute
   '/analyze': typeof AppAnalyzeRoute
   '/feed': typeof AppFeedRoute
@@ -145,12 +159,14 @@ export interface FileRoutesByFullPath {
   '/challenge/$date': typeof AppChallengeDateRoute
 }
 export interface FileRoutesByTo {
+  '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/verify-email': typeof VerifyEmailRoute
   '/welcome': typeof WelcomeRoute
+  '/admin': typeof AppAdminRoute
   '/analytics': typeof AppAnalyticsRoute
   '/analyze': typeof AppAnalyzeRoute
   '/feed': typeof AppFeedRoute
@@ -167,12 +183,14 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/verify-email': typeof VerifyEmailRoute
   '/welcome': typeof WelcomeRoute
+  '/_app/admin': typeof AppAdminRoute
   '/_app/analytics': typeof AppAnalyticsRoute
   '/_app/analyze': typeof AppAnalyzeRoute
   '/_app/feed': typeof AppFeedRoute
@@ -190,12 +208,14 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/dashboard'
     | '/forgot-password'
     | '/login'
     | '/reset-password'
     | '/signup'
     | '/verify-email'
     | '/welcome'
+    | '/admin'
     | '/analytics'
     | '/analyze'
     | '/feed'
@@ -209,12 +229,14 @@ export interface FileRouteTypes {
     | '/challenge/$date'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/dashboard'
     | '/forgot-password'
     | '/login'
     | '/reset-password'
     | '/signup'
     | '/verify-email'
     | '/welcome'
+    | '/admin'
     | '/analytics'
     | '/analyze'
     | '/feed'
@@ -230,12 +252,14 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_app'
+    | '/dashboard'
     | '/forgot-password'
     | '/login'
     | '/reset-password'
     | '/signup'
     | '/verify-email'
     | '/welcome'
+    | '/_app/admin'
     | '/_app/analytics'
     | '/_app/analyze'
     | '/_app/feed'
@@ -252,6 +276,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  DashboardRoute: typeof DashboardRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -302,6 +327,13 @@ declare module '@tanstack/react-router' {
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -381,6 +413,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAnalyticsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin': {
+      id: '/_app/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/challenge/$date': {
       id: '/_app/challenge/$date'
       path: '/challenge/$date'
@@ -399,6 +438,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppAdminRoute: typeof AppAdminRoute
   AppAnalyticsRoute: typeof AppAnalyticsRoute
   AppAnalyzeRoute: typeof AppAnalyzeRoute
   AppFeedRoute: typeof AppFeedRoute
@@ -413,6 +453,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAdminRoute: AppAdminRoute,
   AppAnalyticsRoute: AppAnalyticsRoute,
   AppAnalyzeRoute: AppAnalyzeRoute,
   AppFeedRoute: AppFeedRoute,
@@ -440,6 +481,7 @@ const LoginRouteWithChildren = LoginRoute._addFileChildren(LoginRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  DashboardRoute: DashboardRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
