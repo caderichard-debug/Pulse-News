@@ -75,7 +75,9 @@ services:
     # NODE_ENV=production (below) skips devDependencies; vite + vite.config need devDependencies.
     # Use NODE_ENV=development only for `npm ci` — avoids `npm ci --include=dev`, which can segfault in
     # Render's npm wrapper on Node 22. `vite build` still runs with service NODE_ENV=production.
-    buildCommand: NODE_ENV=development npm ci && npm run build
+    # Build TanStack Start bundles, then generate a static SPA entrypoint for Render web serving.
+    # This project currently emits assets in dist/client but no index.html by default.
+    buildCommand: NODE_ENV=development npm ci && npm run build && node -e "const fs=require('fs');const a='dist/client/assets';const files=fs.readdirSync(a);const js=files.find(f=>/^index-.*\\.js$/.test(f));const css=files.find(f=>/^styles-.*\\.css$/.test(f));if(!js)throw new Error('Missing client index bundle in dist/client/assets');const html='<!doctype html><html><head><meta charset=\"UTF-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"/>'+(css?'<link rel=\"stylesheet\" href=\"/assets/'+css+'\"/>':'')+'</head><body><div id=\"root\"></div><script type=\"module\" src=\"/assets/'+js+'\"></script></body></html>';fs.writeFileSync('dist/client/index.html',html);"
     # Serve the built client bundle as a static SPA.
     # Previous runtime modes failed on Render (`vite preview` missing dist/server/server.js,
     # and `node dist/server/index.js` exits early in this build shape).
