@@ -75,10 +75,10 @@ services:
     # NODE_ENV=production (below) skips devDependencies; vite + vite.config need devDependencies.
     # Use NODE_ENV=development only for `npm ci` — avoids `npm ci --include=dev`, which can segfault in
     # Render's npm wrapper on Node 22. `vite build` still runs with service NODE_ENV=production.
-    buildCommand: NODE_ENV=development npm ci && npm run build
-    # Run TanStack Start server with static assets from dist/client.
-    # Without --static, HTML renders but CSS/JS assets are not served.
-    startCommand: npx srvx serve --entry dist/server/index.js --static dist/client --port $PORT --prod
+    # Build app and copy client assets to srvx default static root (`public/`).
+    # srvx in Render is serving from `public/`, so SSR references to `/assets/*` must exist there.
+    buildCommand: NODE_ENV=development npm ci && npm run build && mkdir -p public && rm -rf public/assets && cp -R dist/client/assets public/assets
+    startCommand: npx srvx serve --entry dist/server/index.js --port $PORT --prod
     plan: free
     # Enable PR previews
     previews:
