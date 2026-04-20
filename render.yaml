@@ -70,10 +70,10 @@ services:
         value: Pulse News
       # Secrets are loaded from /etc/secrets/.env (Secret File in Render dashboard)
 
-  # Frontend Vite Web Service
+  # Frontend Static Site (TanStack Start SPA mode)
   - type: web
     name: pulse-frontend
-    runtime: node
+    env: static
     repo: https://github.com/caderichard-debug/Pulse-News
     branch: main
     rootDir: frontend
@@ -81,9 +81,7 @@ services:
     # Use NODE_ENV=development only for `npm ci` — avoids `npm ci --include=dev`, which can segfault in
     # Render's npm wrapper on Node 22. `vite build` still runs with service NODE_ENV=production.
     buildCommand: NODE_ENV=development npm ci && npm run build
-    # srvx defaults static serving to ./public in this Render runtime; /assets/* 404s unless
-    # built client assets are copied there at startup.
-    startCommand: mkdir -p public && rm -rf public/assets && cp -R dist/client/assets public/assets && npx srvx serve --entry dist/server/index.js --port $PORT --prod
+    staticPublishPath: dist/client
     plan: free
     # Enable PR previews
     previews:
@@ -92,10 +90,12 @@ services:
       # Node 22 + npm ci --include=dev has segfaulted in Render's npm wrapper; pin LTS for stability.
       - key: NODE_VERSION
         value: "20"
-      - key: NODE_ENV
-        value: production
       - key: VITE_API_URL
         fromService:
           type: web
           name: pulse-backend
           envVarKey: RENDER_EXTERNAL_URL
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /_shell.html
