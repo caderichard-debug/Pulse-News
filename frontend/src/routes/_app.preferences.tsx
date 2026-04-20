@@ -7,6 +7,15 @@ import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 
 type PrefSearch = { tab: "topics" | "sources" | "settings" };
+type PreferenceSummary = { topics?: Array<{ id: number; is_active: boolean }> };
+type SourcePreference = Source & { source_id?: number; subscribed?: boolean; organizational_bias?: string };
+type UserSettings = {
+  source_discovery_mode?: "none" | "some" | "open";
+  article_order_preference?: "good_first" | "good_last" | "mixed";
+  articles_per_topic_default?: number;
+  theme_preference?: "light" | "dark" | "auto";
+  newsletter_enabled?: boolean;
+};
 
 export const Route = createFileRoute("/_app/preferences")({
   validateSearch: (s: Record<string, unknown>): PrefSearch => ({
@@ -26,20 +35,30 @@ function PreferencesPage() {
   const [subscribed, setSubscribed] = useState<Set<string | number>>(new Set());
   const [sources, setSources] = useState<Source[]>([]);
   const [activeSources, setActiveSources] = useState<Set<string | number>>(new Set());
-  const [settings, setSettings] = useState<{ newsletter?: boolean; daily_digest?: boolean }>({});
+  const [settings, setSettings] = useState<UserSettings>({});
 
   useEffect(() => {
-    api<Topic[] | { items: Topic[] }>("/preferences/topics").then((r) =>
-      setTopics(Array.isArray(r) ? r : r?.items || []),
-    ).catch(() => {});
-    api<{ topic_ids?: (string | number)[] }>("/preferences").then((p) => {
-      if (p?.topic_ids) setSubscribed(new Set(p.topic_ids));
-    }).catch(() => {});
-    api<Source[] | { items: Source[] }>("/preferences/sources").then((r) => {
-      const list = Array.isArray(r) ? r : r?.items || [];
-      setSources(list);
-      setActiveSources(new Set(list.filter((s) => s.active !== false).map((s) => s.id)));
-    }).catch(() => {});
+    api<Topic[] | { items: Topic[] }>("/preferences/topics")
+      .then((r) => setTopics(Array.isArray(r) ? r : r?.items || []))
+      .catch(() => {});
+    api<PreferenceSummary>("/preferences")
+      .then((p) => {
+        const topicIds = (p?.topics || []).filter((t) => t.is_active).map((t) => t.id);
+        setSubscribed(new Set(topicIds));
+      })
+      .catch(() => {});
+    api<SourcePreference[] | { items: SourcePreference[] }>("/preferences/sources")
+      .then((r) => {
+        const list = (Array.isArray(r) ? r : r?.items || []).map((s) => ({
+          ...s,
+          id: s.id ?? s.source_id ?? 0,
+          bias: s.bias ?? s.organizational_bias,
+          active: s.active ?? s.subscribed,
+        }));
+        setSources(list);
+        setActiveSources(new Set(list.filter((s) => s.active !== false).map((s) => s.id)));
+      })
+      .catch(() => {});
     api<typeof settings>("/preferences/settings").then(setSettings).catch(() => {});
   }, []);
 
@@ -77,7 +96,13 @@ function PreferencesPage() {
 
   async function saveSettings() {
     try {
-      await api("/preferences/settings", { method: "PUT", body: settings });
+      await api("/preferences/settings", {
+        method: "PUT",
+        body: {
+          ...settings,
+          theme_preference: theme,
+        },
+      });
       toast.success("Settings saved");
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Could not save");
@@ -189,14 +214,16 @@ function PreferencesPage() {
             <Toggle
               label="Daily newsletter"
               hint="A morning briefing of top stories."
-              value={!!settings.newsletter}
-              onChange={(v) => setSettings({ ...settings, newsletter: v })}
+              value={!!settings.newsletter_enabled}
+              onChange={(v) => setSettings({ ...settings, newsletter_enabled: v })}
             />
             <Toggle
-              label="Daily digest in feed"
-              hint="Show a summary card at the top of your feed."
-              value={!!settings.daily_digest}
-              onChange={(v) => setSettings({ ...settings, daily_digest: v })}
+              label="Open source discovery"
+              hint="Allow broader source recommendations."
+              value={settings.source_discovery_mode === "open"}
+              onChange={(v) =>
+                setSettings({ ...settings, source_discovery_mode: v ? "open" : "none" })
+              }
             />
             <Toggle
               label="Dark theme"

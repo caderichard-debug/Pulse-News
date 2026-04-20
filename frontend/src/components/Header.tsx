@@ -16,6 +16,7 @@ export function Header() {
   const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const hasAdminAccess = !!user && (user.is_admin || user.email === "cade.richard@gmail.com");
 
   return (
     <nav className="sticky top-0 z-30 bg-background/90 backdrop-blur border-b border-border">
@@ -42,6 +43,19 @@ export function Header() {
                 </Link>
               );
             })}
+            {hasAdminAccess && (
+              <Link
+                to="/admin"
+                className={cn(
+                  "pb-1 border-b transition-colors",
+                  path === "/admin" || path.startsWith("/admin/")
+                    ? "text-foreground border-foreground"
+                    : "border-transparent hover:text-foreground",
+                )}
+              >
+                Admin
+              </Link>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">

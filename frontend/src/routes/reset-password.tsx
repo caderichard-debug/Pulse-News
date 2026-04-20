@@ -27,7 +27,7 @@ function ResetPage() {
     try {
       await api("/auth/reset-password", {
         method: "POST",
-        body: { token, password },
+        body: { token, new_password: password },
         auth: false,
       });
       toast.success("Password updated. Sign in with your new password.");

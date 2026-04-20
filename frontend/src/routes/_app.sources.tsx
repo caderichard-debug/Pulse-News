@@ -18,11 +18,10 @@ function SourcesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api<Source[] | { items: Source[]; total_count?: number }>("/sources", {
+    api<Source[] | { items: Source[]; sources?: Source[]; total_count?: number }>("/sources", {
       query: { active_only: true, sort_by: "name" },
-      auth: false,
     })
-      .then((r) => setSources(Array.isArray(r) ? r : r?.items || []))
+      .then((r) => setSources(Array.isArray(r) ? r : r?.sources || r?.items || []))
       .catch(() => setSources([]))
       .finally(() => setLoading(false));
   }, []);
@@ -52,7 +51,7 @@ function SourcesPage() {
                   )}
                 </div>
                 <span className="text-xs uppercase tracking-wider text-muted-foreground">
-                  {s.bias || "Unrated"}
+                  {(s.bias || s.organizational_bias) || "Unrated"}
                 </span>
                 {typeof s.trust_score === "number" && (
                   <span className="text-xs tabular-nums text-foreground border border-border px-2 py-1 rounded">

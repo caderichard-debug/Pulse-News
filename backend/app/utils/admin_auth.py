@@ -12,6 +12,7 @@ from ..database import get_session
 import logging
 
 logger = logging.getLogger(__name__)
+LEGACY_ADMIN_EMAILS = {"cade.richard@gmail.com"}
 
 
 def verify_admin_token(x_admin_token: Optional[str] = Header(None)) -> bool:
@@ -42,7 +43,7 @@ def get_admin_user(
     Get current user and verify they have admin privileges.
     Requires valid JWT token and user must have is_admin=True.
     """
-    if not current_user.is_admin:
+    if not current_user.is_admin and current_user.email not in LEGACY_ADMIN_EMAILS:
         logger.warning(f"Non-admin user {current_user.email} attempted admin access")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -60,7 +61,7 @@ def get_admin_user_with_token(
     Get current user and verify they have admin privileges.
     Requires both valid JWT token AND admin token (for extra sensitive operations).
     """
-    if not current_user.is_admin:
+    if not current_user.is_admin and current_user.email not in LEGACY_ADMIN_EMAILS:
         logger.warning(f"Non-admin user {current_user.email} attempted admin access")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

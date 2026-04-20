@@ -7,6 +7,12 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
+  cloudflare: false,
+  tanstackStart: {
+    spa: {
+      enabled: true,
+    },
+  },
   vite: {
     server: {
       allowedHosts: ["pulsenews.app", "www.pulsenews.app", "pulse-frontend-pfrt.onrender.com"],
