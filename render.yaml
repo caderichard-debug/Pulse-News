@@ -72,15 +72,19 @@ services:
     repo: https://github.com/caderichard-debug/Pulse-News
     branch: main
     rootDir: frontend
-    # NODE_ENV=production skips devDependencies; vite.config imports @lovable.dev/vite-tanstack-config (devDep).
-    # --include=dev ensures the Vite config loads. Use npm ci for reproducible installs (clear build cache if npm segfaults).
-    buildCommand: npm ci --include=dev && npm run build
+    # NODE_ENV=production (below) skips devDependencies; vite + vite.config need devDependencies.
+    # Use NODE_ENV=development only for `npm ci` — avoids `npm ci --include=dev`, which can segfault in
+    # Render's npm wrapper on Node 22. `vite build` still runs with service NODE_ENV=production.
+    buildCommand: NODE_ENV=development npm ci && npm run build
     startCommand: npm run preview -- --host 0.0.0.0 --port $PORT
     plan: free
     # Enable PR previews
     previews:
       generation: manual
     envVars:
+      # Node 22 + npm ci --include=dev has segfaulted in Render's npm wrapper; pin LTS for stability.
+      - key: NODE_VERSION
+        value: "20"
       - key: NODE_ENV
         value: production
       - key: VITE_API_URL
