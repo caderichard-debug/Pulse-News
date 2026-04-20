@@ -76,9 +76,10 @@ services:
     # Use NODE_ENV=development only for `npm ci` — avoids `npm ci --include=dev`, which can segfault in
     # Render's npm wrapper on Node 22. `vite build` still runs with service NODE_ENV=production.
     buildCommand: NODE_ENV=development npm ci && npm run build
-    # Use the built SSR server entrypoint in production.
-    # `vite preview` is for previewing static builds and fails here with missing dist/server/server.js.
-    startCommand: node dist/server/index.js
+    # Serve the built client bundle as a static SPA.
+    # Previous runtime modes failed on Render (`vite preview` missing dist/server/server.js,
+    # and `node dist/server/index.js` exits early in this build shape).
+    startCommand: npx serve -s dist/client -l $PORT
     plan: free
     # Enable PR previews
     previews:
