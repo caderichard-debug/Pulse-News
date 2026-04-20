@@ -448,17 +448,28 @@ DOCUMENTATION_URL=https://docs.pulsenews.app
 4. **For production deployment**: Update render.yaml environment section
 
 ### 🚨 Render Frontend Asset Guardrail
-For the `pulse-frontend` Render service, do **not** rely on `srvx --static dist/client`.
-In this runtime, SSR works but `/assets/*` can still 404 and render plain HTML.
+Current direction is TanStack Start **SPA mode** + Render static hosting.
 
-Known-good commands for production:
-- Build:
-  `NODE_ENV=development npm ci && npm run build`
-- Start:
+Migration notes:
+- `frontend/vite.config.ts` now sets:
+  - `cloudflare: false`
+  - `tanstackStart.spa.enabled: true`
+- `frontend/postbuild.mjs` creates compatibility outputs:
+  - `dist/server/index.js` (copied from `dist/server/server.js`)
+  - `dist/client/index.html` (copied from `dist/client/_shell.html`)
+
+Why compatibility exists:
+- The live Render frontend service is still configured as a web service in dashboard settings.
+- It currently runs:
   `mkdir -p public && rm -rf public/assets && cp -R dist/client/assets public/assets && npx srvx serve --entry dist/server/index.js --port $PORT --prod`
+- The postbuild shim keeps this command working during migration.
+
+Target end state:
+- Convert `pulse-frontend` to a Render static site using `frontend/dist/client`.
+- Keep SPA fallback rewrite to `/_shell.html` (or `/index.html` if using the copied compatibility file).
 
 After deploy, always verify in logs:
-- `GET /` returns `200`
+- `HEAD /` or `GET /` returns `200`
 - `GET /assets/*.css` and `GET /assets/*.js` return `200` (not `404`)
 
 ---
