@@ -94,6 +94,12 @@ class FrameworkGlossaryItem(BaseModel):
     is_seed: bool
 
 
+class ReadingInsight(BaseModel):
+    top_sources: List[Dict[str, int]]
+    top_topics: List[Dict[str, int]]
+    momentum: Dict[str, int]
+
+
 @router.get("/sentiment-over-time")
 async def get_sentiment_over_time(
     current_user: User = Depends(get_current_user),
@@ -449,3 +455,100 @@ async def get_user_stats(
         "sources_subscribed": source_count,
         "views_changed": 0  # Will be implemented with challenge system
     }
+
+
+@router.get("/reading-insights", response_model=ReadingInsight)
+async def get_reading_insights(
+    current_user: User = Depends(get_current_user),
+    days: int = Query(default=30, ge=7, le=120),
+    session: Session = Depends(get_session),
+):
+    """
+    Rich dashboard insights scoped to the user's reading universe.
+    """
+    start_date = datetime.utcnow() - timedelta(days=days)
+    reading_scope = _user_reading_scope_filter(session, current_user)
+    if reading_scope is None:
+        return ReadingInsight(top_sources=[], top_topics=[], momentum={"last_7_days": 0, "previous_7_days": 0})
+
+    top_sources_rows = session.exec(
+        select(
+            Article.source_id,
+            func.count(Article.id).label("count"),
+        )
+        .where(Article.published_at >= start_date)
+        .where(reading_scope)
+        .group_by(Article.source_id)
+        .order_by(func.count(Article.id).desc())
+        .limit(5)
+    ).all()
+
+    source_name_map = {}
+    if top_sources_rows:
+        source_ids = [row[0] for row in top_sources_rows if row[0] is not None]
+        if source_ids:
+            from ..models import Source
+            sources = session.exec(select(Source).where(Source.id.in_(source_ids))).all()
+            source_name_map = {s.id: s.name for s in sources}
+
+    top_sources = [
+        {
+            "name": source_name_map.get(source_id, f"Source {source_id}"),
+            "count": int(count),
+        }
+        for source_id, count in top_sources_rows
+    ]
+
+    top_topics_rows = session.exec(
+        select(
+            ArticleTopicLink.topic_id,
+            func.count(ArticleTopicLink.article_id).label("count"),
+        )
+        .join(Article, Article.id == ArticleTopicLink.article_id)
+        .where(Article.published_at >= start_date)
+        .where(reading_scope)
+        .group_by(ArticleTopicLink.topic_id)
+        .order_by(func.count(ArticleTopicLink.article_id).desc())
+        .limit(6)
+    ).all()
+
+    topic_name_map = {}
+    if top_topics_rows:
+        topic_ids = [row[0] for row in top_topics_rows if row[0] is not None]
+        if topic_ids:
+            from ..models import Topic
+            topics = session.exec(select(Topic).where(Topic.id.in_(topic_ids))).all()
+            topic_name_map = {t.id: t.name for t in topics}
+
+    top_topics = [
+        {
+            "name": topic_name_map.get(topic_id, f"Topic {topic_id}"),
+            "count": int(count),
+        }
+        for topic_id, count in top_topics_rows
+    ]
+
+    last_7_start = datetime.utcnow() - timedelta(days=7)
+    prev_7_start = datetime.utcnow() - timedelta(days=14)
+    prev_7_end = datetime.utcnow() - timedelta(days=7)
+
+    last_7_days = session.exec(
+        select(func.count(Article.id))
+        .where(Article.published_at >= last_7_start)
+        .where(reading_scope)
+    ).one()
+    previous_7_days = session.exec(
+        select(func.count(Article.id))
+        .where(Article.published_at >= prev_7_start)
+        .where(Article.published_at < prev_7_end)
+        .where(reading_scope)
+    ).one()
+
+    return ReadingInsight(
+        top_sources=top_sources,
+        top_topics=top_topics,
+        momentum={
+            "last_7_days": int(last_7_days),
+            "previous_7_days": int(previous_7_days),
+        },
+    )

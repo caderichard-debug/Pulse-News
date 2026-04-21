@@ -11,6 +11,9 @@ import {
   BarChart,
   Bar,
   Cell,
+  ScatterChart,
+  Scatter,
+  ZAxis,
 } from "recharts";
 import { ApiError, api } from "@/lib/api";
 import { toast } from "sonner";
@@ -45,12 +48,22 @@ type FrameworkGlossaryItem = {
   article_count: number;
   is_seed: boolean;
 };
+type FrameworkAxis = { id: number; name: string; left_position: string; right_position: string };
+type HeatmapCell = { x: number; y: number; article_count: number; avg_sentiment: number };
+type ReadingInsights = {
+  top_sources: { name: string; count: number }[];
+  top_topics: { name: string; count: number }[];
+  momentum: { last_7_days: number; previous_7_days: number };
+};
 
 function AnalyticsPage() {
   const [stats, setStats] = useState<Stats>({});
   const [sentiment, setSentiment] = useState<SentimentPoint[]>([]);
   const [bias, setBias] = useState<BiasBucket[]>([]);
   const [frameworks, setFrameworks] = useState<FrameworkGlossaryItem[]>([]);
+  const [frameworkAxes, setFrameworkAxes] = useState<FrameworkAxis[]>([]);
+  const [heatmap, setHeatmap] = useState<HeatmapCell[]>([]);
+  const [insights, setInsights] = useState<ReadingInsights | null>(null);
 
   useEffect(() => {
     const errMsg = (err: unknown, fallback: string) =>
@@ -113,7 +126,35 @@ function AnalyticsPage() {
         toast.error(errMsg(err, "Could not load framework glossary"));
         setFrameworks([]);
       });
+
+    api<FrameworkAxis[]>("/analytics/frameworks/available")
+      .then((axes) => {
+        const items = axes || [];
+        setFrameworkAxes(items);
+        if (items.length >= 2) {
+          return api<HeatmapCell[]>("/analytics/framework-heatmap", {
+            query: { framework1_id: items[0].id, framework2_id: items[1].id, days: 30 },
+          });
+        }
+        return [];
+      })
+      .then((cells) => setHeatmap(cells || []))
+      .catch((err) => {
+        toast.error(errMsg(err, "Could not load framework heatmap"));
+        setHeatmap([]);
+      });
+
+    api<ReadingInsights>("/analytics/reading-insights", { query: { days: 30 } })
+      .then((r) => setInsights(r))
+      .catch((err) => {
+        toast.error(errMsg(err, "Could not load reading insights"));
+        setInsights(null);
+      });
   }, []);
+
+  const momentumDelta = insights
+    ? insights.momentum.last_7_days - insights.momentum.previous_7_days
+    : 0;
 
   return (
     <div className="max-w-[1100px] mx-auto px-6 py-12">
@@ -125,6 +166,14 @@ function AnalyticsPage() {
         <Stat label="Newsletters" value={stats.newsletters_received ?? 0} />
         <Stat label="Topics" value={stats.topics_tracked ?? 0} />
         <Stat label="Sources" value={stats.sources_subscribed ?? 0} />
+      </div>
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Stat label="Last 7 days" value={insights?.momentum.last_7_days ?? 0} />
+        <Stat label="Previous 7 days" value={insights?.momentum.previous_7_days ?? 0} />
+        <Stat
+          label="Momentum"
+          value={momentumDelta > 0 ? `+${momentumDelta}` : momentumDelta}
+        />
       </div>
 
       <Section title="Sentiment over time" subtitle="Average sentiment grouped by political lean">
@@ -200,6 +249,73 @@ function AnalyticsPage() {
             </BarChart>
           </ResponsiveContainer>
         </div>
+      </Section>
+
+      <Section
+        title="Top sources and topics"
+        subtitle="Where your reading attention is concentrated in the last 30 days"
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <h3 className="text-sm font-medium mb-3">Top sources</h3>
+            <div className="space-y-2">
+              {(insights?.top_sources || []).length === 0 ? (
+                <p className="text-sm text-muted-foreground">No source data yet.</p>
+              ) : (
+                (insights?.top_sources || []).map((s) => (
+                  <div key={s.name} className="flex items-center justify-between text-sm">
+                    <span>{s.name}</span>
+                    <span className="font-medium tabular-nums">{s.count}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium mb-3">Top topics</h3>
+            <div className="space-y-2">
+              {(insights?.top_topics || []).length === 0 ? (
+                <p className="text-sm text-muted-foreground">No topic data yet.</p>
+              ) : (
+                (insights?.top_topics || []).map((t) => (
+                  <div key={t.name} className="flex items-center justify-between text-sm">
+                    <span>{t.name}</span>
+                    <span className="font-medium tabular-nums">{t.count}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      <Section
+        title="Framework overlap map"
+        subtitle={
+          frameworkAxes.length >= 2
+            ? `How stories map across ${frameworkAxes[0].name} (X) and ${frameworkAxes[1].name} (Y)`
+            : "Not enough framework data to render overlap map"
+        }
+      >
+        {frameworkAxes.length < 2 || heatmap.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Heatmap is unavailable until enough framework mappings exist.</p>
+        ) : (
+          <div className="h-80">
+            <ResponsiveContainer>
+              <ScatterChart margin={{ top: 20, right: 20, left: 10, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis type="number" dataKey="x" domain={[-10, 10]} stroke="var(--muted-foreground)" />
+                <YAxis type="number" dataKey="y" domain={[-10, 10]} stroke="var(--muted-foreground)" />
+                <ZAxis type="number" dataKey="article_count" range={[80, 400]} />
+                <Tooltip
+                  cursor={{ strokeDasharray: "3 3" }}
+                  formatter={(value: number, name: string) => [value, name === "article_count" ? "Articles" : name]}
+                />
+                <Scatter data={heatmap} fill="var(--primary)" />
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </Section>
 
       <Section
