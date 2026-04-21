@@ -282,6 +282,25 @@ class TestCostCalculation:
             cost = client._calculate_cost(0, 0)
             assert cost == 0.0
 
+    @patch('app.utils.openai_client.snapshot')
+    @patch('app.utils.openai_client.settings')
+    def test_resolve_model_uses_fallback_when_budget_threshold_exceeded(
+        self,
+        mock_settings,
+        mock_snapshot,
+    ):
+        """Model should switch to fallback when spend reaches warning threshold."""
+        mock_settings.openai_api_key = "sk-test123"
+        mock_settings.ai_model = "gpt-4o"
+        mock_settings.fallback_ai_model = "gpt-4o-mini"
+        mock_settings.pipeline_daily_budget_usd = 10.0
+        mock_settings.pipeline_warn_budget_percent = 0.8
+        mock_snapshot.return_value = {"costs_usd": {"pipeline_total": 8.01}}
+
+        with patch('app.utils.openai_client.OpenAI'):
+            client = OpenAIClient()
+            assert client._resolve_model() == "gpt-4o-mini"
+
 
 class TestPromptBuilding:
     """Test prompt building functions"""

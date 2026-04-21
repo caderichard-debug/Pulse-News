@@ -15,6 +15,8 @@ from ..routes.auth import get_current_user, get_admin_user
 from ..models import User
 from ..services.challenge_monitoring import ChallengeSystemMonitor
 from ..utils.logging import get_logger
+from ..utils.pipeline_metrics import snapshot as pipeline_snapshot
+from ..config import settings
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/monitoring", tags=["monitoring"])
@@ -191,6 +193,26 @@ def get_quality_metrics(session: Session = Depends(get_session)):
     except Exception as e:
         logger.error(f"Failed to get quality metrics: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get metrics: {str(e)}")
+
+
+@router.get("/pipeline", response_model=Dict[str, Any])
+def get_pipeline_metrics():
+    """Return pipeline operational metrics and budget status."""
+    metrics = pipeline_snapshot()
+    total_cost = metrics.get("costs_usd", {}).get("pipeline_total", 0.0)
+    budget = settings.pipeline_daily_budget_usd
+    utilization = (total_cost / budget) if budget else 0.0
+    return {
+        "timestamp": datetime.utcnow().isoformat(),
+        "metrics": metrics,
+        "budget": {
+            "daily_budget_usd": budget,
+            "spent_usd": round(total_cost, 4),
+            "utilization_ratio": round(utilization, 4),
+            "warning_threshold_ratio": settings.pipeline_warn_budget_percent,
+            "warning": utilization >= settings.pipeline_warn_budget_percent,
+        },
+    }
 
 
 # Admin-only endpoints

@@ -10,6 +10,9 @@ import requests
 from sqlmodel import Session, select
 from ..models import Article, ProcessingStatus
 from ..database import engine
+from ..config import settings
+from ..utils.resilience import retry_call
+from ..utils.pipeline_metrics import incr, TimedStage
 from typing import Optional, Dict
 import logging
 import time
@@ -18,7 +21,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def extract_article_content(url: str, timeout: int = 10) -> Dict[str, any]:
+def extract_article_content(url: str, timeout: Optional[int] = None) -> Dict[str, any]:
     """
     Extract full article text from URL using cascade of methods.
 
@@ -44,7 +47,14 @@ def extract_article_content(url: str, timeout: int = 10) -> Dict[str, any]:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
-        response = requests.get(url, timeout=timeout, headers=headers)
+        timeout = timeout or settings.http_timeout_seconds
+        response, _ = retry_call(
+            lambda: requests.get(url, timeout=timeout, headers=headers),
+            operation="extract_article_content_http_get",
+            max_retries=settings.http_max_retries,
+            backoff_base_seconds=settings.http_backoff_base_seconds,
+            retriable_exceptions=(requests.RequestException,),
+        )
         response.raise_for_status()
         html = response.text
 
@@ -142,6 +152,8 @@ def process_pending_articles(session: Session, batch_size: int = 20, delay: floa
     """
     processed_count = 0
 
+    batch_size = batch_size or settings.extract_batch_size
+    delay = max(settings.pipeline_min_delay_seconds, delay)
     # Get pending articles
     pending_articles = session.exec(
         select(Article)
@@ -159,7 +171,8 @@ def process_pending_articles(session: Session, batch_size: int = 20, delay: floa
         logger.info(f"[{i}/{len(pending_articles)}] Extracting: {article.title[:50]}...")
 
         # Extract content
-        extraction_result = extract_article_content(article.url)
+        with TimedStage("pipeline.extract.article_duration"):
+            extraction_result = extract_article_content(article.url)
 
         if extraction_result['success']:
             # Update article with extracted content
@@ -170,12 +183,14 @@ def process_pending_articles(session: Session, batch_size: int = 20, delay: floa
 
             session.add(article)
             processed_count += 1
+            incr("pipeline.extract.success")
             logger.info(f"  ✓ Extracted {extraction_result['word_count']} words via {extraction_result['method']}")
         else:
             # Mark as failed
             article.processing_status = ProcessingStatus.FAILED
             article.extraction_method = 'failed'
             session.add(article)
+            incr("pipeline.extract.failed")
             logger.warning(f"  ✗ Extraction failed")
 
         # Commit after each article to avoid losing progress

@@ -17,6 +17,7 @@ from ..models import (
     VerificationStatus, VerificationMethod
 )
 from ..config import settings
+from ..utils.resilience import retry_call
 from openai import OpenAI
 
 # Import V2 services
@@ -120,14 +121,20 @@ def extract_statistics_from_article(
             return []
 
         logger.debug(f"[EXTRACT] Article {article.id} - Calling OpenAI for extraction...")
-        response = openai_api.chat.completions.create(
-            model=settings.ai_model,
-            messages=[
-                {"role": "system", "content": "You are a fact-checking assistant that extracts verifiable statistics from news articles."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.3,
-            max_tokens=1000
+        response, _ = retry_call(
+            lambda: openai_api.chat.completions.create(
+                model=settings.ai_model,
+                messages=[
+                    {"role": "system", "content": "You are a fact-checking assistant that extracts verifiable statistics from news articles."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3,
+                max_tokens=1000,
+                timeout=settings.ai_request_timeout_seconds,
+            ),
+            operation="statistics_extract_openai",
+            max_retries=settings.ai_max_retries,
+            backoff_base_seconds=settings.http_backoff_base_seconds,
         )
 
         # Parse response

@@ -9,7 +9,8 @@ from sqlmodel import Session, select
 from app.services.ai_analyzer import (
     analyze_articles_batch,
     get_article_analysis,
-    get_unanalyzed_article_count
+    get_unanalyzed_article_count,
+    _normalize_analysis_payload,
 )
 from app.models import (
     Article, ArticleAnalysis, Source, ProcessingStatus, PoliticalLean
@@ -236,6 +237,22 @@ class TestAnalyzeArticlesBatch:
             select(ArticleAnalysis).where(ArticleAnalysis.article_id == sample_article.id)
         ).first()
         assert len(analysis.summary) <= 1000
+
+
+class TestAnalysisNormalization:
+    def test_normalize_payload_applies_fallbacks(self):
+        normalized = _normalize_analysis_payload(
+            {
+                "summary": "",
+                "sentiment_score": 999,
+                "topic_category": "unknown_topic",
+                "political_lean": "wildcard",
+            }
+        )
+        assert normalized["summary"] == "Summary unavailable from model response."
+        assert normalized["sentiment_score"] == 10
+        assert normalized["topic_category"] == "general"
+        assert normalized["political_lean"] == "center"
 
 
 class TestGetArticleAnalysis:
