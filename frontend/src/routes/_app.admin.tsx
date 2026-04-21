@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -25,10 +25,24 @@ type AdminJob = {
   duration_seconds?: number;
   items_processed?: number;
   error_message?: string | null;
+  result_data?: string | null;
 };
 
 type AdminJobsResponse = {
   jobs: AdminJob[];
+};
+
+type SchedulerJob = {
+  id: string;
+  name: string;
+  next_run?: string | null;
+  trigger: string;
+  is_paused: boolean;
+};
+
+type SchedulerJobsResponse = {
+  status: string;
+  jobs: SchedulerJob[];
 };
 
 type AdminUser = {
@@ -92,10 +106,12 @@ const JOB_TRIGGER_IDS = [
   "cluster_articles",
   "generate_context",
   "send_newsletters",
+  "reanalyze_unanalyzed_failed",
 ] as const;
 
 export const Route = createFileRoute("/_app/admin")<{
   tab?: AdminTab;
+  logId?: number;
 }>({
   validateSearch: (search) => {
     const tab = search.tab;
@@ -109,7 +125,13 @@ export const Route = createFileRoute("/_app/admin")<{
     ) {
       return { tab };
     }
-    return { tab: "dashboard" as AdminTab };
+    const logId =
+      typeof search.logId === "number"
+        ? search.logId
+        : typeof search.logId === "string" && search.logId.trim() !== ""
+          ? Number.parseInt(search.logId, 10)
+          : undefined;
+    return { tab: "dashboard" as AdminTab, logId: Number.isNaN(logId) ? undefined : logId };
   },
   head: () => ({ meta: [{ title: "Admin Dashboard — Pulse" }] }),
   component: AdminPage,
@@ -120,8 +142,10 @@ function AdminPage() {
   const navigate = Route.useNavigate();
   const { user } = useAuth();
   const tab = (search.tab ?? "dashboard") as AdminTab;
+  const selectedLogId = search.logId;
   const [dashboard, setDashboard] = useState<AdminDashboardResponse | null>(null);
   const [jobs, setJobs] = useState<AdminJob[]>([]);
+  const [schedulerJobs, setSchedulerJobs] = useState<SchedulerJob[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [sources, setSources] = useState<AdminSource[]>([]);
   const [articles, setArticles] = useState<AdminArticle[]>([]);
@@ -136,23 +160,27 @@ function AdminPage() {
       tab === "dashboard"
         ? api<AdminDashboardResponse>("/admin-panel/dashboard").then(setDashboard)
         : tab === "jobs"
-          ? api<AdminJobsResponse>("/admin-panel/jobs/history", { query: { limit: 30 } }).then((r) =>
-              setJobs(r.jobs || []),
-            )
+          ? Promise.all([
+              api<AdminJobsResponse>("/admin-panel/jobs/history", { query: { limit: 30 } }),
+              api<SchedulerJobsResponse>("/admin-panel/jobs/scheduler"),
+            ]).then(([history, scheduler]) => {
+              setJobs(history.jobs || []);
+              setSchedulerJobs(scheduler.jobs || []);
+            })
           : tab === "users"
-            ? api<AdminUsersResponse>("/admin-panel/users", { query: { page_size: 50 } }).then((r) =>
-                setUsers(r.users || []),
+            ? api<AdminUsersResponse>("/admin-panel/users", { query: { page_size: 50 } }).then(
+                (r) => setUsers(r.users || []),
               )
             : tab === "sources"
               ? api<AdminSourcesResponse>("/admin-panel/sources", {
                   query: { page_size: 50, active_only: false },
                 }).then((r) => setSources(r.sources || []))
               : tab === "articles"
-                ? api<AdminArticlesResponse>("/admin-panel/articles", { query: { page_size: 50 } }).then(
-                    (r) => setArticles(r.articles || []),
-                  )
-                : api<AdminAuditResponse>("/admin-panel/audit", { query: { page_size: 50 } }).then((r) =>
-                    setAuditLogs(r.audit_logs || []),
+                ? api<AdminArticlesResponse>("/admin-panel/articles", {
+                    query: { page_size: 50 },
+                  }).then((r) => setArticles(r.articles || []))
+                : api<AdminAuditResponse>("/admin-panel/audit", { query: { page_size: 50 } }).then(
+                    (r) => setAuditLogs(r.audit_logs || []),
                   );
 
     req
@@ -179,15 +207,40 @@ function AdminPage() {
     [],
   );
 
+  async function refreshJobs() {
+    const [history, scheduler] = await Promise.all([
+      api<AdminJobsResponse>("/admin-panel/jobs/history", { query: { limit: 30 } }),
+      api<SchedulerJobsResponse>("/admin-panel/jobs/scheduler"),
+    ]);
+    setJobs(history.jobs || []);
+    setSchedulerJobs(scheduler.jobs || []);
+  }
+
   async function triggerJob(jobId: (typeof JOB_TRIGGER_IDS)[number]) {
     try {
       await api(`/admin-panel/jobs/trigger/${jobId}`, { method: "POST" });
       if (tab === "jobs") {
-        const r = await api<AdminJobsResponse>("/admin-panel/jobs/history", { query: { limit: 30 } });
-        setJobs(r.jobs || []);
+        await refreshJobs();
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not trigger job");
+    }
+  }
+
+  async function controlSchedulerJob(
+    jobId: string,
+    action: "pause" | "resume" | "stop" | "trigger",
+  ) {
+    try {
+      await api(`/admin-panel/jobs/control/${jobId}`, {
+        method: "POST",
+        query: { action },
+      });
+      if (tab === "jobs") {
+        await refreshJobs();
+      }
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not control scheduler job");
     }
   }
 
@@ -197,7 +250,9 @@ function AdminPage() {
         method: "PUT",
         query: { is_admin: !target.is_admin },
       });
-      setUsers((prev) => prev.map((u) => (u.id === target.id ? { ...u, is_admin: !u.is_admin } : u)));
+      setUsers((prev) =>
+        prev.map((u) => (u.id === target.id ? { ...u, is_admin: !u.is_admin } : u)),
+      );
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not update admin role");
     }
@@ -227,7 +282,9 @@ function AdminPage() {
   return (
     <div className="max-w-[1100px] mx-auto px-6 py-12">
       <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-3">Operations</p>
-      <h1 className="font-serif text-4xl md:text-5xl font-medium tracking-tight">Admin dashboard</h1>
+      <h1 className="font-serif text-4xl md:text-5xl font-medium tracking-tight">
+        Admin dashboard
+      </h1>
       {user?.email && <p className="mt-2 text-muted-foreground">{user.email}</p>}
 
       <div className="mt-8 flex flex-wrap gap-2">
@@ -261,7 +318,10 @@ function AdminPage() {
                 <Stat label="Users" value={dashboard?.system_stats?.users?.total ?? 0} />
                 <Stat label="Admins" value={dashboard?.system_stats?.users?.admins ?? 0} />
                 <Stat label="Articles" value={dashboard?.system_stats?.articles?.total ?? 0} />
-                <Stat label="Failed jobs (24h)" value={dashboard?.error_summary?.failed_jobs_24h ?? 0} />
+                <Stat
+                  label="Failed jobs (24h)"
+                  value={dashboard?.error_summary?.failed_jobs_24h ?? 0}
+                />
               </div>
 
               <section className="mt-10 border border-border rounded-lg p-5 bg-card">
@@ -270,10 +330,20 @@ function AdminPage() {
                   {(dashboard?.recent_jobs ?? []).slice(0, 8).map((job) => (
                     <div key={job.id} className="py-3 flex items-center justify-between gap-3">
                       <div>
-                        <p className="font-medium">{job.job_name}</p>
-                        <p className="text-xs text-muted-foreground">{new Date(job.started_at).toLocaleString()}</p>
+                        <Link
+                          to="/admin"
+                          search={{ tab: "jobs", logId: job.id }}
+                          className="font-medium hover:underline"
+                        >
+                          {job.job_name}
+                        </Link>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(job.started_at).toLocaleString()}
+                        </p>
                       </div>
-                      <span className="text-xs uppercase tracking-wider text-muted-foreground">{job.status}</span>
+                      <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                        {job.status}
+                      </span>
                     </div>
                   ))}
                   {(dashboard?.recent_jobs?.length ?? 0) === 0 && (
@@ -298,20 +368,103 @@ function AdminPage() {
                   </button>
                 ))}
               </div>
+              <h3 className="mt-8 text-sm uppercase tracking-wider text-muted-foreground">
+                Scheduler controls
+              </h3>
+              <div className="mt-3 divide-y divide-border">
+                {schedulerJobs.map((job) => (
+                  <div key={job.id} className="py-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium">{job.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {job.id} • {job.is_paused ? "paused" : "scheduled"}
+                        {job.next_run ? ` • next ${new Date(job.next_run).toLocaleString()}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => controlSchedulerJob(job.id, "trigger")}
+                        className="px-3 py-1.5 rounded-md border border-border text-sm hover:bg-accent"
+                      >
+                        Trigger
+                      </button>
+                      {job.is_paused ? (
+                        <button
+                          onClick={() => controlSchedulerJob(job.id, "resume")}
+                          className="px-3 py-1.5 rounded-md border border-border text-sm hover:bg-accent"
+                        >
+                          Resume
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => controlSchedulerJob(job.id, "pause")}
+                          className="px-3 py-1.5 rounded-md border border-border text-sm hover:bg-accent"
+                        >
+                          Pause
+                        </button>
+                      )}
+                      <button
+                        onClick={() => controlSchedulerJob(job.id, "stop")}
+                        className="px-3 py-1.5 rounded-md border border-border text-sm hover:bg-accent"
+                      >
+                        Stop
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {schedulerJobs.length === 0 && (
+                  <p className="py-3 text-sm text-muted-foreground">No scheduler jobs found.</p>
+                )}
+              </div>
               <div className="mt-6 divide-y divide-border">
                 {jobs.map((job) => (
                   <div key={job.id} className="py-3 flex items-center justify-between gap-3">
                     <div>
-                      <p className="font-medium">{job.job_name}</p>
+                      <Link
+                        to="/admin"
+                        search={{ tab: "jobs", logId: job.id }}
+                        className="font-medium hover:underline"
+                      >
+                        {job.job_name}
+                      </Link>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(job.started_at).toLocaleString()} {job.duration_seconds ? `• ${job.duration_seconds.toFixed(1)}s` : ""}
+                        {new Date(job.started_at).toLocaleString()}{" "}
+                        {job.duration_seconds ? `• ${job.duration_seconds.toFixed(1)}s` : ""}
                       </p>
                     </div>
-                    <span className="text-xs uppercase tracking-wider text-muted-foreground">{job.status}</span>
+                    <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                      {job.status}
+                    </span>
                   </div>
                 ))}
-                {jobs.length === 0 && <p className="py-3 text-sm text-muted-foreground">No job history found.</p>}
+                {jobs.length === 0 && (
+                  <p className="py-3 text-sm text-muted-foreground">No job history found.</p>
+                )}
               </div>
+              {selectedLogId ? (
+                <div className="mt-6 border border-border rounded-lg p-4 bg-background/50">
+                  {jobs
+                    .filter((job) => job.id === selectedLogId)
+                    .map((job) => (
+                      <div key={job.id}>
+                        <p className="font-medium">Execution log: {job.job_name}</p>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          status {job.status} • started {new Date(job.started_at).toLocaleString()}
+                        </p>
+                        {job.error_message && (
+                          <pre className="mt-3 text-xs whitespace-pre-wrap rounded-md border border-border p-3 bg-card">
+                            {job.error_message}
+                          </pre>
+                        )}
+                        {job.result_data && (
+                          <pre className="mt-3 text-xs whitespace-pre-wrap rounded-md border border-border p-3 bg-card">
+                            {job.result_data}
+                          </pre>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              ) : null}
             </section>
           )}
 
@@ -333,7 +486,9 @@ function AdminPage() {
                     </button>
                   </div>
                 ))}
-                {users.length === 0 && <p className="py-3 text-sm text-muted-foreground">No users found.</p>}
+                {users.length === 0 && (
+                  <p className="py-3 text-sm text-muted-foreground">No users found.</p>
+                )}
               </div>
             </section>
           )}
@@ -347,7 +502,8 @@ function AdminPage() {
                     <div>
                       <p className="font-medium">{s.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {s.organizational_bias || "unrated"} • trust {s.trust_score ?? 0} • {s.article_count} articles
+                        {s.organizational_bias || "unrated"} • trust {s.trust_score ?? 0} •{" "}
+                        {s.article_count} articles
                       </p>
                     </div>
                     <button
@@ -359,7 +515,9 @@ function AdminPage() {
                     </button>
                   </div>
                 ))}
-                {sources.length === 0 && <p className="py-3 text-sm text-muted-foreground">No sources found.</p>}
+                {sources.length === 0 && (
+                  <p className="py-3 text-sm text-muted-foreground">No sources found.</p>
+                )}
               </div>
             </section>
           )}
@@ -371,9 +529,16 @@ function AdminPage() {
                 {articles.map((a) => (
                   <div key={a.id} className="py-3 flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-medium truncate">{a.title}</p>
+                      <Link
+                        to="/article/$id"
+                        params={{ id: String(a.id) }}
+                        className="font-medium truncate hover:underline block"
+                      >
+                        {a.title}
+                      </Link>
                       <p className="text-xs text-muted-foreground">
-                        {a.processing_status} • source {a.source_id} • {new Date(a.scraped_at).toLocaleString()}
+                        {a.processing_status} • source {a.source_id} •{" "}
+                        {new Date(a.scraped_at).toLocaleString()}
                       </p>
                     </div>
                     <button
@@ -384,7 +549,9 @@ function AdminPage() {
                     </button>
                   </div>
                 ))}
-                {articles.length === 0 && <p className="py-3 text-sm text-muted-foreground">No articles found.</p>}
+                {articles.length === 0 && (
+                  <p className="py-3 text-sm text-muted-foreground">No articles found.</p>
+                )}
               </div>
             </section>
           )}
@@ -404,7 +571,9 @@ function AdminPage() {
                     </p>
                   </div>
                 ))}
-                {auditLogs.length === 0 && <p className="py-3 text-sm text-muted-foreground">No audit events found.</p>}
+                {auditLogs.length === 0 && (
+                  <p className="py-3 text-sm text-muted-foreground">No audit events found.</p>
+                )}
               </div>
             </section>
           )}

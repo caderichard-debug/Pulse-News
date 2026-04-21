@@ -544,6 +544,13 @@ For any agent modifying frontend build/deploy behavior, treat this as required p
 - Admin UI route is **`/admin`** (`frontend/src/routes/_app.admin.tsx`).
 - Show admin nav only for users with `user.is_admin === true` (with temporary fallback for `cade.richard@gmail.com` while role data is reconciled).
 - Backend admin dashboard data source is `GET /admin-panel/dashboard`; if this endpoint contract changes, update `frontend/src/routes/_app.admin.tsx` in the same PR.
+- Job operations in admin panel now include:
+  - `GET /admin-panel/jobs/scheduler` (scheduled job state)
+  - `POST /admin-panel/jobs/control/{job_id}?action=pause|resume|stop|trigger`
+  - `GET /admin-panel/jobs/history/{execution_id}` (single execution log payload)
+  - `POST /admin-panel/jobs/trigger/reanalyze_unanalyzed_failed` (manual recovery)
+- Admin jobs list entries should deep-link to `/admin?tab=jobs&logId=<execution_id>` and display execution `error_message` / `result_data`.
+- Admin article list titles should link to `/article/$id` for direct inspection.
 - Before declaring dashboard/admin fixes complete, verify all of:
   - `/analytics` loads
   - `/dashboard` redirects to `/analytics`

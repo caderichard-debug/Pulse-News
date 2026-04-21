@@ -299,6 +299,77 @@ def analyze_job(session: Session = None, chain_processing: bool = False):
         return {"success": False, "error": str(e)}
 
 
+@track_job_execution(job_id="reanalyze_unanalyzed_failed", job_name="Re-analyze Unanalyzed/Failed Articles")
+def reanalyze_unanalyzed_failed_job(session: Session = None):
+    """
+    Admin recovery job: analyze all articles that:
+    - have content_text
+    - have no ArticleAnalysis row
+    - are either COMPLETED or FAILED processing_status
+    """
+    try:
+        logger.info("=" * 60)
+        logger.info("Starting re-analysis job for unanalyzed/failed articles")
+        logger.info("=" * 60)
+
+        from ..services.ai_analyzer import analyze_articles_batch, get_unanalyzed_article_count
+
+        total_analyzed = 0
+        batch_num = 0
+
+        if session is None:
+            with Session(engine) as temp_session:
+                initial_count = get_unanalyzed_article_count(
+                    temp_session,
+                    include_failed_status=True,
+                )
+        else:
+            initial_count = get_unanalyzed_article_count(
+                session,
+                include_failed_status=True,
+            )
+
+        logger.info("Found %s unanalyzed/failed analysis candidates", initial_count)
+
+        if session is None:
+            with Session(engine) as run_session:
+                while True:
+                    batch_num += 1
+                    count = analyze_articles_batch(
+                        run_session,
+                        batch_size=5,
+                        include_failed_status=True,
+                    )
+                    total_analyzed += count
+                    if count == 0:
+                        break
+                    time.sleep(1)
+        else:
+            while True:
+                batch_num += 1
+                count = analyze_articles_batch(
+                    session,
+                    batch_size=5,
+                    include_failed_status=True,
+                )
+                total_analyzed += count
+                if count == 0:
+                    break
+                time.sleep(1)
+
+        logger.info(
+            "Re-analysis completed: %s/%s articles analyzed across %s batches",
+            total_analyzed,
+            initial_count,
+            batch_num,
+        )
+        logger.info("=" * 60)
+        return {"success": True, "articles_analyzed": total_analyzed}
+    except Exception as e:
+        logger.error("Re-analysis job failed: %s", e, exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
 @track_job_execution(job_id="framework_mapping", job_name="Framework Mapping & Discovery")
 def framework_job(session: Session = None):
     """

@@ -178,6 +178,44 @@ class TestJobManagement:
         data = response.json()
         assert data["limit"] == 5
 
+    def test_get_job_execution_log(self, client: TestClient, admin_headers: dict, session: Session):
+        """Test getting a single job execution log entry."""
+        job = JobExecutionHistory(
+            job_id="extract_articles",
+            job_name="Extract Article Content",
+            started_at=datetime.utcnow(),
+            status="failed",
+            error_message="Sample failure",
+            result_data="{'success': False}",
+            triggered_by="admin",
+        )
+        session.add(job)
+        session.commit()
+        session.refresh(job)
+
+        response = client.get(f"/admin-panel/jobs/history/{job.id}", headers=admin_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == job.id
+        assert data["job_id"] == "extract_articles"
+        assert data["error_message"] == "Sample failure"
+
+    def test_get_scheduler_jobs(self, client: TestClient, admin_headers: dict):
+        """Test scheduler job listing endpoint."""
+        response = client.get("/admin-panel/jobs/scheduler", headers=admin_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert "status" in data
+        assert "jobs" in data
+
+    def test_control_scheduler_job_invalid_action(self, client: TestClient, admin_headers: dict):
+        """Test scheduler control validation for unsupported action."""
+        response = client.post(
+            "/admin-panel/jobs/control/scrape_rss?action=invalid",
+            headers=admin_headers,
+        )
+        assert response.status_code == 400
+
     def test_trigger_job(self, client: TestClient, admin_headers: dict, session: Session):
         """Test manually triggering a job."""
         response = client.post(
@@ -190,6 +228,16 @@ class TestJobManagement:
         assert data["job_id"] == "scrape_rss"
         assert "result" in data
         assert "execution_id" in data
+
+    def test_trigger_reanalyze_unanalyzed_failed_job(self, client: TestClient, admin_headers: dict):
+        """Test manual trigger for re-analysis recovery job."""
+        response = client.post(
+            "/admin-panel/jobs/trigger/reanalyze_unanalyzed_failed",
+            headers=admin_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["job_id"] == "reanalyze_unanalyzed_failed"
 
 
 class TestUserManagement:
