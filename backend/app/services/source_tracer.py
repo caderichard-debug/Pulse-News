@@ -22,6 +22,7 @@ from sqlmodel import Session, select
 
 from ..models import Article, StatisticVerification
 from ..config import settings
+from ..utils.resilience import retry_call
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
@@ -323,14 +324,20 @@ class SourceTracer:
                 article_content=article_content
             )
 
-            response = self.openai_api.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are an expert at identifying sources and citations in articles."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.3,
-                max_tokens=300
+            response, _ = retry_call(
+                lambda: self.openai_api.chat.completions.create(
+                    model=settings.ai_model,
+                    messages=[
+                        {"role": "system", "content": "You are an expert at identifying sources and citations in articles."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.3,
+                    max_tokens=300,
+                    timeout=settings.ai_request_timeout_seconds,
+                ),
+                operation="source_tracer_ai_extract_source",
+                max_retries=settings.ai_max_retries,
+                backoff_base_seconds=settings.http_backoff_base_seconds,
             )
 
             content = response.choices[0].message.content.strip()
@@ -517,7 +524,17 @@ class SourceTracer:
                     "num": 10  # Get top 10 results for better selection
                 }
 
-                response = requests.get(url, params=params, timeout=10)
+                response, _ = retry_call(
+                    lambda: requests.get(
+                        url,
+                        params=params,
+                        timeout=settings.http_timeout_seconds,
+                    ),
+                    operation="source_tracer_google_custom_search",
+                    max_retries=settings.http_max_retries,
+                    backoff_base_seconds=settings.http_backoff_base_seconds,
+                    retriable_exceptions=(requests.RequestException,),
+                )
 
                 if response.status_code != 200:
                     logger.warning(f"[TRACE-WEB] Google Search API returned status {response.status_code}")
@@ -957,11 +974,17 @@ class SourceTracer:
                 {"role": "user", "content": prompt}
             ]
 
-            response_1 = self.openai_api.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=messages,
-                temperature=0.3,
-                max_tokens=300
+            response_1, _ = retry_call(
+                lambda: self.openai_api.chat.completions.create(
+                    model=settings.ai_model,
+                    messages=messages,
+                    temperature=0.3,
+                    max_tokens=300,
+                    timeout=settings.ai_request_timeout_seconds,
+                ),
+                operation="source_tracer_ai_reasoning_pass1",
+                max_retries=settings.ai_max_retries,
+                backoff_base_seconds=settings.http_backoff_base_seconds,
             )
 
             content_1 = response_1.choices[0].message.content.strip()
@@ -993,11 +1016,17 @@ class SourceTracer:
 
             messages.append({"role": "user", "content": verification_prompt})
 
-            response_2 = self.openai_api.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=messages,
-                temperature=0.3,
-                max_tokens=200
+            response_2, _ = retry_call(
+                lambda: self.openai_api.chat.completions.create(
+                    model=settings.ai_model,
+                    messages=messages,
+                    temperature=0.3,
+                    max_tokens=200,
+                    timeout=settings.ai_request_timeout_seconds,
+                ),
+                operation="source_tracer_ai_reasoning_pass2",
+                max_retries=settings.ai_max_retries,
+                backoff_base_seconds=settings.http_backoff_base_seconds,
             )
 
             content_2 = response_2.choices[0].message.content.strip()

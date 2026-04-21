@@ -4,16 +4,49 @@ Generates summaries, sentiment analysis, bias detection, and extracts key statis
 """
 
 from sqlmodel import Session, select
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from ..models import Article, ArticleAnalysis, ProcessingStatus, PoliticalLean, Topic, ArticleTopicLink
 from ..database import engine
 from ..services.statistics_verifier import process_article_statistics
 from ..utils.openai_client import openai_client
+from ..utils.pipeline_metrics import incr, TimedStage
+from ..config import settings
 from datetime import datetime
 from typing import List, Optional
 import logging
 
 logger = logging.getLogger(__name__)
+
+VALID_TOPICS = {
+    "general", "politics", "economics", "technology", "science", "culture", "world", "environment"
+}
+
+
+def _normalize_analysis_payload(payload: dict) -> dict:
+    summary = (payload.get("summary") or "").strip()
+    if not summary:
+        summary = "Summary unavailable from model response."
+        incr("pipeline.analysis.anomaly.empty_summary")
+    sentiment = payload.get("sentiment_score", 0)
+    if not isinstance(sentiment, (int, float)):
+        sentiment = 0
+    sentiment = int(max(-10, min(10, sentiment)))
+    topic = (payload.get("topic_category") or "general").strip().lower()
+    if topic not in VALID_TOPICS:
+        incr("pipeline.analysis.anomaly.unknown_topic")
+        topic = "general"
+    lean = (payload.get("political_lean") or "center").strip().lower()
+    if lean not in {"left", "center", "right"}:
+        incr("pipeline.analysis.anomaly.invalid_lean")
+        lean = "center"
+    return {
+        "summary": summary[:1000],
+        "sentiment_score": sentiment,
+        "topic_category": topic,
+        "political_lean": lean,
+        "bias_indicators": payload.get("bias_indicators"),
+        "key_stats": payload.get("key_stats"),
+    }
 
 
 def analyze_articles_batch(
@@ -72,7 +105,11 @@ def analyze_articles_batch(
     ]
 
     # Call OpenAI API
-    analyses = openai_client.analyze_articles_batch(article_data)
+    with TimedStage("pipeline.analyze.batch_duration"):
+        analyses = openai_client.analyze_articles_batch(
+            article_data,
+            max_tokens=settings.max_tokens_per_request,
+        )
 
     if not analyses:
         logger.error("Failed to get analyses from OpenAI")
@@ -85,8 +122,9 @@ def analyze_articles_batch(
     # Process each analysis result
     for article, analysis_data in zip(articles_to_analyze, analyses):
         try:
+            normalized = _normalize_analysis_payload(analysis_data)
             # Map political lean string to enum using the enum value (lowercase)
-            lean_str = analysis_data.get('political_lean', 'center').lower()
+            lean_str = normalized["political_lean"]
             try:
                 # Match by enum value, not by enum name
                 political_lean = next(
@@ -98,7 +136,7 @@ def analyze_articles_batch(
                 political_lean = PoliticalLean.CENTER
 
             # Get topic category from AI response
-            topic_category = analysis_data.get('topic_category', 'general').lower()
+            topic_category = normalized["topic_category"]
 
             # Update article's topic_category field for quick filtering
             article.topic_category = topic_category
@@ -141,11 +179,11 @@ def analyze_articles_batch(
             # Create analysis record
             analysis = ArticleAnalysis(
                 article_id=article.id,
-                summary=analysis_data.get('summary', '')[:1000],  # Truncate to max length
-                sentiment_score=analysis_data.get('sentiment_score', 0),
+                summary=normalized["summary"],
+                sentiment_score=normalized["sentiment_score"],
                 political_lean=political_lean,
-                bias_indicators=analysis_data.get('bias_indicators'),
-                key_stats=str(analysis_data.get('key_stats')) if analysis_data.get('key_stats') else None,
+                bias_indicators=normalized.get("bias_indicators"),
+                key_stats=str(normalized.get("key_stats")) if normalized.get("key_stats") else None,
                 stats_verified=False,
                 processing_cost=0.002,  # Approximate cost per article
                 tokens_used=None,  # We don't track individual tokens in batch
@@ -154,6 +192,7 @@ def analyze_articles_batch(
 
             session.add(analysis)
             analyzed_count += 1
+            incr("pipeline.analysis.success")
 
             logger.info(
                 f"  ✓ Analyzed: {article.title[:50]}... "
@@ -162,6 +201,7 @@ def analyze_articles_batch(
 
         except Exception as e:
             logger.error(f"Error creating analysis for article {article.id}: {e}")
+            incr("pipeline.analysis.failed")
             continue
 
     # Commit all analyses
@@ -206,11 +246,11 @@ def get_unanalyzed_article_count(
         else (Article.processing_status == ProcessingStatus.COMPLETED)
     )
     return session.exec(
-        select(Article)
+        select(func.count(Article.id))
         .where(status_filter)
         .where(Article.content_text.isnot(None))
         .where(~Article.id.in_(select(ArticleAnalysis.article_id)))
-    ).all().__len__()
+    ).one()
 
 
 if __name__ == "__main__":

@@ -15,6 +15,8 @@ from ..routes.auth import get_current_user, get_admin_user
 from ..models import User
 from ..services.challenge_monitoring import ChallengeSystemMonitor
 from ..utils.logging import get_logger
+from ..utils.pipeline_metrics import snapshot as pipeline_snapshot
+from ..config import settings
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/monitoring", tags=["monitoring"])
@@ -77,6 +79,8 @@ def get_system_alerts(session: Session = Depends(get_session)):
     try:
         monitor = ChallengeSystemMonitor(session)
         alerts = monitor.get_alert_conditions()
+        pipeline_alerts = get_pipeline_alerts()
+        alerts.extend(pipeline_alerts)
 
         # Sort alerts by severity
         severity_order = {"critical": 0, "warning": 1, "info": 2}
@@ -191,6 +195,83 @@ def get_quality_metrics(session: Session = Depends(get_session)):
     except Exception as e:
         logger.error(f"Failed to get quality metrics: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get metrics: {str(e)}")
+
+
+@router.get("/pipeline", response_model=Dict[str, Any])
+def get_pipeline_metrics():
+    """Return pipeline operational metrics and budget status."""
+    metrics = pipeline_snapshot()
+    total_cost = metrics.get("costs_usd", {}).get("pipeline_total", 0.0)
+    budget = settings.pipeline_daily_budget_usd
+    utilization = (total_cost / budget) if budget else 0.0
+    alerts = get_pipeline_alerts()
+    return {
+        "timestamp": datetime.utcnow().isoformat(),
+        "metrics": metrics,
+        "alerts": alerts,
+        "budget": {
+            "daily_budget_usd": budget,
+            "spent_usd": round(total_cost, 4),
+            "utilization_ratio": round(utilization, 4),
+            "warning_threshold_ratio": settings.pipeline_warn_budget_percent,
+            "warning": utilization >= settings.pipeline_warn_budget_percent,
+        },
+    }
+
+
+def get_pipeline_alerts() -> List[Dict[str, Any]]:
+    metrics = pipeline_snapshot()
+    alerts: List[Dict[str, Any]] = []
+
+    counters = metrics.get("counters", {})
+    costs = metrics.get("costs_usd", {})
+    gauges = metrics.get("gauges", {})
+
+    failed_extract = counters.get("pipeline.extract.failed", 0)
+    success_extract = counters.get("pipeline.extract.success", 0)
+    total_extract = failed_extract + success_extract
+    if total_extract >= 10:
+        failure_rate = failed_extract / max(total_extract, 1)
+        if failure_rate >= 0.2:
+            alerts.append(
+                {
+                    "severity": "critical",
+                    "type": "pipeline_extract_failure_rate",
+                    "message": f"Extraction failure rate is {failure_rate:.0%} over {total_extract} attempts.",
+                }
+            )
+
+    total_cost = costs.get("pipeline_total", 0.0)
+    budget = settings.pipeline_daily_budget_usd
+    utilization = (total_cost / budget) if budget else 0.0
+    if utilization >= 1.0:
+        alerts.append(
+            {
+                "severity": "critical",
+                "type": "pipeline_budget_exceeded",
+                "message": f"Daily pipeline budget exceeded (${total_cost:.2f}/${budget:.2f}).",
+            }
+        )
+    elif utilization >= settings.pipeline_warn_budget_percent:
+        alerts.append(
+            {
+                "severity": "warning",
+                "type": "pipeline_budget_warning",
+                "message": f"Pipeline budget at {utilization:.0%} (${total_cost:.2f}/${budget:.2f}).",
+            }
+        )
+
+    failed_post = gauges.get("pipeline.post_process.tasks_failed", 0)
+    if failed_post > 0:
+        alerts.append(
+            {
+                "severity": "warning",
+                "type": "pipeline_post_process_failures",
+                "message": f"{int(failed_post)} post-analysis task(s) failed in latest run.",
+            }
+        )
+
+    return alerts
 
 
 # Admin-only endpoints

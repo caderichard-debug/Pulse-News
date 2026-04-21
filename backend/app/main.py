@@ -1,7 +1,8 @@
 import asyncio
 import os
 import re
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from .database import create_db_and_tables
@@ -73,6 +74,11 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+if settings.enforce_secure_secret_key and (
+    not settings.secret_key or settings.secret_key == "your-secret-key-change-in-production"
+):
+    raise RuntimeError("SECRET_KEY must be set to a strong production value")
+
 # CORS middleware for frontend
 frontend_url = settings.frontend_url
 frontend_custom_url = settings.frontend_custom_url
@@ -82,9 +88,20 @@ app.add_middleware(
     allow_origins=[frontend_url, frontend_custom_url],  # Local dev
     allow_origin_regex=r"^https:\/\/[\w\-]+\.onrender\.com$",  # Any *.onrender.com
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
 )
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response: Response = await call_next(request)
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
 
 # Include routers
 app.include_router(admin.router)

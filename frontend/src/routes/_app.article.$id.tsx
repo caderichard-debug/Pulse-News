@@ -21,6 +21,15 @@ function ArticlePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  function refetch() {
+    setError(null);
+    setLoading(true);
+    api<Article>(`/articles/${id}`)
+      .then((a) => setArticle(a))
+      .catch((err) => setError(err instanceof ApiError ? err.message : "Could not load article"))
+      .finally(() => setLoading(false));
+  }
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -54,9 +63,14 @@ function ArticlePage() {
     return (
       <div className="max-w-[760px] mx-auto px-6 py-20 text-center">
         <p className="text-destructive mb-4">{error || "Article not found"}</p>
-        <Link to="/feed" className="underline underline-offset-4">
-          Back to feed
-        </Link>
+        <div className="flex items-center justify-center gap-4">
+          <button onClick={refetch} className="px-4 py-2 rounded-md border border-border hover:bg-accent text-sm">
+            Retry
+          </button>
+          <Link to="/feed" className="underline underline-offset-4">
+            Back to feed
+          </Link>
+        </div>
       </div>
     );
   }
@@ -177,6 +191,12 @@ function ArticlePage() {
               <StatRow key={i} stat={s} />
             ))}
           </div>
+        </section>
+      )}
+      {(!article.statistics || article.statistics.length === 0) && (
+        <section className="mb-12">
+          <SectionTitle>Statistic verification</SectionTitle>
+          <p className="text-sm text-muted-foreground">No verified statistics are available for this article yet.</p>
         </section>
       )}
 

@@ -10,6 +10,8 @@ To use this:
 
 from openai import OpenAI
 from ..config import settings
+from ..utils.resilience import retry_call
+from ..utils.pipeline_metrics import add_cost, incr, TimedStage, snapshot
 import logging
 import json
 from typing import List, Dict, Optional
@@ -26,11 +28,28 @@ class OpenAIClient:
             self.client = None
         else:
             self.client = OpenAI(api_key=settings.openai_api_key)
+            self.model = settings.ai_model
             logger.info(f"OpenAI client initialized with model: {settings.ai_model}")
 
     def is_available(self) -> bool:
         """Check if OpenAI API is configured and available"""
         return self.client is not None
+
+    def _resolve_model(self) -> str:
+        metrics = snapshot()
+        spent = metrics.get("costs_usd", {}).get("pipeline_total", 0.0)
+        budget = settings.pipeline_daily_budget_usd
+        if budget and spent >= budget * settings.pipeline_warn_budget_percent:
+            incr("pipeline.cost.fallback_model_activations")
+            logger.warning(
+                "pipeline_budget_warning spent_usd=%.4f budget_usd=%.4f threshold_ratio=%.2f fallback_model=%s",
+                spent,
+                budget,
+                settings.pipeline_warn_budget_percent,
+                settings.fallback_ai_model,
+            )
+            return settings.fallback_ai_model
+        return settings.ai_model
 
     def analyze_articles_batch(
         self,
@@ -59,23 +78,30 @@ class OpenAIClient:
 
         try:
             logger.info(f"Sending {len(articles)} articles to OpenAI for analysis...")
-
-            response = self.client.chat.completions.create(
-                model=settings.ai_model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a news analysis assistant that provides objective analysis of articles including summaries, sentiment, political lean, and bias detection."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                max_tokens=max_tokens,
-                temperature=0.3,  # Lower temperature for more consistent analysis
-                response_format={"type": "json_object"}  # Ensure JSON response
-            )
+            with TimedStage("openai.analyze_articles_batch"):
+                response, retry_stats = retry_call(
+                    lambda: self.client.chat.completions.create(
+                        model=self._resolve_model(),
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "You are a news analysis assistant that provides objective analysis of articles including summaries, sentiment, political lean, and bias detection."
+                            },
+                            {
+                                "role": "user",
+                                "content": prompt
+                            }
+                        ],
+                        max_tokens=max_tokens,
+                        temperature=0.3,
+                        response_format={"type": "json_object"},
+                        timeout=settings.ai_request_timeout_seconds,
+                    ),
+                    operation="openai_analyze_articles_batch",
+                    max_retries=settings.ai_max_retries,
+                    backoff_base_seconds=settings.http_backoff_base_seconds,
+                )
+                incr("openai.retry_attempts_total", max(0, retry_stats.attempts - 1))
 
             # Extract and parse the response
             response_text = response.choices[0].message.content
@@ -88,6 +114,7 @@ class OpenAIClient:
             input_tokens = response.usage.prompt_tokens
             output_tokens = response.usage.completion_tokens
             cost = self._calculate_cost(input_tokens, output_tokens)
+            add_cost("analysis", cost)
 
             logger.info(
                 f"Analysis complete: {input_tokens} input + {output_tokens} output tokens"
@@ -130,21 +157,27 @@ class OpenAIClient:
         try:
             logger.info("Asking OpenAI to discover new ethical frameworks...")
 
-            response = self.client.chat.completions.create(
-                model=settings.ai_model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an expert in political philosophy and ethics who identifies underlying moral debates in current events."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                max_tokens=max_tokens,
-                temperature=0.5,
-                response_format={"type": "json_object"}
+            response, _ = retry_call(
+                lambda: self.client.chat.completions.create(
+                    model=self._resolve_model(),
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are an expert in political philosophy and ethics who identifies underlying moral debates in current events."
+                        },
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    max_tokens=max_tokens,
+                    temperature=0.5,
+                    response_format={"type": "json_object"},
+                    timeout=settings.ai_request_timeout_seconds,
+                ),
+                operation="openai_generate_frameworks",
+                max_retries=settings.ai_max_retries,
+                backoff_base_seconds=settings.http_backoff_base_seconds,
             )
 
             response_text = response.choices[0].message.content
@@ -183,21 +216,27 @@ class OpenAIClient:
         prompt = self._build_framework_mapping_prompt(article_title, article_summary, frameworks)
 
         try:
-            response = self.client.chat.completions.create(
-                model=settings.ai_model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an expert at mapping news articles to underlying ethical and moral debates."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                max_tokens=max_tokens,
-                temperature=0.3,
-                response_format={"type": "json_object"}
+            response, _ = retry_call(
+                lambda: self.client.chat.completions.create(
+                    model=self._resolve_model(),
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are an expert at mapping news articles to underlying ethical and moral debates."
+                        },
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    max_tokens=max_tokens,
+                    temperature=0.3,
+                    response_format={"type": "json_object"},
+                    timeout=settings.ai_request_timeout_seconds,
+                ),
+                operation="openai_map_article_to_frameworks",
+                max_retries=settings.ai_max_retries,
+                backoff_base_seconds=settings.http_backoff_base_seconds,
             )
 
             response_text = response.choices[0].message.content
@@ -399,20 +438,26 @@ Examples of good explanations:
 Explanation:"""
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an expert at political philosophy and media analysis. Your task is to clearly explain ideological differences in news coverage."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                max_tokens=150,
-                temperature=0.7
+            response, _ = retry_call(
+                lambda: self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are an expert at political philosophy and media analysis. Your task is to clearly explain ideological differences in news coverage."
+                        },
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    max_tokens=150,
+                    temperature=0.7,
+                    timeout=settings.ai_request_timeout_seconds,
+                ),
+                operation="openai_generate_framework_opposition_explanation",
+                max_retries=settings.ai_max_retries,
+                backoff_base_seconds=settings.http_backoff_base_seconds,
             )
 
             explanation = response.choices[0].message.content.strip()

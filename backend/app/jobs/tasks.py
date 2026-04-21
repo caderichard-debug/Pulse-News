@@ -6,10 +6,14 @@ All jobs are wrapped with execution tracking that creates JobExecutionHistory re
 """
 
 from sqlmodel import Session
+from sqlalchemy import func
 from ..database import engine
+from ..config import settings
 from ..services.rss_scraper import scrape_all_sources
 from ..services.article_extractor import process_pending_articles
 from ..models import JobExecutionHistory
+from ..utils.pipeline_metrics import TimedStage, set_gauge, snapshot, incr
+from ..utils.resilience import classify_exception
 from datetime import datetime
 import logging
 import io
@@ -19,6 +23,15 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 
 logger = logging.getLogger(__name__)
+
+
+def _adaptive_delay(errors: int, total: int) -> float:
+    if total <= 0:
+        return settings.pipeline_min_delay_seconds
+    error_rate = errors / total
+    if error_rate > settings.pipeline_target_error_rate:
+        return settings.pipeline_max_delay_seconds
+    return settings.pipeline_min_delay_seconds
 
 
 class _JobLogCaptureHandler(logging.Handler):
@@ -115,7 +128,8 @@ def track_job_execution(job_id: str, job_name: str):
             root_logger = logging.getLogger()
             root_logger.addHandler(capture_handler)
             try:
-                result = func(session=session, *args, **kwargs)
+                with TimedStage(f"job.{job_id}.duration"):
+                    result = func(session=session, *args, **kwargs)
 
                 # Update history with success
                 with Session(engine) as history_session:
@@ -126,6 +140,8 @@ def track_job_execution(job_id: str, job_name: str):
                         history.completed_at - history.started_at
                     ).total_seconds()
                     history.result_data = capture_handler.get_value() or str(result)
+                    if isinstance(result, dict):
+                        result.setdefault("metrics_snapshot", snapshot())
 
                     # Extract metrics from result
                     if isinstance(result, dict):
@@ -156,6 +172,8 @@ def track_job_execution(job_id: str, job_name: str):
                     ).total_seconds()
                     history.error_message = str(e)
                     history.result_data = capture_handler.get_value()
+                    reason = classify_exception(e)
+                    history.result_data += f"\n\nfailure_reason_code={reason}"
                     history_session.add(history)
                     history_session.commit()
 
@@ -225,9 +243,17 @@ def extract_job(session: Session = None, chain_analysis: bool = False):
         # Process up to 50 articles per run (adjust based on performance)
         if session is None:
             with Session(engine) as session:
-                count = process_pending_articles(session, batch_size=50, delay=1.0)
+                count = process_pending_articles(
+                    session,
+                    batch_size=settings.extract_batch_size,
+                    delay=settings.pipeline_min_delay_seconds,
+                )
         else:
-            count = process_pending_articles(session, batch_size=50, delay=1.0)
+            count = process_pending_articles(
+                session,
+                batch_size=settings.extract_batch_size,
+                delay=settings.pipeline_min_delay_seconds,
+            )
 
         logger.info("=" * 60)
         logger.info(f"Article extraction job completed: {count} articles processed")
@@ -269,6 +295,7 @@ def analyze_job(session: Session = None, chain_processing: bool = False):
         from ..services.ai_analyzer import analyze_articles_batch, get_unanalyzed_article_count
 
         total_analyzed = 0
+        failed_batches = 0
         batch_num = 0
 
         # Get initial count of unanalyzed articles
@@ -286,7 +313,7 @@ def analyze_job(session: Session = None, chain_processing: bool = False):
                 while True:
                     batch_num += 1
                     logger.info(f"Processing batch {batch_num}...")
-                    count = analyze_articles_batch(session, batch_size=5)
+                    count = analyze_articles_batch(session, batch_size=settings.analysis_batch_size)
                     total_analyzed += count
 
                     if count == 0:
@@ -294,13 +321,14 @@ def analyze_job(session: Session = None, chain_processing: bool = False):
                         break  # No more articles to process
 
                     # Add a small delay between batches to avoid rate limiting
-                    if count > 0:
-                        time.sleep(1)
+                    if count == 0:
+                        failed_batches += 1
+                    time.sleep(_adaptive_delay(failed_batches, batch_num))
         else:
             while True:
                 batch_num += 1
                 logger.info(f"Processing batch {batch_num}...")
-                count = analyze_articles_batch(session, batch_size=5)
+                count = analyze_articles_batch(session, batch_size=settings.analysis_batch_size)
                 total_analyzed += count
 
                 if count == 0:
@@ -308,8 +336,9 @@ def analyze_job(session: Session = None, chain_processing: bool = False):
                     break  # No more articles to process
 
                 # Add a small delay between batches to avoid rate limiting
-                if count > 0:
-                    time.sleep(1)
+                if count == 0:
+                    failed_batches += 1
+                time.sleep(_adaptive_delay(failed_batches, batch_num))
 
         logger.info("=" * 60)
         logger.info(f"AI analysis job completed: {total_analyzed}/{initial_count} articles analyzed in {batch_num} batches")
@@ -660,14 +689,13 @@ def process_articles_job(session: Session = None):
 
                 with Session(engine) as task_session:
                     # Count unmapped articles
-                    unmapped_articles = task_session.exec(
-                        select(Article)
+                    initial_count = task_session.exec(
+                        select(func.count(Article.id))
                         .join(ArticleAnalysis)
                         .where(~Article.id.in_(
                             select(ArticleFrameworkLink.article_id)
                         ))
-                    ).all()
-                    initial_count = len(unmapped_articles)
+                    ).one()
                     logger.info(f"[Frameworks] Found {initial_count} unmapped articles")
 
                     # Process all unmapped articles in batches
@@ -676,7 +704,7 @@ def process_articles_job(session: Session = None):
                     while True:
                         batch_num += 1
                         logger.info(f"[Frameworks] Processing batch {batch_num}...")
-                        count = map_articles_to_frameworks(task_session, limit=20)
+                        count = map_articles_to_frameworks(task_session, limit=settings.framework_batch_size)
                         total_mappings += count
                         if count == 0:
                             break
@@ -707,12 +735,11 @@ def process_articles_job(session: Session = None):
 
                 with Session(engine) as task_session:
                     # Count articles without statistics verification
-                    pending_articles = task_session.exec(
-                        select(Article)
+                    initial_count = task_session.exec(
+                        select(func.count(Article.id))
                         .join(ArticleAnalysis)
                         .where(ArticleAnalysis.stats_verification_date.is_(None))
-                    ).all()
-                    initial_count = len(pending_articles)
+                    ).one()
                     logger.info(f"[Statistics] Found {initial_count} articles pending verification")
 
                     # Process all pending articles in batches
@@ -725,7 +752,7 @@ def process_articles_job(session: Session = None):
                     while True:
                         batch_num += 1
                         logger.info(f"[Statistics] Processing batch {batch_num}...")
-                        stats = process_pending_verifications(task_session, limit=10)
+                        stats = process_pending_verifications(task_session, limit=settings.statistics_batch_size)
 
                         total_stats["articles_processed"] += stats["articles_processed"]
                         total_stats["stats_extracted"] += stats["stats_extracted"]
@@ -758,14 +785,13 @@ def process_articles_job(session: Session = None):
 
                 with Session(engine) as task_session:
                     # Count unclustered articles
-                    unclustered_articles = task_session.exec(
-                        select(Article)
+                    initial_count = task_session.exec(
+                        select(func.count(Article.id))
                         .join(ArticleAnalysis)
                         .where(~Article.id.in_(
                             select(ArticleClusterMember.article_id)
                         ))
-                    ).all()
-                    initial_count = len(unclustered_articles)
+                    ).one()
                     logger.info(f"[Clustering] Found {initial_count} unclustered articles")
 
                     # Process all unclustered articles in batches
@@ -778,7 +804,7 @@ def process_articles_job(session: Session = None):
                     while True:
                         batch_num += 1
                         logger.info(f"[Clustering] Processing batch {batch_num}...")
-                        stats = process_article_clustering(task_session, limit=20)
+                        stats = process_article_clustering(task_session, limit=settings.clustering_batch_size)
 
                         total_stats["articles_processed"] += stats["articles_processed"]
                         total_stats["clusters_created"] += stats["clusters_created"]
@@ -811,11 +837,10 @@ def process_articles_job(session: Session = None):
 
                 with Session(engine) as task_session:
                     # Count articles without context
-                    no_context_articles = task_session.exec(
-                        select(ArticleAnalysis)
+                    initial_count = task_session.exec(
+                        select(func.count(ArticleAnalysis.id))
                         .where(ArticleAnalysis.has_context == False)
-                    ).all()
-                    initial_count = len(no_context_articles)
+                    ).one()
                     logger.info(f"[Context] Found {initial_count} articles without context")
 
                     # Process all articles without context in batches
@@ -828,7 +853,7 @@ def process_articles_job(session: Session = None):
                     while True:
                         batch_num += 1
                         logger.info(f"[Context] Processing batch {batch_num}...")
-                        stats = process_article_contexts(task_session, limit=5)
+                        stats = process_article_contexts(task_session, limit=settings.context_batch_size)
 
                         total_stats["articles_processed"] += stats["articles_processed"]
                         total_stats["contexts_generated"] += stats["contexts_generated"]
@@ -877,6 +902,8 @@ def process_articles_job(session: Session = None):
         logger.info("Article processing job completed")
         logger.info(f"Results: {len([r for r in results if 'error' not in r])}/{len(tasks)} tasks succeeded")
         logger.info("=" * 60)
+        set_gauge("pipeline.post_process.tasks_failed", len([r for r in results if "error" in r]))
+        incr("pipeline.post_process.runs")
 
         return {
             "success": True,
