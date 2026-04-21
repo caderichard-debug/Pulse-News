@@ -83,6 +83,17 @@ class FrameworkAxis(BaseModel):
     right_position: str
 
 
+class FrameworkGlossaryItem(BaseModel):
+    id: int
+    name: str
+    description: str
+    axis_description: str
+    left_position: str
+    right_position: str
+    article_count: int
+    is_seed: bool
+
+
 @router.get("/sentiment-over-time")
 async def get_sentiment_over_time(
     current_user: User = Depends(get_current_user),
@@ -362,6 +373,33 @@ async def get_available_frameworks(
             name=f.name,
             left_position=f.left_position,
             right_position=f.right_position
+        )
+        for f in frameworks
+    ]
+
+
+@router.get("/frameworks/glossary", response_model=List[FrameworkGlossaryItem])
+async def get_framework_glossary(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """
+    Get all ethical frameworks with human-readable definitions for dashboard explainers.
+    """
+    frameworks = session.exec(
+        select(Framework).order_by(Framework.is_seed.desc(), Framework.name.asc())
+    ).all()
+
+    return [
+        FrameworkGlossaryItem(
+            id=f.id,
+            name=f.name,
+            description=f.description,
+            axis_description=f.axis_description,
+            left_position=f.left_position,
+            right_position=f.right_position,
+            article_count=f.article_count,
+            is_seed=f.is_seed,
         )
         for f in frameworks
     ]
