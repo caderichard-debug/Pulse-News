@@ -4,6 +4,7 @@ Generates summaries, sentiment analysis, bias detection, and extracts key statis
 """
 
 from sqlmodel import Session, select
+from sqlalchemy import or_
 from ..models import Article, ArticleAnalysis, ProcessingStatus, PoliticalLean, Topic, ArticleTopicLink
 from ..database import engine
 from ..services.statistics_verifier import process_article_statistics
@@ -15,7 +16,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def analyze_articles_batch(session: Session, batch_size: int = 5) -> int:
+def analyze_articles_batch(
+    session: Session,
+    batch_size: int = 5,
+    include_failed_status: bool = False,
+) -> int:
     """
     Analyze a batch of articles using Claude API.
     Processes articles that have been extracted but not yet analyzed.
@@ -33,14 +38,21 @@ def analyze_articles_batch(session: Session, batch_size: int = 5) -> int:
 
     analyzed_count = 0
 
-    # Get completed articles that haven't been analyzed yet
+    # Get extracted articles that haven't been analyzed yet.
+    # Optionally include FAILED rows to recover analysis candidates that still have content.
+    status_filter = (
+        or_(
+            Article.processing_status == ProcessingStatus.COMPLETED,
+            Article.processing_status == ProcessingStatus.FAILED,
+        )
+        if include_failed_status
+        else (Article.processing_status == ProcessingStatus.COMPLETED)
+    )
     articles_to_analyze = session.exec(
         select(Article)
-        .where(Article.processing_status == ProcessingStatus.COMPLETED)
+        .where(status_filter)
         .where(Article.content_text.isnot(None))
-        .where(~Article.id.in_(
-            select(ArticleAnalysis.article_id)
-        ))
+        .where(~Article.id.in_(select(ArticleAnalysis.article_id)))
         .limit(batch_size)
     ).all()
 
@@ -180,15 +192,24 @@ def get_article_analysis(article_id: int, session: Session) -> Optional[ArticleA
     ).first()
 
 
-def get_unanalyzed_article_count(session: Session) -> int:
+def get_unanalyzed_article_count(
+    session: Session,
+    include_failed_status: bool = False,
+) -> int:
     """Get count of extracted articles that haven't been analyzed yet"""
+    status_filter = (
+        or_(
+            Article.processing_status == ProcessingStatus.COMPLETED,
+            Article.processing_status == ProcessingStatus.FAILED,
+        )
+        if include_failed_status
+        else (Article.processing_status == ProcessingStatus.COMPLETED)
+    )
     return session.exec(
         select(Article)
-        .where(Article.processing_status == ProcessingStatus.COMPLETED)
+        .where(status_filter)
         .where(Article.content_text.isnot(None))
-        .where(~Article.id.in_(
-            select(ArticleAnalysis.article_id)
-        ))
+        .where(~Article.id.in_(select(ArticleAnalysis.article_id)))
     ).all().__len__()
 
 

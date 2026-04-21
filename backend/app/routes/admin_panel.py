@@ -17,6 +17,7 @@ from ..models import (
 )
 from ..database import get_session
 from ..utils.admin_auth import get_admin_user, log_admin_action
+from ..jobs.scheduler import list_scheduler_jobs, control_scheduler_job
 
 logger = logging.getLogger(__name__)
 
@@ -239,6 +240,87 @@ def get_job_history(
     }
 
 
+@router.get("/jobs/history/{execution_id}")
+def get_job_execution_log(
+    execution_id: int,
+    admin_user: User = Depends(get_admin_user),
+    session: Session = Depends(get_session),
+) -> Dict[str, Any]:
+    """Get detailed log payload for a single job execution."""
+    job = session.get(JobExecutionHistory, execution_id)
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job execution not found",
+        )
+
+    return {
+        "id": job.id,
+        "job_id": job.job_id,
+        "job_name": job.job_name,
+        "status": job.status,
+        "started_at": job.started_at.isoformat(),
+        "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+        "duration_seconds": job.duration_seconds,
+        "items_processed": job.items_processed,
+        "api_calls_made": job.api_calls_made,
+        "tokens_used": job.tokens_used,
+        "triggered_by": job.triggered_by,
+        "triggered_by_user_id": job.triggered_by_user_id,
+        "error_message": job.error_message,
+        "result_data": job.result_data,
+    }
+
+
+@router.get("/jobs/scheduler")
+def get_scheduler_jobs(
+    admin_user: User = Depends(get_admin_user),
+) -> Dict[str, Any]:
+    """Get scheduler definitions with pause/schedule state."""
+    return list_scheduler_jobs()
+
+
+@router.post("/jobs/control/{job_id}")
+def control_job_schedule(
+    job_id: str,
+    action: str,
+    request: Request,
+    admin_user: User = Depends(get_admin_user),
+    session: Session = Depends(get_session),
+) -> Dict[str, Any]:
+    """
+    Control a scheduler job:
+    - pause: temporarily disable schedule
+    - resume: re-enable schedule
+    - stop: alias of pause
+    - trigger: queue immediate run
+    """
+    action = action.lower().strip()
+    if action not in {"pause", "resume", "stop", "trigger"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid action. Supported actions: pause, resume, stop, trigger",
+        )
+
+    result = control_scheduler_job(job_id, action)
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result.get("error", "Failed to control job"),
+        )
+
+    log_admin_action(
+        admin_user=admin_user,
+        action_type=f"control_job_{action}",
+        resource_type="scheduler_job",
+        resource_id=job_id,
+        new_value=str(result),
+        session=session,
+        request=request,
+    )
+    return result
+
+
 @router.post("/jobs/trigger/{job_id}")
 def trigger_job(
     job_id: str,
@@ -253,6 +335,7 @@ def trigger_job(
         - scrape_rss
         - extract_articles
         - analyze_articles
+        - reanalyze_unanalyzed_failed
         - update_frameworks
         - verify_statistics
         - cluster_articles
@@ -264,7 +347,7 @@ def trigger_job(
     from ..jobs.tasks import (
         scrape_job, extract_job, analyze_job, framework_job,
         statistics_verification_job, article_clustering_job,
-        context_generation_job, newsletter_job
+        context_generation_job, newsletter_job, reanalyze_unanalyzed_failed_job
     )
 
     # Map job IDs to functions
@@ -272,6 +355,11 @@ def trigger_job(
         "scrape_rss": ("scrape_job", scrape_job, "Scrape RSS Feeds"),
         "extract_articles": ("extract_job", extract_job, "Extract Article Content"),
         "analyze_articles": ("analyze_job", analyze_job, "AI Article Analysis"),
+        "reanalyze_unanalyzed_failed": (
+            "reanalyze_unanalyzed_failed_job",
+            reanalyze_unanalyzed_failed_job,
+            "Re-analyze Unanalyzed/Failed Articles",
+        ),
         "update_frameworks": ("framework_job", framework_job, "Update Frameworks"),
         "verify_statistics": ("statistics_verification_job", statistics_verification_job, "Verify Statistics"),
         "cluster_articles": ("article_clustering_job", article_clustering_job, "Cluster Articles"),

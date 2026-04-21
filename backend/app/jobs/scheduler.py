@@ -23,6 +23,7 @@ from ..jobs.tasks import (
 )
 from ..config import settings
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -161,3 +162,45 @@ def get_job_status():
         "status": "running",
         "jobs": jobs
     }
+
+
+def list_scheduler_jobs():
+    """Return scheduler job metadata including pause state."""
+    if not scheduler.running:
+        return {"status": "stopped", "jobs": []}
+
+    jobs = []
+    for job in scheduler.get_jobs():
+        jobs.append({
+            "id": job.id,
+            "name": job.name,
+            "next_run": str(job.next_run_time) if job.next_run_time else None,
+            "trigger": str(job.trigger),
+            "is_paused": job.next_run_time is None,
+        })
+    return {"status": "running", "jobs": jobs}
+
+
+def control_scheduler_job(job_id: str, action: str):
+    """
+    Control scheduler jobs. Supported actions: pause, resume, stop.
+    `stop` is an alias of `pause` for schedule control.
+    """
+    if not scheduler.running:
+        return {"success": False, "error": "Scheduler is not running"}
+
+    job = scheduler.get_job(job_id)
+    if not job:
+        return {"success": False, "error": f"Job '{job_id}' not found"}
+
+    if action in {"pause", "stop"}:
+        scheduler.pause_job(job_id)
+        return {"success": True, "job_id": job_id, "action": action, "status": "paused"}
+    if action == "resume":
+        scheduler.resume_job(job_id)
+        return {"success": True, "job_id": job_id, "action": action, "status": "scheduled"}
+    if action == "trigger":
+        scheduler.modify_job(job_id, next_run_time=datetime.utcnow())
+        return {"success": True, "job_id": job_id, "action": action, "status": "trigger_queued"}
+
+    return {"success": False, "error": f"Unsupported action '{action}'"}
