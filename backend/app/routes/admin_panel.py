@@ -373,20 +373,7 @@ def trigger_job(
             detail=f"Invalid job_id. Valid options: {', '.join(job_map.keys())}"
         )
 
-    job_func_name, job_func, job_name = job_map[job_id]
-
-    # Create job execution history record
-    job_history = JobExecutionHistory(
-        job_id=job_id,
-        job_name=job_name,
-        started_at=datetime.utcnow(),
-        status="running",
-        triggered_by="admin",
-        triggered_by_user_id=admin_user.id
-    )
-    session.add(job_history)
-    session.commit()
-    session.refresh(job_history)
+    _, job_func, job_name = job_map[job_id]
 
     # Log admin action
     log_admin_action(
@@ -398,49 +385,37 @@ def trigger_job(
         request=request
     )
 
-    # Execute job and update history
+    started_after = datetime.utcnow()
+    # Execute job (decorator stores execution history and logs)
     try:
-        result = job_func(session=session)
-
-        job_history.status = "success" if result.get("success", True) else "failed"
-        job_history.completed_at = datetime.utcnow()
-        job_history.duration_seconds = (
-            job_history.completed_at - job_history.started_at
-        ).total_seconds()
-        job_history.result_data = str(result)
-
-        # Extract metrics if available
-        if isinstance(result, dict):
-            job_history.items_processed = (
-                result.get("articles_scraped") or
-                result.get("articles_processed") or
-                result.get("articles_analyzed") or
-                result.get("mappings_created")
-            )
-            job_history.tokens_used = result.get("tokens_used")
-
+        result = job_func(
+            session=session,
+            triggered_by="admin",
+            triggered_by_user_id=admin_user.id,
+        )
     except Exception as e:
-        job_history.status = "failed"
-        job_history.completed_at = datetime.utcnow()
-        job_history.duration_seconds = (
-            job_history.completed_at - job_history.started_at
-        ).total_seconds()
-        job_history.error_message = str(e)
         logger.error(f"Job {job_id} failed: {e}", exc_info=True)
+        result = {"success": False, "error": str(e)}
 
-    session.add(job_history)
-    session.commit()
+    execution = session.exec(
+        select(JobExecutionHistory)
+        .where(JobExecutionHistory.job_id == job_id)
+        .where(JobExecutionHistory.triggered_by == "admin")
+        .where(JobExecutionHistory.triggered_by_user_id == admin_user.id)
+        .where(JobExecutionHistory.started_at >= started_after - timedelta(seconds=2))
+        .order_by(JobExecutionHistory.started_at.desc())
+    ).first()
 
     return {
         "status": "completed",
         "job_id": job_id,
         "job_name": job_name,
-        "execution_id": job_history.id,
+        "execution_id": execution.id if execution else None,
         "result": {
-            "status": job_history.status,
-            "duration_seconds": job_history.duration_seconds,
-            "items_processed": job_history.items_processed,
-            "error_message": job_history.error_message
+            "status": execution.status if execution else ("success" if result.get("success") else "failed"),
+            "duration_seconds": execution.duration_seconds if execution else None,
+            "items_processed": execution.items_processed if execution else None,
+            "error_message": execution.error_message if execution else result.get("error"),
         }
     }
 

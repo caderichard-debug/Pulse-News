@@ -12,12 +12,30 @@ from ..services.article_extractor import process_pending_articles
 from ..models import JobExecutionHistory
 from datetime import datetime
 import logging
+import io
 from functools import wraps
 from typing import Callable, Dict, Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 
 logger = logging.getLogger(__name__)
+
+
+class _JobLogCaptureHandler(logging.Handler):
+    """Capture log lines for a single job execution."""
+
+    def __init__(self):
+        super().__init__()
+        self._buffer = io.StringIO()
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            self._buffer.write(self.format(record) + "\n")
+        except Exception:
+            pass
+
+    def get_value(self) -> str:
+        return self._buffer.getvalue()
 
 
 def track_job_execution(job_id: str, job_name: str):
@@ -32,6 +50,8 @@ def track_job_execution(job_id: str, job_name: str):
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(session: Session = None, *args, **kwargs) -> Dict[str, Any]:
+            triggered_by = kwargs.pop("triggered_by", "scheduler")
+            triggered_by_user_id = kwargs.pop("triggered_by_user_id", None)
             # Use PostgreSQL advisory lock to prevent concurrent executions
             # Convert job_id string to integer hash for advisory lock
             lock_id = hash(job_id) % (2**31)  # Keep within PostgreSQL bigint range
@@ -74,7 +94,8 @@ def track_job_execution(job_id: str, job_name: str):
                         job_name=job_name,
                         started_at=datetime.utcnow(),
                         status="running",
-                        triggered_by="scheduler"
+                        triggered_by=triggered_by,
+                        triggered_by_user_id=triggered_by_user_id,
                     )
                     lock_session.add(history)
                     lock_session.commit()
@@ -86,6 +107,13 @@ def track_job_execution(job_id: str, job_name: str):
                     lock_session.commit()
 
             # Execute the job
+            capture_handler = _JobLogCaptureHandler()
+            capture_handler.setLevel(logging.INFO)
+            capture_handler.setFormatter(
+                logging.Formatter("%(asctime)s %(levelname)s [%(name)s] %(message)s")
+            )
+            root_logger = logging.getLogger()
+            root_logger.addHandler(capture_handler)
             try:
                 result = func(session=session, *args, **kwargs)
 
@@ -97,7 +125,7 @@ def track_job_execution(job_id: str, job_name: str):
                     history.duration_seconds = (
                         history.completed_at - history.started_at
                     ).total_seconds()
-                    history.result_data = str(result)
+                    history.result_data = capture_handler.get_value() or str(result)
 
                     # Extract metrics from result
                     if isinstance(result, dict):
@@ -127,11 +155,14 @@ def track_job_execution(job_id: str, job_name: str):
                         history.completed_at - history.started_at
                     ).total_seconds()
                     history.error_message = str(e)
+                    history.result_data = capture_handler.get_value()
                     history_session.add(history)
                     history_session.commit()
 
                 # Re-raise the exception
                 raise
+            finally:
+                root_logger.removeHandler(capture_handler)
 
         return wrapper
     return decorator

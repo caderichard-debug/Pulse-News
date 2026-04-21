@@ -30,13 +30,27 @@ type Stats = {
   views_changed?: number;
 };
 
-type SentimentApiPoint = { date: string; values?: { Left?: number; Center?: number; Right?: number } };
+type SentimentApiPoint = {
+  date: string;
+  values?: { Left?: number; Center?: number; Right?: number };
+};
 type BiasApiPoint = { week: string; left: number; center: number; right: number };
+type FrameworkGlossaryItem = {
+  id: number;
+  name: string;
+  description: string;
+  axis_description: string;
+  left_position: string;
+  right_position: string;
+  article_count: number;
+  is_seed: boolean;
+};
 
 function AnalyticsPage() {
   const [stats, setStats] = useState<Stats>({});
   const [sentiment, setSentiment] = useState<SentimentPoint[]>([]);
   const [bias, setBias] = useState<BiasBucket[]>([]);
+  const [frameworks, setFrameworks] = useState<FrameworkGlossaryItem[]>([]);
 
   useEffect(() => {
     const errMsg = (err: unknown, fallback: string) =>
@@ -92,6 +106,13 @@ function AnalyticsPage() {
         toast.error(errMsg(err, "Could not load bias distribution"));
         setBias([]);
       });
+
+    api<FrameworkGlossaryItem[]>("/analytics/frameworks/glossary")
+      .then((items) => setFrameworks(items || []))
+      .catch((err) => {
+        toast.error(errMsg(err, "Could not load framework glossary"));
+        setFrameworks([]);
+      });
   }, []);
 
   return (
@@ -121,15 +142,36 @@ function AnalyticsPage() {
                   color: "var(--popover-foreground)",
                 }}
               />
-              <Line type="monotone" dataKey="positive" stroke="var(--sent-pos)" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="neutral" stroke="var(--sent-neu)" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="negative" stroke="var(--sent-neg)" strokeWidth={2} dot={false} />
+              <Line
+                type="monotone"
+                dataKey="positive"
+                stroke="var(--sent-pos)"
+                strokeWidth={2}
+                dot={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="neutral"
+                stroke="var(--sent-neu)"
+                strokeWidth={2}
+                dot={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="negative"
+                stroke="var(--sent-neg)"
+                strokeWidth={2}
+                dot={false}
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </Section>
 
-      <Section title="Political lean distribution" subtitle="Where the stories you read sit on the spectrum">
+      <Section
+        title="Political lean distribution"
+        subtitle="Where the stories you read sit on the spectrum"
+      >
         <div className="h-72">
           <ResponsiveContainer>
             <BarChart data={bias}>
@@ -157,6 +199,48 @@ function AnalyticsPage() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+        </div>
+      </Section>
+
+      <Section
+        title="Ethical frameworks explained"
+        subtitle="How Pulse maps stories to the core debates that shape policy and public discourse"
+      >
+        <div className="space-y-3">
+          {frameworks.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No framework glossary entries are available yet.
+            </p>
+          ) : (
+            frameworks.map((framework) => (
+              <details
+                key={framework.id}
+                className="rounded-md border border-border bg-background px-4 py-3"
+              >
+                <summary className="cursor-pointer list-none font-medium">
+                  {framework.name}
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    ({framework.article_count} mapped articles)
+                  </span>
+                </summary>
+                <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                  <p>{framework.description}</p>
+                  <p>
+                    <span className="font-medium text-foreground">Debate axis:</span>{" "}
+                    {framework.axis_description}
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">Left position:</span>{" "}
+                    {framework.left_position}
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">Right position:</span>{" "}
+                    {framework.right_position}
+                  </p>
+                </div>
+              </details>
+            ))
+          )}
         </div>
       </Section>
     </div>

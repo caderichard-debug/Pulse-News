@@ -32,6 +32,19 @@ type AdminJobsResponse = {
   jobs: AdminJob[];
 };
 
+type JobExecutionLog = {
+  id: number;
+  job_id: string;
+  job_name: string;
+  status: string;
+  started_at: string;
+  completed_at?: string | null;
+  duration_seconds?: number | null;
+  items_processed?: number | null;
+  error_message?: string | null;
+  result_data?: string | null;
+};
+
 type SchedulerJob = {
   id: string;
   name: string;
@@ -111,7 +124,6 @@ const JOB_TRIGGER_IDS = [
 
 export const Route = createFileRoute("/_app/admin")<{
   tab?: AdminTab;
-  logId?: number;
 }>({
   validateSearch: (search) => {
     const tab = search.tab;
@@ -125,13 +137,7 @@ export const Route = createFileRoute("/_app/admin")<{
     ) {
       return { tab };
     }
-    const logId =
-      typeof search.logId === "number"
-        ? search.logId
-        : typeof search.logId === "string" && search.logId.trim() !== ""
-          ? Number.parseInt(search.logId, 10)
-          : undefined;
-    return { tab: "dashboard" as AdminTab, logId: Number.isNaN(logId) ? undefined : logId };
+    return { tab: "dashboard" as AdminTab };
   },
   head: () => ({ meta: [{ title: "Admin Dashboard — Pulse" }] }),
   component: AdminPage,
@@ -142,7 +148,6 @@ function AdminPage() {
   const navigate = Route.useNavigate();
   const { user } = useAuth();
   const tab = (search.tab ?? "dashboard") as AdminTab;
-  const selectedLogId = search.logId;
   const [dashboard, setDashboard] = useState<AdminDashboardResponse | null>(null);
   const [jobs, setJobs] = useState<AdminJob[]>([]);
   const [schedulerJobs, setSchedulerJobs] = useState<SchedulerJob[]>([]);
@@ -152,6 +157,9 @@ function AdminPage() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [expandedJobId, setExpandedJobId] = useState<number | null>(null);
+  const [jobLogMap, setJobLogMap] = useState<Record<number, JobExecutionLog>>({});
+  const [jobLogLoadingId, setJobLogLoadingId] = useState<number | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -244,6 +252,25 @@ function AdminPage() {
     }
   }
 
+  async function toggleJobLog(jobId: number) {
+    if (expandedJobId === jobId) {
+      setExpandedJobId(null);
+      return;
+    }
+    setExpandedJobId(jobId);
+    if (jobLogMap[jobId]) return;
+
+    try {
+      setJobLogLoadingId(jobId);
+      const log = await api<JobExecutionLog>(`/admin-panel/jobs/history/${jobId}`);
+      setJobLogMap((prev) => ({ ...prev, [jobId]: log }));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not load job log");
+    } finally {
+      setJobLogLoadingId(null);
+    }
+  }
+
   async function toggleAdmin(target: AdminUser) {
     try {
       await api(`/admin-panel/users/${target.id}/admin`, {
@@ -332,7 +359,7 @@ function AdminPage() {
                       <div>
                         <Link
                           to="/admin"
-                          search={{ tab: "jobs", logId: job.id }}
+                          search={{ tab: "jobs" }}
                           className="font-medium hover:underline"
                         >
                           {job.job_name}
@@ -418,53 +445,54 @@ function AdminPage() {
               </div>
               <div className="mt-6 divide-y divide-border">
                 {jobs.map((job) => (
-                  <div key={job.id} className="py-3 flex items-center justify-between gap-3">
-                    <div>
-                      <Link
-                        to="/admin"
-                        search={{ tab: "jobs", logId: job.id }}
-                        className="font-medium hover:underline"
-                      >
-                        {job.job_name}
-                      </Link>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(job.started_at).toLocaleString()}{" "}
-                        {job.duration_seconds ? `• ${job.duration_seconds.toFixed(1)}s` : ""}
-                      </p>
+                  <div key={job.id} className="py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => toggleJobLog(job.id)}
+                          className="font-medium hover:underline text-left"
+                        >
+                          {job.job_name}
+                        </button>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(job.started_at).toLocaleString()}{" "}
+                          {job.duration_seconds ? `• ${job.duration_seconds.toFixed(1)}s` : ""}
+                        </p>
+                      </div>
+                      <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                        {job.status}
+                      </span>
                     </div>
-                    <span className="text-xs uppercase tracking-wider text-muted-foreground">
-                      {job.status}
-                    </span>
+
+                    {expandedJobId === job.id && (
+                      <div className="mt-3 ml-2 border-l border-border pl-3">
+                        {jobLogLoadingId === job.id ? (
+                          <p className="text-xs text-muted-foreground">Loading log…</p>
+                        ) : (
+                          <>
+                            {jobLogMap[job.id]?.error_message && (
+                              <pre className="text-xs whitespace-pre-wrap rounded-md border border-border p-3 bg-card">
+                                {jobLogMap[job.id]?.error_message}
+                              </pre>
+                            )}
+                            {jobLogMap[job.id]?.result_data ? (
+                              <pre className="mt-2 text-xs whitespace-pre-wrap rounded-md border border-border p-3 bg-card max-h-72 overflow-auto">
+                                {jobLogMap[job.id]?.result_data}
+                              </pre>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">No stored log output.</p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
                 {jobs.length === 0 && (
                   <p className="py-3 text-sm text-muted-foreground">No job history found.</p>
                 )}
               </div>
-              {selectedLogId ? (
-                <div className="mt-6 border border-border rounded-lg p-4 bg-background/50">
-                  {jobs
-                    .filter((job) => job.id === selectedLogId)
-                    .map((job) => (
-                      <div key={job.id}>
-                        <p className="font-medium">Execution log: {job.job_name}</p>
-                        <p className="mt-2 text-xs text-muted-foreground">
-                          status {job.status} • started {new Date(job.started_at).toLocaleString()}
-                        </p>
-                        {job.error_message && (
-                          <pre className="mt-3 text-xs whitespace-pre-wrap rounded-md border border-border p-3 bg-card">
-                            {job.error_message}
-                          </pre>
-                        )}
-                        {job.result_data && (
-                          <pre className="mt-3 text-xs whitespace-pre-wrap rounded-md border border-border p-3 bg-card">
-                            {job.result_data}
-                          </pre>
-                        )}
-                      </div>
-                    ))}
-                </div>
-              ) : null}
             </section>
           )}
 
