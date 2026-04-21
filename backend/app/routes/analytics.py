@@ -3,11 +3,13 @@ Analytics routes for dashboard data visualization.
 """
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import or_
 from sqlmodel import Session, select, func
 from ..database import get_session
 from ..models import (
     User, Article, ArticleAnalysis, ArticleFrameworkLink,
-    Framework, Topic, UserTopicPreference, PoliticalLean
+    Framework, UserTopicPreference,
+    UserSourceSubscription, ArticleTopicLink,
 )
 from ..routes.auth import get_current_user
 from pydantic import BaseModel
@@ -17,6 +19,40 @@ import logging
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 logger = logging.getLogger(__name__)
+
+
+def _user_reading_scope_filter(session: Session, user: User):
+    """
+    Articles that match the user's subscribed sources OR preferred topics (via ArticleTopicLink).
+    Returns None if the user has no subscriptions and no topic preferences (caller treats as no filter).
+    """
+    source_ids = session.exec(
+        select(UserSourceSubscription.source_id).where(
+            UserSourceSubscription.user_id == user.id,
+            UserSourceSubscription.subscribed == True,
+        )
+    ).all()
+
+    topic_article_ids = session.exec(
+        select(ArticleTopicLink.article_id)
+        .join(
+            UserTopicPreference,
+            UserTopicPreference.topic_id == ArticleTopicLink.topic_id,
+        )
+        .where(UserTopicPreference.user_id == user.id)
+    ).all()
+
+    clauses = []
+    if source_ids:
+        clauses.append(Article.source_id.in_(source_ids))
+    if topic_article_ids:
+        clauses.append(Article.id.in_(topic_article_ids))
+
+    if not clauses:
+        return None
+    if len(clauses) == 1:
+        return clauses[0]
+    return or_(*clauses)
 
 
 # Response Models
@@ -52,6 +88,11 @@ async def get_sentiment_over_time(
     current_user: User = Depends(get_current_user),
     days: int = Query(default=30, ge=1, le=90),
     topic_ids: Optional[str] = Query(default=None, description="Comma-separated topic IDs (currently unused)"),
+    scope: str = Query(
+        default="user",
+        description="user: articles from subscribed sources / preferred topics; global: all analyzed articles",
+        pattern="^(user|global)$",
+    ),
     session: Session = Depends(get_session)
 ):
     """
@@ -68,6 +109,11 @@ async def get_sentiment_over_time(
 
     Note: Currently groups by political lean instead of topics since articles
     don't have topic_category assigned yet.
+
+    With ``scope=user``, articles are limited to subscribed sources and/or
+    preferred topics (via article–topic links). If the user has neither, the
+    result is empty (not global aggregates). Use ``scope=global`` for the
+    previous all-articles behavior.
     """
     # Calculate date range
     end_date = datetime.utcnow().date()
@@ -80,7 +126,14 @@ async def get_sentiment_over_time(
         .where(Article.published_at >= start_date)
     )
 
-    results = session.exec(query).all()
+    if scope == "user":
+        filt = _user_reading_scope_filter(session, current_user)
+        if filt is None:
+            results = []
+        else:
+            results = session.exec(query.where(filt)).all()
+    else:
+        results = session.exec(query).all()
 
     # Group by date and political lean in Python
     result_data = {}
@@ -116,6 +169,11 @@ async def get_sentiment_over_time(
 async def get_bias_distribution(
     current_user: User = Depends(get_current_user),
     weeks: int = Query(default=4, ge=1, le=12),
+    scope: str = Query(
+        default="user",
+        description="user: articles from subscribed sources / preferred topics; global: all analyzed articles",
+        pattern="^(user|global)$",
+    ),
     session: Session = Depends(get_session)
 ):
     """
@@ -131,6 +189,9 @@ async def get_bias_distribution(
       },
       ...
     ]
+
+    ``scope=user`` uses the same reading scope as sentiment-over-time; empty
+    when the user has no subscriptions and no topic preferences.
     """
     # Calculate date range
     end_date = datetime.utcnow().date()
@@ -143,7 +204,14 @@ async def get_bias_distribution(
         .where(Article.published_at >= start_date)
     )
 
-    results = session.exec(query).all()
+    if scope == "user":
+        filt = _user_reading_scope_filter(session, current_user)
+        if filt is None:
+            results = []
+        else:
+            results = session.exec(query.where(filt)).all()
+    else:
+        results = session.exec(query).all()
 
     # Group by week in Python (works with SQLite and PostgreSQL)
     weekly_data = {}

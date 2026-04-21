@@ -12,7 +12,8 @@ import {
   Bar,
   Cell,
 } from "recharts";
-import { api } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/analytics")({
   head: () => ({ meta: [{ title: "Dashboard — Pulse" }] }),
@@ -38,9 +39,17 @@ function AnalyticsPage() {
   const [bias, setBias] = useState<BiasBucket[]>([]);
 
   useEffect(() => {
-    api<Stats>("/analytics/user-stats").then(setStats).catch(() => {});
+    const errMsg = (err: unknown, fallback: string) =>
+      err instanceof ApiError ? err.message : fallback;
+
+    api<Stats>("/analytics/user-stats")
+      .then(setStats)
+      .catch((err) => {
+        toast.error(errMsg(err, "Could not load dashboard stats"));
+      });
+
     api<SentimentApiPoint[]>("/analytics/sentiment-over-time", {
-      query: { days: 30 },
+      query: { days: 30, scope: "user" },
     })
       .then((r) =>
         setSentiment(
@@ -52,9 +61,13 @@ function AnalyticsPage() {
           })),
         ),
       )
-      .catch(() => {});
+      .catch((err) => {
+        toast.error(errMsg(err, "Could not load sentiment over time"));
+        setSentiment([]);
+      });
+
     api<BiasApiPoint[]>("/analytics/bias-distribution", {
-      query: { weeks: 4 },
+      query: { weeks: 4, scope: "user" },
     })
       .then((rows) => {
         if (!rows || rows.length === 0) {
@@ -75,7 +88,10 @@ function AnalyticsPage() {
           { lean: "Right", count: Number((totals.right / rows.length).toFixed(1)) },
         ]);
       })
-      .catch(() => {});
+      .catch((err) => {
+        toast.error(errMsg(err, "Could not load bias distribution"));
+        setBias([]);
+      });
   }, []);
 
   return (
