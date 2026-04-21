@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from .database import create_db_and_tables
 from .jobs.scheduler import start_scheduler, stop_scheduler
-from .routes import admin, auth, preferences, articles, test_email, analytics, feed, sources, admin_panel, password_reset, analyze, favorites, oauth, challenge
+from .routes import admin, auth, preferences, articles, test_email, analytics, feed, sources, admin_panel, password_reset, analyze, favorites, oauth, challenge, newsletter_links
 import logging
 from .config import settings
 
@@ -101,6 +101,7 @@ app.include_router(sources.router)
 app.include_router(analyze.router)  # Article URL analysis
 app.include_router(favorites.router)  # Favorites/bookmarking
 app.include_router(challenge.router)  # Weekly challenge system
+app.include_router(newsletter_links.router)  # Signed newsletter unsubscribe / preferences links
 
 
 @app.get("/")

@@ -3,7 +3,7 @@ Framework generation and article mapping service.
 This is the "competitive edge" - mapping articles to underlying ethical debates.
 """
 
-from sqlmodel import Session, select
+from sqlmodel import Session, select, func
 from ..models import (
     Article, ArticleAnalysis, Framework, ArticleFrameworkLink
 )
@@ -15,6 +15,22 @@ import logging
 import json
 
 logger = logging.getLogger(__name__)
+
+
+def refresh_framework_article_counts(session: Session) -> None:
+    """
+    Recompute Framework.article_count from ArticleFrameworkLink rows.
+    Call after mapping commits or as a maintenance reconcile.
+    """
+    frameworks = session.exec(select(Framework)).all()
+    for fw in frameworks:
+        cnt = session.exec(
+            select(func.count())
+            .select_from(ArticleFrameworkLink)
+            .where(ArticleFrameworkLink.framework_id == fw.id)
+        ).one()
+        fw.article_count = int(cnt or 0)
+        session.add(fw)
 
 
 def map_articles_to_frameworks(
@@ -144,8 +160,12 @@ def map_articles_to_frameworks(
             logger.error(f"Error mapping article {article.id}: {e}")
             continue
 
+    session.flush()
+    refresh_framework_article_counts(session)
     session.commit()
-    logger.info(f"Created {mappings_created} framework mappings")
+    logger.info(
+        f"Created {mappings_created} framework mappings; refreshed framework article_count"
+    )
 
     return mappings_created
 

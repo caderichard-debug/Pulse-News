@@ -12,6 +12,7 @@ from ..models import (
 )
 from ..database import engine
 from ..config import settings
+from ..utils.newsletter_token import create_newsletter_token
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 import logging
@@ -295,6 +296,9 @@ def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict
 
     # Prepare template data
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    backend_base = settings.backend_url.rstrip("/")
+    prefs_token = create_newsletter_token(user.id, "preferences")
+    unsub_token = create_newsletter_token(user.id, "unsubscribe")
 
     # Add Friday challenge section if applicable
     challenge = None
@@ -318,10 +322,10 @@ def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict
         ],
         "articles": [],
         "challenge": challenge,  # Will be None except on Fridays for opted-in users
-        "preferences_url": f"{frontend_url}/preferences?token={user.email}",  # TODO: Add real token
+        "preferences_url": f"{backend_base}/newsletter/preferences?token={prefs_token}",
         "website_url": frontend_url,
         "documentation_url": os.getenv("DOCUMENTATION_URL", "https://docs.pulsenews.app"),
-        "unsubscribe_url": f"{frontend_url}/unsubscribe?token={user.email}"  # TODO: Add real token
+        "unsubscribe_url": f"{backend_base}/newsletter/unsubscribe?token={unsub_token}",
     }
 
     # Add article data with enhancements
