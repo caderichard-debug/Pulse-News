@@ -29,6 +29,9 @@ openai_api = OpenAI(api_key=settings.openai_api_key) if settings.openai_api_key 
 
 logger = logging.getLogger(__name__)
 
+# Cap per article to keep batch analysis and verification bounded.
+MAX_STATISTICS_PER_ARTICLE = 5
+
 
 STATISTICS_EXTRACTION_PROMPT = """Analyze this article and extract ALL quantifiable claims, statistics, and factual assertions.
 
@@ -146,6 +149,13 @@ def extract_statistics_from_article(
         if len(statistics) == 0:
             logger.info(f"[EXTRACT] Article {article.id} - No statistics found by AI")
             return []
+
+        if len(statistics) > MAX_STATISTICS_PER_ARTICLE:
+            logger.info(
+                f"[EXTRACT] Article {article.id} - Capping statistics "
+                f"from {len(statistics)} to {MAX_STATISTICS_PER_ARTICLE}"
+            )
+            statistics = statistics[:MAX_STATISTICS_PER_ARTICLE]
 
         # Create StatisticVerification objects
         verifications = []
@@ -409,6 +419,9 @@ def process_article_statistics(
     if any(v.verification_status == VerificationStatus.VERIFIED for v in verifications):
         analysis.stats_verification_status = VerificationStatus.VERIFIED
     analysis.stats_verification_date = datetime.utcnow()
+    analysis.stats_verified = any(
+        v.verification_status == VerificationStatus.VERIFIED for v in verifications
+    )
 
     session.commit()
 

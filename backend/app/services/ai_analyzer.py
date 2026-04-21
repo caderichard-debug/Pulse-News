@@ -6,6 +6,7 @@ Generates summaries, sentiment analysis, bias detection, and extracts key statis
 from sqlmodel import Session, select
 from ..models import Article, ArticleAnalysis, ProcessingStatus, PoliticalLean, Topic, ArticleTopicLink
 from ..database import engine
+from ..services.statistics_verifier import process_article_statistics
 from ..utils.openai_client import openai_client
 from datetime import datetime
 from typing import List, Optional
@@ -133,7 +134,7 @@ def analyze_articles_batch(session: Session, batch_size: int = 5) -> int:
                 political_lean=political_lean,
                 bias_indicators=analysis_data.get('bias_indicators'),
                 key_stats=str(analysis_data.get('key_stats')) if analysis_data.get('key_stats') else None,
-                stats_verified=None,  # TODO: Implement stats verification
+                stats_verified=False,
                 processing_cost=0.002,  # Approximate cost per article
                 tokens_used=None,  # We don't track individual tokens in batch
                 processed_at=datetime.utcnow()
@@ -154,6 +155,19 @@ def analyze_articles_batch(session: Session, batch_size: int = 5) -> int:
     # Commit all analyses
     session.commit()
     logger.info(f"Successfully analyzed {analyzed_count}/{len(articles_to_analyze)} articles")
+
+    for article in articles_to_analyze:
+        try:
+            with Session(engine) as stat_session:
+                art = stat_session.get(Article, article.id)
+                if art:
+                    process_article_statistics(art, stat_session)
+        except Exception as e:
+            logger.warning(
+                "Post-analysis statistics pipeline failed for article %s: %s",
+                article.id,
+                e,
+            )
 
     return analyzed_count
 
