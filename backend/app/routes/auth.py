@@ -2,7 +2,7 @@
 Authentication routes: user registration, login, and email verification.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlmodel import Session, select
 from ..database import get_session
@@ -15,6 +15,7 @@ from ..utils.auth import (
     decode_access_token
 )
 from ..services.email_service import send_verification_email, send_welcome_email
+from ..utils.rate_limit import enforce_auth_rate_limit
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from datetime import datetime
@@ -125,9 +126,11 @@ def get_optional_user(
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 def register(
+    request_obj: Request,
     request: RegisterRequest,
     session: Session = Depends(get_session)
 ):
+    enforce_auth_rate_limit(request_obj, "auth_register")
     """
     Register a new user account.
 
@@ -223,9 +226,11 @@ def register(
 
 @router.post("/login", response_model=AuthResponse)
 def login(
+    request_obj: Request,
     request: LoginRequest,
     session: Session = Depends(get_session)
 ):
+    enforce_auth_rate_limit(request_obj, "auth_login")
     """
     Login with email and password.
 
@@ -341,8 +346,10 @@ def verify_email(
 
 @router.post("/resend-verification-email")
 def resend_verification_email(
+    request_obj: Request,
     current_user: User = Depends(get_current_user)
 ):
+    enforce_auth_rate_limit(request_obj, "auth_resend_verification")
     """
     Resend email verification link to current user.
 

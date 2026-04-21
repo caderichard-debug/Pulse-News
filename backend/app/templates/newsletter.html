@@ -3,371 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pulse Newsletter - {{ date }}</title>
+    <title>Pulse Digest - {{ date }}</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            background-color: #ffffff;
-            border-radius: 8px;
-            padding: 30px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .header {
-            text-align: center;
-            border-bottom: 3px solid #4A90E2;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-        }
-        .header h1 {
-            margin: 0;
-            color: #4A90E2;
-            font-size: 32px;
-        }
-        .header p {
-            margin: 10px 0 0 0;
-            color: #666;
-            font-size: 14px;
-        }
-        .intro {
-            margin-bottom: 30px;
-            font-size: 16px;
-            color: #555;
-        }
-        .section {
-            margin-bottom: 40px;
-        }
-        .section-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: #2C3E50;
-            margin-bottom: 15px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #E8E8E8;
-        }
-        .article {
-            margin-bottom: 25px;
-            padding: 15px;
-            background-color: #FAFAFA;
-            border-left: 4px solid #4A90E2;
-            border-radius: 4px;
-        }
-        .article-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #2C3E50;
-            margin: 0 0 8px 0;
-        }
-        .article-title a {
-            color: #2C3E50;
-            text-decoration: none;
-        }
-        .article-title a:hover {
-            color: #4A90E2;
-        }
-        .article-meta {
-            font-size: 12px;
-            color: #888;
-            margin-bottom: 10px;
-        }
-        .article-source {
-            font-weight: 600;
-            color: #666;
-        }
-        .article-lean {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-size: 11px;
-            font-weight: 600;
-            margin-left: 8px;
-        }
-        .lean-left {
-            background-color: #E3F2FD;
-            color: #1976D2;
-        }
-        .lean-center {
-            background-color: #F3E5F5;
-            color: #7B1FA2;
-        }
-        .lean-right {
-            background-color: #FFEBEE;
-            color: #C62828;
-        }
-        .article-summary {
-            font-size: 14px;
-            line-height: 1.6;
-            color: #555;
-            margin-bottom: 10px;
-        }
-        .article-stats {
-            font-size: 13px;
-            color: #666;
-            background-color: #FFF9C4;
-            padding: 8px 12px;
-            border-radius: 4px;
-            margin-top: 10px;
-        }
-        .article-stats strong {
-            color: #F57C00;
-        }
-        .statistics {
-            margin-top: 12px;
-            padding: 10px;
-            background-color: #E3F2FD;
-            border-radius: 4px;
-        }
-        .statistic {
-            margin: 6px 0;
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-        }
-        .verified-badge {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 10px;
-            font-weight: 600;
-            margin-left: 8px;
-        }
-        .verified {
-            background-color: #C8E6C9;
-            color: #2E7D32;
-        }
-        .unverified {
-            background-color: #FFE0B2;
-            color: #E65100;
-        }
-        .context-toggle {
-            display: block;
-            margin-top: 10px;
-            padding: 8px 12px;
-            background-color: #E1F5FE;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 13px;
-            color: #0277BD;
-            text-decoration: none;
-            border: 1px solid #B3E5FC;
-        }
-        .context-toggle:hover {
-            background-color: #B3E5FC;
-        }
-        .context-content {
-            margin-top: 10px;
-            padding: 12px;
-            background-color: #F5F5F5;
-            border-radius: 4px;
-            font-size: 13px;
-            border-left: 3px solid #0277BD;
-        }
-        .context-header {
-            font-weight: 600;
-            color: #0277BD;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-        .context-section {
-            margin-bottom: 10px;
-        }
-        .context-section strong {
-            color: #1976D2;
-        }
-        .cluster-info {
-            margin-top: 12px;
-            padding: 10px;
-            background-color: #F3E5F5;
-            border-radius: 4px;
-            font-size: 13px;
-        }
-        .cluster-sources {
-            margin-top: 8px;
-        }
-        .cluster-source {
-            display: inline-block;
-            margin-right: 10px;
-            color: #7B1FA2;
-        }
-        .framework {
-            margin-bottom: 30px;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 8px;
-        }
-        .framework-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin: 0 0 8px 0;
-        }
-        .framework-description {
-            font-size: 14px;
-            margin-bottom: 15px;
-            opacity: 0.95;
-        }
-        .framework-axis {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 15px;
-            font-size: 13px;
-        }
-        .framework-axis-bar {
-            flex: 1;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 4px;
-            margin: 0 15px;
-            position: relative;
-        }
-        .framework-indicator {
-            position: absolute;
-            top: -4px;
-            width: 16px;
-            height: 16px;
-            background: white;
-            border-radius: 50%;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            transform: translateX(-50%);
-        }
-        .framework-gradient {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(to right, #FF5252, #FFFFFF, #2196F3);
-            border-radius: 4px;
-            opacity: 0.6;
-        }
-        .framework-related {
-            font-size: 13px;
-            opacity: 0.9;
-        }
-        .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 2px solid #E8E8E8;
-            text-align: center;
-            font-size: 12px;
-            color: #888;
-        }
-        .footer a {
-            color: #4A90E2;
-            text-decoration: none;
-        }
-        .footer a:hover {
-            text-decoration: underline;
-        }
-        .unsubscribe {
-            margin-top: 15px;
-            font-size: 11px;
-        }
-
-        /* Challenge Section Styles */
-        .challenge-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 12px;
-            padding: 30px;
-            margin-bottom: 30px;
-            color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
-        }
-        .challenge-section .section-title {
-            color: white;
-            margin-bottom: 15px;
-            font-size: 22px;
-        }
-        .challenge-intro {
-            margin-bottom: 25px;
-            font-size: 16px;
-            line-height: 1.6;
-        }
-        .challenge-intro em {
-            opacity: 0.9;
-            font-style: italic;
-        }
-        .claims-container {
-            margin-bottom: 25px;
-        }
-        .claim-option {
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 12px;
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-        }
-        .claim-option:hover {
-            background: rgba(255, 255, 255, 0.25);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-        }
-        .claim-number {
-            font-size: 20px;
-            font-weight: bold;
-            color: #FFE082;
-            margin-bottom: 8px;
-        }
-        .claim-text {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 6px;
-            line-height: 1.4;
-        }
-        .claim-type {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.8);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .challenge-cta {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .challenge-button {
-            display: inline-block;
-            background: #FFD54F;
-            color: #333;
-            text-decoration: none;
-            padding: 12px 24px;
-            border-radius: 25px;
-            font-weight: 600;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(255, 213, 79, 0.3);
-        }
-        .challenge-button:hover {
-            background: #FFC107;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255, 213, 79, 0.4);
-        }
-        .challenge-note {
-            text-align: center;
-            opacity: 0.8;
-        }
-        .challenge-note p {
-            margin: 0;
-            font-size: 13px;
-            line-height: 1.4;
-        }
+        body { margin: 0; padding: 0; background: #f5f7fb; color: #111827; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; }
+        .shell { width: 100%; padding: 24px 12px; box-sizing: border-box; }
+        .container { max-width: 680px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden; }
+        .hero { padding: 30px 28px; background: radial-gradient(circle at top left, #4f46e5 0%, #1f2937 70%); color: #ffffff; }
+        .brand { font-size: 28px; font-weight: 700; margin: 0; letter-spacing: -0.02em; }
+        .sub { margin: 8px 0 0; color: #dbeafe; font-size: 14px; }
+        .content { padding: 28px; }
+        .greeting { font-size: 16px; line-height: 1.6; color: #374151; margin: 0 0 18px; }
+        .section-title { margin: 26px 0 14px; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #6b7280; font-weight: 700; }
+        .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; margin-bottom: 14px; background: #ffffff; }
+        .article-title { margin: 0 0 8px; font-size: 18px; line-height: 1.35; }
+        .article-title a { color: #0f172a; text-decoration: none; }
+        .meta { color: #6b7280; font-size: 12px; margin-bottom: 10px; }
+        .summary { color: #374151; font-size: 14px; line-height: 1.65; margin: 0; }
+        .pill { display: inline-block; font-size: 11px; font-weight: 600; color: #4b5563; background: #f3f4f6; padding: 4px 10px; border-radius: 999px; margin-right: 6px; margin-top: 8px; }
+        .accent { border-left: 4px solid #4f46e5; background: #f8fafc; padding: 10px 12px; margin-top: 12px; border-radius: 8px; font-size: 13px; color: #334155; }
+        .stat-line { font-size: 12px; color: #475569; margin-top: 6px; }
+        .challenge { border-radius: 14px; background: linear-gradient(135deg, #4338ca 0%, #111827 100%); color: #ffffff; padding: 22px; }
+        .challenge h3 { margin: 0 0 10px; font-size: 20px; }
+        .claim { border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 12px; margin-top: 10px; font-size: 14px; line-height: 1.5; }
+        .cta-wrap { text-align: center; margin-top: 16px; }
+        .cta { background: #ffffff; color: #111827; text-decoration: none; font-weight: 700; font-size: 14px; border-radius: 999px; padding: 10px 18px; display: inline-block; }
+        .footer { border-top: 1px solid #e5e7eb; margin-top: 28px; padding-top: 18px; color: #6b7280; font-size: 12px; text-align: center; line-height: 1.7; }
+        .footer a { color: #4338ca; text-decoration: none; }
     </style>
 </head>
 <body>
+<div class="shell">
     <div class="container">
-        <div class="header">
-            <h1>⚡ Pulse</h1>
-            <p>Your Daily News Brief - {{ date }}</p>
+        <div class="hero">
+            <p class="brand">Pulse</p>
+            <p class="sub">Personalized briefing for {{ date }}</p>
         </div>
+        <div class="content">
+            <p class="greeting">Hi {{ user_name }}, here are <strong>{{ article_count }}</strong> stories from your selected sources, with perspective and context so you can scan faster and think deeper.</p>
 
         <div class="intro">
             <p>Hello {{ user_name }},</p>
@@ -376,186 +48,67 @@
 
         <!-- Challenge Section (Fridays only) -->
         {% if challenge %}
-        <div class="section challenge-section">
-            <div class="section-title">🤔 Weekly Ethical Challenge</div>
-            <div class="challenge-intro">
-                <p>This week's ethical dilemma. Choose one claim that resonates with you:</p>
-                {% if challenge.description %}
-                <p><em>{{ challenge.description }}</em></p>
-                {% endif %}
-            </div>
-
-            <div class="claims-container">
+        <div class="section-title">Weekly Challenge</div>
+        <div class="challenge">
+            <h3>Choose a claim that resonates with you</h3>
+            {% if challenge.description %}
+                <p style="margin: 0 0 8px; color: #c7d2fe;">{{ challenge.description }}</p>
+            {% endif %}
+            <div>
                 {% for claim in challenge.claims %}
-                <div class="claim-option">
-                    <div class="claim-number">{{ claim.display_order }}.</div>
-                    <div class="claim-text">{{ claim.claim_text }}</div>
-                    <div class="claim-type">{{ claim.claim_type }}</div>
+                <div class="claim">
+                    <strong>{{ claim.display_order }}.</strong> {{ claim.claim_text }}
                 </div>
                 {% endfor %}
             </div>
-
-            <div class="challenge-cta">
-                <a href="{{ website_url }}/challenge/{{ challenge.week_start_date }}"
-                   class="challenge-button"
-                   target="_blank">
-                    Share Your Perspective →
-                </a>
-            </div>
-
-            <div class="challenge-note">
-                <p><small>This challenge helps you explore different ethical viewpoints. Your selection will guide a 7-day series of articles that broaden your perspective.</small></p>
+            <div class="cta-wrap">
+                <a href="{{ website_url }}/challenge/{{ challenge.week_start_date }}" class="cta" target="_blank">Open this week's challenge</a>
             </div>
         </div>
         {% endif %}
 
-        <div class="section">
-            <div class="section-title">📰 Today's Articles</div>
+        <div class="section-title">Today's Articles</div>
             {% for article in articles %}
-            <div class="article">
-                <div class="article-title">
-                    <a href="{{ article.url }}" target="_blank">{{ article.title }}</a>
-                </div>
-                <div class="article-meta">
-                    <span class="article-source">{{ article.source_name }}</span>
-                    <span style="margin-left: 8px;">{{ article.published_at }}</span>
-                </div>
-
-                <!-- Political Lean & Sentiment -->
-                <div style="margin-top: 8px; display: flex; gap: 25px; align-items: center; flex-wrap: wrap;">
-                    {% if article.political_lean %}
-                    <div>
-                        <span style="font-size: 12px; font-weight: 600; color: #666;">Political Lean:</span>
-                        <span class="article-lean lean-{{ article.political_lean|lower }}" style="margin-left: 4px;">
-                            {{ article.political_lean }}
-                        </span>
-                    </div>
-                    {% endif %}
-
-                    {% if article.sentiment_score is not none %}
-                    <div style="font-size: 12px;">
-                        <span style="font-weight: 600; color: #666;">Sentiment:</span>
-                        {% if article.sentiment_score <= -0.3 %}
-                            <span style="color: #D32F2F;">{{ article.sentiment_score|round(2) }}</span>
-                        {% elif article.sentiment_score >= 0.3 %}
-                            <span style="color: #388E3C;">{{ article.sentiment_score|round(2) }}</span>
-                        {% else %}
-                            <span style="color: #616161;">{{ article.sentiment_score|round(2) }}</span>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                </div>
-
-                <!-- Bias Indicators (separate line) -->
-                {% if article.bias_indicators %}
-                <div style="margin-top: 4px; font-size: 12px;">
-                    <span style="font-weight: 600; color: #666;">Bias Indicators:</span>
-                    <span style="color: #F57C00;">{{ article.bias_indicators[:3]|join(', ') }}</span>
-                </div>
+            <div class="card">
+                <h3 class="article-title"><a href="{{ article.url }}" target="_blank">{{ article.title }}</a></h3>
+                <div class="meta">{{ article.source_name }} · {{ article.published_at }}</div>
+                {% if article.political_lean %}
+                    <span class="pill">{{ article.political_lean }}</span>
                 {% endif %}
-
-                <div class="article-summary" style="margin-top: 8px;">{{ article.summary }}</div>
+                {% if article.sentiment_score is not none %}
+                    <span class="pill">Sentiment {{ article.sentiment_score|round(2) }}</span>
+                {% endif %}
+                <p class="summary">{{ article.summary }}</p>
 
                 {% if article.frameworks %}
-                <!-- Ethical Debates Context -->
                 {% for framework in article.frameworks %}
-                <div style="margin-top: 10px; padding: 8px 10px; background-color: #F3E5F5; border-left: 3px solid #7B1FA2; border-radius: 3px; font-size: 12px;">
-                    <div style="font-weight: 600; color: #6A1B9A; margin-bottom: 3px;">⚖️ {{ framework.name }}</div>
-                    <div style="color: #666; font-size: 11px;">{{ framework.explanation }}</div>
+                <div class="accent">
+                    <strong>{{ framework.name }}</strong><br>
+                    {{ framework.explanation }}
                 </div>
                 {% endfor %}
                 {% endif %}
 
-                <!-- Statistics with V2 badges (only show if statistics exist) -->
                 {% if article.statistics and article.statistics|length > 0 %}
-                <div style="margin-top: 15px; padding: 12px; background-color: #FFF9C4; border-left: 4px solid #FBC02D; border-radius: 3px;">
-                    <div style="font-weight: 600; color: #F57F17; margin-bottom: 8px;">📊 Key Statistics</div>
-
+                <div class="accent" style="border-left-color:#f59e0b;">
+                    <strong>Key statistics</strong>
                         {% for stat in article.statistics %}
-                        <div style="margin-bottom: 12px; padding: 10px; background-color: #FFFDE7; border-radius: 4px;">
-                            <!-- Statistic text with context inline -->
-                            <div style="font-size: 13px; color: #333; margin-bottom: 6px; font-weight: 500;">
-                                {{ stat.text }}
-                                <span style="font-size: 11px; color: #666; font-style: italic; font-weight: normal; margin-left: 6px;">
-                                    {% if stat.context %}
-                                        ({{ stat.context }})
-                                    {% else %}
-                                        (Statistical claim from the article)
-                                    {% endif %}
-                                </span>
-                            </div>
-
-                            <!-- V2 Verification badge - single line with labels -->
-                            <div style="font-size: 11px; display: flex; align-items: center; flex-wrap: nowrap;">
-                                <!-- Status icon -->
-                                <span style="margin-right: 8px;">
-                                    {% if stat.status == 'verified' %}
-                                        <span style="color: #2E7D32; font-size: 14px;">✓</span>
-                                    {% elif stat.status == 'disputed' %}
-                                        <span style="color: #F57C00; font-size: 14px;">⚠️</span>
-                                    {% elif stat.status == 'false' %}
-                                        <span style="color: #C62828; font-size: 14px;">❌</span>
-                                    {% else %}
-                                        <span style="color: #757575; font-size: 14px;">⏳</span>
-                                    {% endif %}
-                                </span>
-
-                                <!-- Source name with link -->
-                                <span style="margin-right: 8px;">
-                                    {% if stat.source_name %}
-                                        <span style="color: #1976D2;">
-                                            {% if stat.source_url %}
-                                                <a href="{{ stat.source_url }}" style="color: #1976D2; text-decoration: none;">
-                                                    {{ stat.source_name }}
-                                                </a>
-                                            {% else %}
-                                                {{ stat.source_name }}
-                                            {% endif %}
-                                        </span>
-                                    {% else %}
-                                        <span style="color: #9E9E9E; font-style: italic;">Source not traced</span>
-                                    {% endif %}
-                                </span>
-
-                                <!-- Credibility rating (numerical) -->
-                                {% if stat.source_credibility_score %}
-                                    {% set rating = (stat.source_credibility_score * 5) | round(1) %}
-                                    <span style="color: #424242; margin-right: 8px;">
-                                        Credibility: <strong>{{ rating }}/5</strong>
-                                    </span>
-                                {% endif %}
-
-                                <!-- Confidence percentage with label -->
-                                {% if stat.confidence %}
-                                    <span style="color: #424242; font-weight: 600; margin-left: auto;">
-                                        Confidence: {{ (stat.confidence * 100) | round(0) | int }}%
-                                    </span>
-                                {% endif %}
-                            </div>
-
-                            <!-- Fact-check details (if available) -->
-                            {% if stat.fact_check_details %}
-                            <div style="margin-top: 6px; padding: 6px; background-color: #E3F2FD; border-left: 2px solid #1976D2; font-size: 11px; color: #0D47A1;">
-                                <strong>Fact-check:</strong> {{ stat.fact_check_details[:200] }}
-                                {% if stat.fact_check_url %}
-                                    <a href="{{ stat.fact_check_url }}" style="color: #1976D2; text-decoration: underline;">Read more</a>
-                                {% endif %}
-                            </div>
-                            {% endif %}
+                        <div class="stat-line">
+                            • {{ stat.text }}
+                            {% if stat.status %} ({{ stat.status }}){% endif %}
+                            {% if stat.source_name %} - {{ stat.source_name }}{% endif %}
                         </div>
                         {% endfor %}
                 </div>
                 {% endif %}
 
                 {% if article.cluster %}
-                <div class="cluster-info">
-                    <strong>🔗 Cross-Source Coverage:</strong>
-                    This story is being covered by {{ article.cluster.article_count }} sources
+                <div class="accent" style="border-left-color:#9333ea;">
+                    <strong>Cross-source coverage:</strong> also covered by {{ article.cluster.article_count }} sources.
                     {% if article.cluster.other_sources %}
-                    <div class="cluster-sources">
-                        Also from:
+                    <div class="stat-line">
                         {% for source in article.cluster.other_sources %}
-                        <a href="{{ source.url }}" class="cluster-source" target="_blank">{{ source.source }}</a>
+                        <a href="{{ source.url }}" target="_blank" style="color:#4338ca; text-decoration:none;">{{ source.source }}</a>{% if not loop.last %}, {% endif %}
                         {% endfor %}
                     </div>
                     {% endif %}
@@ -563,64 +116,20 @@
                 {% endif %}
 
                 {% if article.context %}
-                <!-- Background & Context Section -->
-                <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top: 12px; border-collapse: collapse;">
-                    <tr>
-                        <td style="padding: 10px 12px; background-color: #E1F5FE; border-radius: 4px 4px 0 0; border: 1px solid #B3E5FC; border-bottom: none;">
-                            <div style="font-size: 14px; font-weight: 600; color: #0277BD;">
-                                📚 Background & Context
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 12px; background-color: #F5F5F5; border-radius: 0 0 4px 4px; font-size: 13px; border: 1px solid #B3E5FC; border-top: none; border-left: 3px solid #0277BD;">
-                            {% if article.context.background %}
-                            <div style="margin-bottom: 10px;">
-                                <strong style="color: #1976D2;">📖 Background:</strong> {{ article.context.background }}
-                            </div>
-                            {% endif %}
-
-                            {% if article.context.key_players %}
-                            <div style="margin-bottom: 10px;">
-                                <strong style="color: #1976D2;">👥 Key Players:</strong>
-                                {{ article.context.key_players|join(', ') }}
-                            </div>
-                            {% endif %}
-
-                            {% if article.context.timeline %}
-                            <div style="margin-bottom: 10px;">
-                                <strong style="color: #1976D2;">⏱️ Timeline:</strong>
-                                <ul style="margin: 5px 0; padding-left: 20px;">
-                                {% for event in article.context.timeline|reverse %}
-                                    <li style="margin-bottom: 3px;"><strong>{{ event.date }}:</strong> {{ event.event }}</li>
-                                {% endfor %}
-                                </ul>
-                            </div>
-                            {% endif %}
-
-                            {% if article.context.significance %}
-                            <div style="margin-bottom: 10px;">
-                                <strong style="color: #1976D2;">💡 Why This Matters:</strong> {{ article.context.significance }}
-                            </div>
-                            {% endif %}
-
-                            {% if article.context.next_developments %}
-                            <div style="margin-bottom: 0;">
-                                <strong style="color: #1976D2;">🔮 What's Next:</strong> {{ article.context.next_developments }}
-                            </div>
-                            {% endif %}
-                        </td>
-                    </tr>
-                </table>
+                <div class="accent" style="border-left-color:#0ea5e9;">
+                    <strong>Background</strong><br>
+                    {% if article.context.background %}{{ article.context.background }}{% endif %}
+                    {% if article.context.significance %}<div class="stat-line"><strong>Why it matters:</strong> {{ article.context.significance }}</div>{% endif %}
+                    {% if article.context.next_developments %}<div class="stat-line"><strong>What's next:</strong> {{ article.context.next_developments }}</div>{% endif %}
+                </div>
                 {% endif %}
             </div>
             {% endfor %}
-        </div>
 
         <div class="footer">
             <p>
-                <strong>Pulse News Aggregator</strong><br>
-                Bringing clarity to the news through ethical frameworks
+                <strong>Pulse</strong><br>
+                AI-assisted news with context and balance.
             </p>
             <p>
                 <a href="{{ preferences_url }}">Update Preferences</a> ·
@@ -631,6 +140,8 @@
                 <a href="{{ unsubscribe_url }}">Unsubscribe</a> from this newsletter
             </p>
         </div>
+        </div>
     </div>
+</div>
 </body>
 </html>

@@ -45,6 +45,7 @@ function FeedPage() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [sources, setSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState(search.q);
 
   useEffect(() => {
@@ -70,6 +71,7 @@ function FeedPage() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setLoadError(null);
     const params: Record<string, string | number | boolean | (string | number)[] | undefined> = {
       page: search.page,
       page_size: PAGE_SIZE,
@@ -95,7 +97,9 @@ function FeedPage() {
           setArticles([]);
           setTotal(0);
         } else {
-          toast.error(err instanceof ApiError ? err.message : "Could not load feed");
+          const msg = err instanceof ApiError ? err.message : "Could not load feed";
+          setLoadError(msg);
+          toast.error(msg);
         }
       })
       .finally(() => !cancelled && setLoading(false));
@@ -246,9 +250,26 @@ function FeedPage() {
 
       {loading ? (
         <div className="py-20 text-center text-muted-foreground">Loading the day's coverage…</div>
+      ) : loadError ? (
+        <div className="py-20 text-center">
+          <p className="text-destructive mb-3">We couldn't load your feed right now.</p>
+          <p className="text-sm text-muted-foreground mb-6">{loadError}</p>
+          <button
+            onClick={() => update({ page: search.page })}
+            className="px-4 py-2 rounded-md border border-border hover:bg-accent text-sm"
+          >
+            Try again
+          </button>
+        </div>
       ) : articles.length === 0 ? (
         <div className="py-20 text-center text-muted-foreground">
-          No articles match these filters.
+          <p className="mb-4">No articles match these filters.</p>
+          <button
+            onClick={() => navigate({ to: "/feed", search: { page: 1, q: "", topic: "", lean: "", sort: "newest", fav: false } })}
+            className="px-4 py-2 rounded-md border border-border hover:bg-accent text-sm text-foreground"
+          >
+            Clear filters
+          </button>
         </div>
       ) : (
         <div className="flex flex-col">
