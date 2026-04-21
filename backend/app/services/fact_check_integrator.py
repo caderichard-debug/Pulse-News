@@ -5,7 +5,7 @@ Integrates with external fact-checking APIs to verify statistics.
 Supports:
 - Google Fact Check Tools API
 - ClaimBuster API
-- Future: PolitiFact, Snopes (web scraping)
+- Optional PolitiFact / Snopes HTML search (see FACT_CHECK_ENABLE_SCRAPING)
 """
 
 import logging
@@ -15,8 +15,14 @@ from urllib.parse import quote
 from datetime import datetime
 
 from ..config import settings
+from .fact_check_scrape.politifact import search_politifact_claim
+from .fact_check_scrape.snopes import search_snopes_claim
+from .fact_check_scrape.rating_parser import parse_textual_rating_to_status
 
 logger = logging.getLogger(__name__)
+
+# Prefer structured API results unless confidence is below this (then try HTML scrapers).
+_SCRAPE_FALLBACK_MAX_CONFIDENCE = 0.55
 
 
 class FactCheckIntegrator:
@@ -47,7 +53,7 @@ class FactCheckIntegrator:
                 - confidence: 0.0 to 1.0
             Returns None if no fact-check found
         """
-        results = []
+        results: List[Dict] = []
 
         # Try Google Fact Check Tools first (best coverage)
         if self.google_api_key:
@@ -61,13 +67,33 @@ class FactCheckIntegrator:
             if claimbuster_result:
                 results.append(claimbuster_result)
 
-        # Select best result
-        if not results:
+        def _best(rs: List[Dict]) -> Optional[Dict]:
+            if not rs:
+                return None
+            return max(rs, key=lambda r: r.get("confidence", 0.0))
+
+        best_result = _best(results)
+
+        # Lightweight HTML search when APIs miss or yield low-confidence only
+        if getattr(settings, "fact_check_enable_scraping", True):
+            ua = settings.fact_check_scrape_user_agent or (
+                "PulseNews/1.0 (+https://pulsenews.app; fact-check verification)"
+            )
+            need_scrape = best_result is None or best_result.get("confidence", 0.0) < _SCRAPE_FALLBACK_MAX_CONFIDENCE
+            if need_scrape:
+                pf = self._check_politifact_web_scraping(statistic_text, user_agent=ua)
+                if pf:
+                    results.append(pf)
+                    best_result = _best(results)
+                if best_result is None or best_result.get("confidence", 0.0) < _SCRAPE_FALLBACK_MAX_CONFIDENCE:
+                    sn = self._check_snopes_web_scraping(statistic_text, user_agent=ua)
+                    if sn:
+                        results.append(sn)
+                        best_result = _best(results)
+
+        if not best_result:
             logger.debug(f"No fact-check found for: {statistic_text[:50]}")
             return None
-
-        # Prefer results with higher confidence
-        best_result = max(results, key=lambda r: r.get("confidence", 0.0))
 
         logger.info(
             f"Fact-check found via {best_result['fact_check_source']}: "
@@ -112,7 +138,7 @@ class FactCheckIntegrator:
 
             # Extract rating
             rating_text = claim_review.get("textualRating", "").lower()
-            status = self._parse_google_rating(rating_text)
+            status = parse_textual_rating_to_status(rating_text)
 
             # Calculate confidence based on publisher and rating clarity
             confidence = 0.7
@@ -134,40 +160,6 @@ class FactCheckIntegrator:
         except Exception as e:
             logger.error(f"Error parsing Google Fact Check response: {e}")
             return None
-
-    def _parse_google_rating(self, rating_text: str) -> str:
-        """
-        Parse Google Fact Check rating into our standard statuses.
-
-        Common ratings: "True", "False", "Mostly True", "Mostly False",
-        "Half True", "Mixture", "Unproven", etc.
-        """
-        rating_lower = rating_text.lower()
-
-        # Check for false/incorrect first (to avoid "incorrect" matching "correct")
-        if any(word in rating_lower for word in ["false", "incorrect", "inaccurate", "pants on fire"]):
-            if any(word in rating_lower for word in ["mostly"]):
-                return "mixed"
-            else:
-                return "false"
-
-        # Check for mixture/mixed/half
-        if any(word in rating_lower for word in ["mixture", "mixed", "half"]):
-            return "mixed"
-
-        # Check for true/correct/accurate
-        if any(word in rating_lower for word in ["true", "correct", "accurate"]):
-            if any(word in rating_lower for word in ["mostly", "partially"]):
-                return "mixed"
-            else:
-                return "verified"
-
-        # Check for unproven
-        if any(word in rating_lower for word in ["unproven", "unclear", "unsupported"]):
-            return "unverifiable"
-
-        # Default to unverifiable if we can't parse the rating
-        return "unverifiable"
 
     def _check_claimbuster(self, claim: str) -> Optional[Dict]:
         """
@@ -228,27 +220,23 @@ class FactCheckIntegrator:
             logger.error(f"Error parsing ClaimBuster response: {e}")
             return None
 
-    def _check_politifact_web_scraping(self, claim: str) -> Optional[Dict]:
+    def _check_politifact_web_scraping(self, claim: str, user_agent: str) -> Optional[Dict]:
         """
-        Search PolitiFact via web scraping (no official API).
+        Search PolitiFact (HTML search). Layouts can change; failures are non-fatal.
+        """
+        try:
+            return search_politifact_claim(claim, user_agent=user_agent)
+        except Exception as e:
+            logger.debug("PolitiFact scrape error: %s", e)
+            return None
 
-        Note: This is a placeholder for future implementation.
-        Would require Beautiful Soup and careful parsing of search results.
-        """
-        # TODO: Implement web scraping for PolitiFact
-        logger.debug("PolitiFact web scraping not yet implemented")
-        return None
-
-    def _check_snopes_web_scraping(self, claim: str) -> Optional[Dict]:
-        """
-        Search Snopes via web scraping (no official API).
-
-        Note: This is a placeholder for future implementation.
-        Would require Beautiful Soup and careful parsing of search results.
-        """
-        # TODO: Implement web scraping for Snopes
-        logger.debug("Snopes web scraping not yet implemented")
-        return None
+    def _check_snopes_web_scraping(self, claim: str, user_agent: str) -> Optional[Dict]:
+        """Search Snopes (HTML search). Layouts can change; failures are non-fatal."""
+        try:
+            return search_snopes_claim(claim, user_agent=user_agent)
+        except Exception as e:
+            logger.debug("Snopes scrape error: %s", e)
+            return None
 
 
 # Singleton instance

@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     google_fact_check_api_key: Optional[str] = None
     google_search_engine_id: Optional[str] = None  # For Google Custom Search
     claimbuster_api_key: Optional[str] = None
+    # Lightweight PolitiFact/Snopes search HTML (no official API); disable in strict prod if desired
+    fact_check_enable_scraping: bool = True
+    fact_check_scrape_user_agent: Optional[str] = None
 
     # Email Configuration
     from_email: str = "newsletter@pulsenews.app"

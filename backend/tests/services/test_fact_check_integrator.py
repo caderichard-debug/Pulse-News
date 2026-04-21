@@ -4,6 +4,7 @@ Tests for Fact Check Integrator Service
 import pytest
 from unittest.mock import Mock, patch
 from app.services.fact_check_integrator import FactCheckIntegrator, get_fact_check_integrator
+from app.services.fact_check_scrape.rating_parser import parse_textual_rating_to_status
 
 
 class TestFactCheckIntegrator:
@@ -195,54 +196,40 @@ class TestFactCheckIntegrator:
 
     def test_parse_google_rating_true(self):
         """Test parsing various 'true' ratings"""
-        integrator = FactCheckIntegrator()
-
-        assert integrator._parse_google_rating("True") == "verified"
-        assert integrator._parse_google_rating("Correct") == "verified"
-        assert integrator._parse_google_rating("Accurate") == "verified"
+        assert parse_textual_rating_to_status("True") == "verified"
+        assert parse_textual_rating_to_status("Correct") == "verified"
+        assert parse_textual_rating_to_status("Accurate") == "verified"
 
     def test_parse_google_rating_mostly_true(self):
         """Test parsing 'mostly true' as mixed"""
-        integrator = FactCheckIntegrator()
-
-        assert integrator._parse_google_rating("Mostly True") == "mixed"
-        assert integrator._parse_google_rating("Partially True") == "mixed"
+        assert parse_textual_rating_to_status("Mostly True") == "mixed"
+        assert parse_textual_rating_to_status("Partially True") == "mixed"
 
     def test_parse_google_rating_false(self):
         """Test parsing various 'false' ratings"""
-        integrator = FactCheckIntegrator()
-
-        assert integrator._parse_google_rating("False") == "false"
-        assert integrator._parse_google_rating("Incorrect") == "false"
-        assert integrator._parse_google_rating("Pants on Fire") == "false"
+        assert parse_textual_rating_to_status("False") == "false"
+        assert parse_textual_rating_to_status("Incorrect") == "false"
+        assert parse_textual_rating_to_status("Pants on Fire") == "false"
 
     def test_parse_google_rating_mostly_false(self):
         """Test parsing 'mostly false' as mixed"""
-        integrator = FactCheckIntegrator()
-
-        assert integrator._parse_google_rating("Mostly False") == "mixed"
+        assert parse_textual_rating_to_status("Mostly False") == "mixed"
 
     def test_parse_google_rating_mixed(self):
         """Test parsing mixed ratings"""
-        integrator = FactCheckIntegrator()
-
-        assert integrator._parse_google_rating("Mixture") == "mixed"
-        assert integrator._parse_google_rating("Half True") == "mixed"
-        assert integrator._parse_google_rating("Mixed") == "mixed"
+        assert parse_textual_rating_to_status("Mixture") == "mixed"
+        assert parse_textual_rating_to_status("Half True") == "mixed"
+        assert parse_textual_rating_to_status("Mixed") == "mixed"
 
     def test_parse_google_rating_unproven(self):
         """Test parsing unproven ratings"""
-        integrator = FactCheckIntegrator()
-
-        assert integrator._parse_google_rating("Unproven") == "unverifiable"
-        assert integrator._parse_google_rating("Unclear") == "unverifiable"
-        assert integrator._parse_google_rating("Unsupported") == "unverifiable"
+        assert parse_textual_rating_to_status("Unproven") == "unverifiable"
+        assert parse_textual_rating_to_status("Unclear") == "unverifiable"
+        assert parse_textual_rating_to_status("Unsupported") == "unverifiable"
 
     def test_parse_google_rating_unknown(self):
         """Test parsing unknown rating defaults to unverifiable"""
-        integrator = FactCheckIntegrator()
-
-        assert integrator._parse_google_rating("Unknown Rating") == "unverifiable"
+        assert parse_textual_rating_to_status("Unknown Rating") == "unverifiable"
 
     @patch('app.services.fact_check_integrator.requests.get')
     def test_verify_statistic_uses_google_first(self, mock_get):
@@ -368,3 +355,33 @@ class TestFactCheckIntegrator:
         result = integrator._check_claimbuster("Test")
 
         assert result is None
+
+    @patch("app.services.fact_check_integrator.search_politifact_claim")
+    @patch.object(FactCheckIntegrator, "_check_google_fact_check")
+    def test_verify_statistic_scrape_when_google_low_confidence(
+        self, mock_google, mock_politifact
+    ):
+        """HTML scrapers run when the best API result is below the confidence threshold."""
+        integrator = FactCheckIntegrator()
+        integrator.google_api_key = "test_key"
+        mock_google.return_value = {
+            "fact_check_status": "unverifiable",
+            "fact_check_source": "google_fact_check",
+            "fact_check_url": "",
+            "fact_check_details": "Low signal",
+            "confidence": 0.35,
+        }
+        mock_politifact.return_value = {
+            "fact_check_status": "verified",
+            "fact_check_source": "politifact_scrape",
+            "fact_check_url": "https://www.politifact.com/factchecks/example/",
+            "fact_check_details": "PolitiFact: Example — True",
+            "confidence": 0.85,
+        }
+
+        result = integrator.verify_statistic("Example headline claim")
+
+        assert result is not None
+        assert result["fact_check_source"] == "politifact_scrape"
+        assert result["confidence"] == 0.85
+        mock_politifact.assert_called_once()
