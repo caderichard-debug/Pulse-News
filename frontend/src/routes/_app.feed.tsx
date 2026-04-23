@@ -6,6 +6,9 @@ import { useAuth } from "@/lib/auth";
 import type { Article, Source, Topic, Paginated } from "@/lib/types";
 import { ArticleCard } from "@/components/ArticleCard";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { FilterChip } from "@/components/ui/filter-chip";
+import { FilterSelect } from "@/components/ui/filter-select";
+import { Button } from "@/components/ui/button";
 
 type FeedSearch = {
   page: number;
@@ -28,7 +31,10 @@ export const Route = createFileRoute("/_app/feed")({
   head: () => ({
     meta: [
       { title: "Your feed — Pulse" },
-      { name: "description", content: "Personalized news with summaries, sentiment, and ethical lens analysis." },
+      {
+        name: "description",
+        content: "Personalized news with summaries, sentiment, and ethical lens analysis.",
+      },
     ],
   }),
   component: FeedPage,
@@ -82,7 +88,10 @@ function FeedPage() {
     if (search.topic) params.topics = [search.topic];
     if (search.lean) params.political_leans = [search.lean];
 
-    api<Paginated<Article> | { articles: Article[]; total_count: number } | Article[]>("/feed/articles", { query: params })
+    api<Paginated<Article> | { articles: Article[]; total_count: number } | Article[]>(
+      "/feed/articles",
+      { query: params },
+    )
       .then((res) => {
         if (cancelled) return;
         const items = Array.isArray(res) ? res : "articles" in res ? res.articles : res.items || [];
@@ -113,7 +122,14 @@ function FeedPage() {
   function update(patch: Partial<FeedSearch>) {
     navigate({
       to: "/feed",
-      search: (prev: FeedSearch) => ({ ...prev, ...patch, page: patch.page ?? 1 }),
+      search: (prev) => ({
+        page: patch.page ?? 1,
+        q: patch.q ?? prev.q ?? "",
+        topic: patch.topic ?? prev.topic ?? "",
+        lean: patch.lean ?? prev.lean ?? "",
+        sort: patch.sort ?? prev.sort ?? "newest",
+        fav: patch.fav ?? prev.fav ?? false,
+      }),
     });
   }
 
@@ -153,8 +169,8 @@ function FeedPage() {
   );
 
   return (
-    <div className="max-w-[1024px] mx-auto px-6 py-12">
-      <header className="flex flex-col gap-6 mb-12">
+    <div className="max-w-[1024px] mx-auto px-6 py-8 md:py-10">
+      <header className="flex flex-col gap-5 mb-8 md:mb-10">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-3">
             {search.fav ? "Saved articles" : "Today's coverage"}
@@ -171,8 +187,12 @@ function FeedPage() {
           }}
           className="relative max-w-md"
         >
+          <label htmlFor="feed-search" className="sr-only">
+            Search stories
+          </label>
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <input
+            id="feed-search"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search stories…"
@@ -180,67 +200,53 @@ function FeedPage() {
           />
         </form>
 
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="text-muted-foreground mr-2 uppercase tracking-wider text-xs">
+            <span className="text-muted-foreground mr-2 uppercase tracking-wide text-xs">
               Topic
             </span>
-            <button
-              onClick={() => update({ topic: "" })}
-              className={chip(!search.topic)}
-            >
+            <FilterChip selected={!search.topic} onClick={() => update({ topic: "" })}>
               All
-            </button>
+            </FilterChip>
             {topics.slice(0, 8).map((t) => (
-              <button
+              <FilterChip
                 key={t.id}
+                selected={search.topic === t.name}
                 onClick={() => update({ topic: t.name })}
-                className={chip(search.topic === t.name)}
               >
                 {t.name}
-              </button>
+              </FilterChip>
             ))}
           </div>
 
-          <div className="flex items-center gap-4 text-sm">
-            <label className="flex items-center gap-2 text-muted-foreground">
-              <span className="uppercase tracking-wider text-xs">Lean</span>
-              <select
-                value={search.lean}
-                onChange={(e) => update({ lean: e.target.value })}
-                className="bg-transparent border-b border-border pb-0.5 focus:outline-none text-foreground"
-              >
-                {leanOptions.map((o) => (
-                  <option key={o.v} value={o.v}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex items-center gap-2 text-muted-foreground">
-              <span className="uppercase tracking-wider text-xs">Sort</span>
-              <select
-                value={search.sort}
-                onChange={(e) => update({ sort: e.target.value })}
-                className="bg-transparent border-b border-border pb-0.5 focus:outline-none text-foreground"
-              >
-                <option value="newest">Most recent</option>
-                <option value="oldest">Oldest first</option>
-                <option value="sentiment_high">Most positive</option>
-                <option value="sentiment_low">Most negative</option>
-              </select>
-            </label>
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <FilterSelect
+              label="Lean"
+              value={search.lean}
+              onValueChange={(value) => update({ lean: value })}
+              options={leanOptions.map((option) => ({ value: option.v, label: option.label }))}
+              triggerClassName="h-9 w-[10.5rem] bg-background"
+            />
+            <FilterSelect
+              label="Sort"
+              value={search.sort}
+              onValueChange={(value) => update({ sort: value })}
+              options={[
+                { value: "newest", label: "Most recent" },
+                { value: "oldest", label: "Oldest first" },
+                { value: "sentiment_high", label: "Most positive" },
+                { value: "sentiment_low", label: "Most negative" },
+              ]}
+              triggerClassName="h-9 w-[10.5rem] bg-background"
+            />
             {user && (
-              <button
+              <FilterChip
+                size="md"
+                selected={search.fav}
                 onClick={() => update({ fav: !search.fav })}
-                className={`text-xs uppercase tracking-wider px-2 py-1 rounded border ${
-                  search.fav
-                    ? "border-foreground text-foreground"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
               >
                 {search.fav ? "Saved" : "Show saved"}
-              </button>
+              </FilterChip>
             )}
           </div>
         </div>
@@ -254,22 +260,25 @@ function FeedPage() {
         <div className="py-20 text-center">
           <p className="text-destructive mb-3">We couldn't load your feed right now.</p>
           <p className="text-sm text-muted-foreground mb-6">{loadError}</p>
-          <button
-            onClick={() => update({ page: search.page })}
-            className="px-4 py-2 rounded-md border border-border hover:bg-accent text-sm"
-          >
+          <Button onClick={() => update({ page: search.page })} variant="outline" size="default">
             Try again
-          </button>
+          </Button>
         </div>
       ) : articles.length === 0 ? (
         <div className="py-20 text-center text-muted-foreground">
           <p className="mb-4">No articles match these filters.</p>
-          <button
-            onClick={() => navigate({ to: "/feed", search: { page: 1, q: "", topic: "", lean: "", sort: "newest", fav: false } })}
-            className="px-4 py-2 rounded-md border border-border hover:bg-accent text-sm text-foreground"
+          <Button
+            onClick={() =>
+              navigate({
+                to: "/feed",
+                search: { page: 1, q: "", topic: "", lean: "", sort: "newest", fav: false },
+              })
+            }
+            variant="outline"
+            size="default"
           >
             Clear filters
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="flex flex-col">
@@ -281,33 +290,29 @@ function FeedPage() {
 
       {sources.length > 0 && articles.length > 0 && (
         <div className="mt-16 pt-6 border-t-[3px] border-border flex items-center justify-between text-sm font-medium">
-          <button
+          <Button
             disabled={search.page <= 1}
             onClick={() => update({ page: search.page - 1 })}
-            className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
           >
             <ChevronLeft className="size-4" /> Newer
-          </button>
+          </Button>
           <span className="text-muted-foreground tabular-nums text-xs uppercase tracking-wider">
             Page {search.page} of {totalPages}
           </span>
-          <button
+          <Button
             disabled={search.page >= totalPages}
             onClick={() => update({ page: search.page + 1 })}
-            className="text-foreground hover:text-muted-foreground transition-colors flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+            variant="ghost"
+            size="sm"
+            className="text-foreground"
           >
             Older <ChevronRight className="size-4" />
-          </button>
+          </Button>
         </div>
       )}
     </div>
   );
-}
-
-function chip(active: boolean) {
-  return `px-3 py-1 rounded-full transition-colors ${
-    active
-      ? "bg-primary text-primary-foreground"
-      : "border border-border text-muted-foreground hover:border-foreground hover:text-foreground"
-  }`;
 }

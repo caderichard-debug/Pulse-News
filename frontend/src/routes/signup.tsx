@@ -5,6 +5,8 @@ import { useAuth } from "@/lib/auth";
 import { api, ApiError } from "@/lib/api";
 import type { Topic } from "@/lib/types";
 import { AuthShell, Field } from "./login";
+import { FilterChip } from "@/components/ui/filter-chip";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({ meta: [{ title: "Join Pulse" }] }),
@@ -94,36 +96,25 @@ function SignupPage() {
         {topics.length > 0 && (
           <div>
             <p className="text-sm font-medium mb-2">Topics you care about</p>
-            <p className="text-xs text-muted-foreground mb-3">Optional — you can change this later.</p>
+            <p className="text-xs text-muted-foreground mb-3">
+              Optional — you can change this later.
+            </p>
             <div className="flex flex-wrap gap-2">
               {topics.map((t) => {
                 const active = selected.has(t.id);
                 return (
-                  <button
-                    type="button"
-                    key={t.id}
-                    onClick={() => toggle(t.id)}
-                    className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-                      active
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "border-border text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
+                  <FilterChip key={t.id} selected={active} size="md" onClick={() => toggle(t.id)}>
                     {t.name}
-                  </button>
+                  </FilterChip>
                 );
               })}
             </div>
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-2.5 rounded-md bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
-        >
+        <Button type="submit" disabled={loading} className="w-full h-10">
           {loading ? "Creating your account..." : "Create account"}
-        </button>
+        </Button>
       </form>
       <p className="mt-6 text-sm text-center text-muted-foreground">
         Already a member?{" "}
