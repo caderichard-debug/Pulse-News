@@ -31,6 +31,14 @@ function AnalyzePage() {
     const frameworks = Array.isArray(raw.frameworks) ? raw.frameworks : [];
     const stats = Array.isArray(raw.statistics) ? raw.statistics : [];
 
+    const rawPoliticalLean = analysis.political_lean;
+    const politicalLean =
+      typeof rawPoliticalLean === "number"
+        ? rawPoliticalLean
+        : typeof rawPoliticalLean === "string"
+          ? Number(rawPoliticalLean)
+          : undefined;
+
     return {
       id: (raw.id as string | number | undefined) ?? "temp",
       title: String(raw.title ?? "Untitled"),
@@ -43,8 +51,8 @@ function AnalyzePage() {
           : undefined,
       sentiment_score:
         typeof analysis.sentiment_score === "number" ? analysis.sentiment_score : undefined,
-      political_lean:
-        typeof analysis.political_lean === "string" ? analysis.political_lean : undefined,
+      sentiment: typeof analysis.sentiment === "string" ? analysis.sentiment : undefined,
+      political_lean: Number.isFinite(politicalLean) ? politicalLean : undefined,
       has_verified_stats: stats.length > 0,
       frameworks: frameworks.map((f) => {
         const row = (f as Record<string, unknown>) ?? {};

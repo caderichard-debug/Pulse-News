@@ -8,6 +8,7 @@ import { LeanMeter, SentimentDot, VerifiedBadge } from "@/components/Signals";
 import { ArticleCard } from "@/components/ArticleCard";
 import { useAuth } from "@/lib/auth";
 import { timeAgo } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_app/article/$id")({
   head: () => ({ meta: [{ title: "Article — Pulse" }] }),
@@ -35,7 +36,10 @@ function ArticlePage() {
     setLoading(true);
     api<Article>(`/articles/${id}`)
       .then((a) => !cancelled && setArticle(a))
-      .catch((err) => !cancelled && setError(err instanceof ApiError ? err.message : "Could not load article"))
+      .catch(
+        (err) =>
+          !cancelled && setError(err instanceof ApiError ? err.message : "Could not load article"),
+      )
       .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
@@ -57,17 +61,26 @@ function ArticlePage() {
   }
 
   if (loading) {
-    return <div className="max-w-[760px] mx-auto px-6 py-20 text-muted-foreground">Loading article…</div>;
+    return (
+      <div className="max-w-[760px] mx-auto px-6 py-20 text-muted-foreground">Loading article…</div>
+    );
   }
   if (error || !article) {
     return (
       <div className="max-w-[760px] mx-auto px-6 py-20 text-center">
         <p className="text-destructive mb-4">{error || "Article not found"}</p>
         <div className="flex items-center justify-center gap-4">
-          <button onClick={refetch} className="px-4 py-2 rounded-md border border-border hover:bg-accent text-sm">
+          <button
+            onClick={refetch}
+            className="px-4 py-2 rounded-md border border-border hover:bg-accent text-sm"
+          >
             Retry
           </button>
-          <Link to="/feed" className="underline underline-offset-4">
+          <Link
+            to="/feed"
+            search={{ page: 1, q: "", topic: "", lean: "", sort: "newest", fav: false }}
+            className="underline underline-offset-4"
+          >
             Back to feed
           </Link>
         </div>
@@ -85,7 +98,8 @@ function ArticlePage() {
     <article className="max-w-[760px] mx-auto px-6 py-12">
       <Link
         to="/feed"
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-10"
+        search={{ page: 1, q: "", topic: "", lean: "", sort: "newest", fav: false }}
+        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
       >
         <ArrowLeft className="size-4" /> Back to feed
       </Link>
@@ -117,32 +131,29 @@ function ArticlePage() {
         )}
 
         <div className="mt-8 flex flex-wrap items-center gap-4">
-          <button
+          <Button
             onClick={toggleFav}
-            className={`inline-flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-colors ${
-              article.is_favorited
-                ? "bg-primary text-primary-foreground border-primary"
-                : "border-border hover:bg-accent"
+            aria-pressed={!!article.is_favorited}
+            variant="outline"
+            className={`${
+              article.is_favorited ? "border-border bg-accent text-foreground hover:bg-accent" : ""
             }`}
           >
             <Star className="size-4" fill={article.is_favorited ? "currentColor" : "none"} />
             {article.is_favorited ? "Saved" : "Save"}
-          </button>
+          </Button>
           {article.url && (
-            <a
-              href={article.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-border hover:bg-accent text-sm transition-colors"
-            >
-              Read original <ExternalLink className="size-3.5" />
-            </a>
+            <Button asChild>
+              <a href={article.url} target="_blank" rel="noopener noreferrer">
+                Read original <ExternalLink className="size-3.5" />
+              </a>
+            </Button>
           )}
         </div>
       </header>
 
       {/* Analysis bar */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 p-6 border border-border rounded-lg bg-card">
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12 p-5 border border-border rounded-lg bg-card">
         <Stat label="Sentiment">
           <SentimentDot sentiment={article.sentiment} />
         </Stat>
@@ -196,7 +207,9 @@ function ArticlePage() {
       {(!article.statistics || article.statistics.length === 0) && (
         <section className="mb-12">
           <SectionTitle>Statistic verification</SectionTitle>
-          <p className="text-sm text-muted-foreground">No verified statistics are available for this article yet.</p>
+          <p className="text-sm text-muted-foreground">
+            No verified statistics are available for this article yet.
+          </p>
         </section>
       )}
 
@@ -216,7 +229,7 @@ function ArticlePage() {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-6 pb-3 border-b border-border">
+    <h2 className="text-xs uppercase tracking-[0.16em] text-muted-foreground mb-6 pb-3 border-b border-border">
       {children}
     </h2>
   );
@@ -225,7 +238,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 function Stat({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">{label}</p>
+      <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground mb-2">{label}</p>
       {children}
     </div>
   );
@@ -251,7 +264,9 @@ function FrameworkAxis({ placement }: { placement: FrameworkPlacement }) {
         </div>
         <span className="font-medium">{framework?.axis_right || "Right"}</span>
       </div>
-      {explanation && <p className="text-sm text-muted-foreground leading-relaxed">{explanation}</p>}
+      {explanation && (
+        <p className="text-sm text-muted-foreground leading-relaxed">{explanation}</p>
+      )}
     </div>
   );
 }
@@ -268,7 +283,9 @@ function StatRow({ stat }: { stat: StatVerification }) {
     <div className="border border-border rounded-md p-4">
       <div className="flex items-start justify-between gap-4">
         <p className="text-sm leading-relaxed">{stat.claim}</p>
-        <span className={`shrink-0 text-[10px] uppercase tracking-wider px-2 py-1 rounded border ${color}`}>
+        <span
+          className={`shrink-0 text-xs uppercase tracking-wide px-2 py-1 rounded border ${color}`}
+        >
           {stat.verdict || "Unverified"}
         </span>
       </div>

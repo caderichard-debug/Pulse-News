@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Sign in — Pulse" }] }),
@@ -22,7 +23,10 @@ function LoginPage() {
     try {
       await login(email, password);
       toast.success("Welcome back to Pulse");
-      navigate({ to: "/feed" });
+      navigate({
+        to: "/feed",
+        search: { page: 1, q: "", topic: "", lean: "", sort: "newest", fav: false },
+      });
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Sign in failed");
     } finally {
@@ -48,7 +52,10 @@ function LoginPage() {
           label="Password"
           id="password"
           right={
-            <Link to="/forgot-password" className="text-xs text-muted-foreground hover:text-foreground">
+            <Link
+              to="/forgot-password"
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
               Forgot?
             </Link>
           }
@@ -63,13 +70,9 @@ function LoginPage() {
             className="w-full px-3 py-2.5 bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </Field>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-2.5 rounded-md bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
-        >
+        <Button type="submit" disabled={loading} className="w-full h-10">
           {loading ? "Signing in..." : "Sign in"}
-        </button>
+        </Button>
       </form>
       <p className="mt-6 text-sm text-center text-muted-foreground">
         New to Pulse?{" "}

@@ -13,7 +13,9 @@ export const Route = createFileRoute("/_app/insights")({
 function InsightsPage() {
   return (
     <div className="max-w-[760px] mx-auto px-6 py-16">
-      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-3">Lens on discourse</p>
+      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-3">
+        Lens on discourse
+      </p>
       <h1 className="font-serif text-5xl font-medium tracking-tight leading-tight">
         Patterns from the week.
       </h1>

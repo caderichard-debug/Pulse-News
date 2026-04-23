@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { Calendar, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 type Claim = {
   id: string | number;
@@ -79,7 +80,11 @@ function ChallengePage() {
   }
 
   if (loading) {
-    return <div className="max-w-[760px] mx-auto px-6 py-16 text-muted-foreground">Loading challenge…</div>;
+    return (
+      <div className="max-w-[760px] mx-auto px-6 py-16 text-muted-foreground">
+        Loading challenge…
+      </div>
+    );
   }
   if (!challenge) {
     return (
@@ -99,7 +104,9 @@ function ChallengePage() {
         {challenge.title || "Weekly news challenge"}
       </h1>
       {challenge.description && (
-        <p className="mt-4 text-lg text-muted-foreground leading-relaxed">{challenge.description}</p>
+        <p className="mt-4 text-lg text-muted-foreground leading-relaxed">
+          {challenge.description}
+        </p>
       )}
 
       <form onSubmit={onSubmit} className="mt-12 space-y-6">
@@ -110,34 +117,38 @@ function ChallengePage() {
             </legend>
             <p className="font-serif text-xl font-medium mb-4">{c.claim_text}</p>
             <div className="flex gap-3">
-              <button
+              <Button
                 type="button"
                 onClick={() => {
                   setSelectedClaimId(String(c.id));
                   setAgreementLevel("agree");
                 }}
+                variant="outline"
                 className={`flex-1 py-2.5 rounded-md border transition-colors ${
                   selectedClaimId === String(c.id) && agreementLevel === "agree"
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "border-border hover:bg-accent"
+                    ? "bg-accent border-foreground text-foreground"
+                    : ""
                 }`}
+                aria-pressed={selectedClaimId === String(c.id) && agreementLevel === "agree"}
               >
                 I agree
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={() => {
                   setSelectedClaimId(String(c.id));
                   setAgreementLevel("disagree");
                 }}
+                variant="outline"
                 className={`flex-1 py-2.5 rounded-md border transition-colors ${
                   selectedClaimId === String(c.id) && agreementLevel === "disagree"
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "border-border hover:bg-accent"
+                    ? "bg-accent border-foreground text-foreground"
+                    : ""
                 }`}
+                aria-pressed={selectedClaimId === String(c.id) && agreementLevel === "disagree"}
               >
                 I disagree
-              </button>
+              </Button>
             </div>
             {submitted && selectedClaimId === String(c.id) && (
               <p className="mt-3 text-sm text-sent-pos">
@@ -148,9 +159,7 @@ function ChallengePage() {
           </fieldset>
         ))}
         {!submitted && canRespond && (challenge.claims?.length ?? 0) > 0 && (
-          <button className="px-5 py-3 rounded-md bg-primary text-primary-foreground font-medium">
-            Submit answers
-          </button>
+          <Button className="h-11 px-5">Submit answers</Button>
         )}
         {!canRespond && (
           <p className="text-sm text-muted-foreground">

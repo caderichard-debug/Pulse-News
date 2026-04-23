@@ -7,7 +7,10 @@ export const Route = createFileRoute("/_app/sources")({
   head: () => ({
     meta: [
       { title: "News sources — Pulse" },
-      { name: "description", content: "Browse the outlets behind Pulse: their bias, trust scores, and active status." },
+      {
+        name: "description",
+        content: "Browse the outlets behind Pulse: their bias, trust scores, and active status.",
+      },
     ],
   }),
   component: SourcesPage,
@@ -43,7 +46,10 @@ function SourcesPage() {
         ) : (
           <ul className="divide-y divide-border">
             {sources.map((s) => (
-              <li key={s.id} className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-4 py-5 items-center">
+              <li
+                key={s.id}
+                className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-4 py-5 items-center"
+              >
                 <div>
                   <h3 className="font-serif text-xl font-medium">{s.name}</h3>
                   {s.description && (
@@ -51,7 +57,7 @@ function SourcesPage() {
                   )}
                 </div>
                 <span className="text-xs uppercase tracking-wider text-muted-foreground">
-                  {(s.bias || s.organizational_bias) || "Unrated"}
+                  {s.bias || s.organizational_bias || "Unrated"}
                 </span>
                 {typeof s.trust_score === "number" && (
                   <span className="text-xs tabular-nums text-foreground border border-border px-2 py-1 rounded">
