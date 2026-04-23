@@ -29,7 +29,11 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         password_bytes = password_bytes[:72]
 
     hashed_bytes = hashed_password.encode('utf-8')
-    return bcrypt.checkpw(password_bytes, hashed_bytes)
+    try:
+        return bcrypt.checkpw(password_bytes, hashed_bytes)
+    except ValueError:
+        # Gracefully handle legacy/corrupt password values that are not valid bcrypt hashes.
+        return False
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
