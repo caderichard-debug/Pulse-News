@@ -22,7 +22,12 @@ function OAuthCallback() {
       hash.get("token");
     if (token) {
       setToken(token);
-      refresh().finally(() => navigate({ to: "/feed" }));
+      refresh().finally(() =>
+        navigate({
+          to: "/feed",
+          search: { page: 1, q: "", topic: "", lean: "", sort: "newest", fav: false },
+        }),
+      );
     } else {
       navigate({ to: "/login" });
     }

@@ -1,8 +1,7 @@
 import { Link } from "@tanstack/react-router";
 
 const DOCS_URL =
-  (import.meta.env.VITE_DOCUMENTATION_URL as string | undefined) ||
-  "https://docs.pulsenews.app";
+  (import.meta.env.VITE_DOCUMENTATION_URL as string | undefined) || "https://docs.pulsenews.app";
 
 export function Footer() {
   return (

@@ -15,6 +15,7 @@ import {
   Scatter,
   ZAxis,
 } from "recharts";
+import { ChevronDown } from "lucide-react";
 import { ApiError, api } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -170,13 +171,17 @@ function AnalyticsPage() {
       <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
         <Stat label="Last 7 days" value={insights?.momentum.last_7_days ?? 0} />
         <Stat label="Previous 7 days" value={insights?.momentum.previous_7_days ?? 0} />
-        <Stat
-          label="Momentum"
-          value={momentumDelta > 0 ? `+${momentumDelta}` : momentumDelta}
-        />
+        <Stat label="Momentum" value={momentumDelta > 0 ? `+${momentumDelta}` : momentumDelta} />
       </div>
 
       <Section title="Sentiment over time" subtitle="Average sentiment grouped by political lean">
+        <Legend
+          items={[
+            { label: "Left-leaning coverage", color: "var(--sent-pos)" },
+            { label: "Center coverage", color: "var(--sent-neu)" },
+            { label: "Right-leaning coverage", color: "var(--sent-neg)" },
+          ]}
+        />
         <div className="h-72">
           <ResponsiveContainer>
             <LineChart data={sentiment}>
@@ -221,6 +226,13 @@ function AnalyticsPage() {
         title="Political lean distribution"
         subtitle="Where the stories you read sit on the spectrum"
       >
+        <Legend
+          items={[
+            { label: "Left", color: "var(--lean-l)" },
+            { label: "Center", color: "var(--lean-c)" },
+            { label: "Right", color: "var(--lean-r)" },
+          ]}
+        />
         <div className="h-72">
           <ResponsiveContainer>
             <BarChart data={bias}>
@@ -298,18 +310,33 @@ function AnalyticsPage() {
         }
       >
         {frameworkAxes.length < 2 || heatmap.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Heatmap is unavailable until enough framework mappings exist.</p>
+          <p className="text-sm text-muted-foreground">
+            Heatmap is unavailable until enough framework mappings exist.
+          </p>
         ) : (
           <div className="h-80">
             <ResponsiveContainer>
               <ScatterChart margin={{ top: 20, right: 20, left: 10, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis type="number" dataKey="x" domain={[-10, 10]} stroke="var(--muted-foreground)" />
-                <YAxis type="number" dataKey="y" domain={[-10, 10]} stroke="var(--muted-foreground)" />
+                <XAxis
+                  type="number"
+                  dataKey="x"
+                  domain={[-10, 10]}
+                  stroke="var(--muted-foreground)"
+                />
+                <YAxis
+                  type="number"
+                  dataKey="y"
+                  domain={[-10, 10]}
+                  stroke="var(--muted-foreground)"
+                />
                 <ZAxis type="number" dataKey="article_count" range={[80, 400]} />
                 <Tooltip
                   cursor={{ strokeDasharray: "3 3" }}
-                  formatter={(value: number, name: string) => [value, name === "article_count" ? "Articles" : name]}
+                  formatter={(value: number, name: string) => [
+                    value,
+                    name === "article_count" ? "Articles" : name,
+                  ]}
                 />
                 <Scatter data={heatmap} fill="var(--primary)" />
               </ScatterChart>
@@ -333,11 +360,17 @@ function AnalyticsPage() {
                 key={framework.id}
                 className="rounded-md border border-border bg-background px-4 py-3"
               >
-                <summary className="cursor-pointer list-none font-medium">
-                  {framework.name}
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    ({framework.article_count} mapped articles)
+                <summary className="cursor-pointer list-none font-medium inline-flex w-full items-center justify-between gap-3 rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <span>
+                    {framework.name}
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      ({framework.article_count} mapped articles)
+                    </span>
                   </span>
+                  <ChevronDown
+                    className="size-4 text-muted-foreground transition-transform details-chevron"
+                    aria-hidden
+                  />
                 </summary>
                 <div className="mt-3 space-y-2 text-sm text-muted-foreground">
                   <p>{framework.description}</p>
@@ -389,5 +422,22 @@ function Section({
       </div>
       <div className="border border-border rounded-lg p-5 bg-card">{children}</div>
     </section>
+  );
+}
+
+function Legend({ items }: { items: { label: string; color: string }[] }) {
+  return (
+    <div className="mb-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
+      {items.map((item) => (
+        <div key={item.label} className="inline-flex items-center gap-2">
+          <span
+            className="size-2 rounded-full"
+            style={{ backgroundColor: item.color }}
+            aria-hidden
+          />
+          <span>{item.label}</span>
+        </div>
+      ))}
+    </div>
   );
 }

@@ -28,9 +28,13 @@ function PrivacyPage() {
       </p>
       <h2 className="font-serif text-2xl mt-10 mb-3">Your controls</h2>
       <p className="text-muted-foreground leading-relaxed">
-        Export or delete your account at any time from <strong className="text-foreground">Preferences → Settings</strong>.
-        For data requests, contact{" "}
-        <a href="mailto:privacy@pulsenews.app" className="underline underline-offset-4 text-foreground">
+        Export or delete your account at any time from{" "}
+        <strong className="text-foreground">Preferences → Settings</strong>. For data requests,
+        contact{" "}
+        <a
+          href="mailto:privacy@pulsenews.app"
+          className="underline underline-offset-4 text-foreground"
+        >
           privacy@pulsenews.app
         </a>
         .

@@ -5,7 +5,10 @@ import { ArrowRight, Sparkles, ShieldCheck, Compass } from "lucide-react";
 export const Route = createFileRoute("/_app/")({
   beforeLoad: () => {
     if (typeof window !== "undefined" && getToken()) {
-      throw redirect({ to: "/feed" });
+      throw redirect({
+        to: "/feed",
+        search: { page: 1, q: "", topic: "", lean: "", sort: "newest", fav: false },
+      });
     }
   },
   head: () => ({

@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Star } from "lucide-react";
 import type { Article } from "@/lib/types";
 import { timeAgo, cn } from "@/lib/utils";
-import { LeanMeter, SentimentDot, VerifiedBadge, FrameworkChip } from "./Signals";
+import { SentimentDot, VerifiedBadge, LeanPill, FrameworkCue } from "./Signals";
 
 export function ArticleCard({
   article,
@@ -17,7 +17,7 @@ export function ArticleCard({
   return (
     <article
       className={cn(
-        "grid grid-cols-1 md:grid-cols-[12rem_1fr] gap-6 md:gap-12",
+        "grid grid-cols-1 md:grid-cols-[11rem_1fr] gap-5 md:gap-10 motion-safe:transition-transform motion-safe:duration-150 motion-safe:ease-out motion-safe:hover:-translate-y-0.5",
         compact ? "pt-8 border-t border-border" : "pt-8 border-t border-border",
       )}
     >
@@ -37,17 +37,17 @@ export function ArticleCard({
         </time>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3.5">
         <div className="flex items-start justify-between gap-6">
           <Link
             to="/article/$id"
             params={{ id: String(article.id) }}
-            className="group"
+            className="group focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
           >
             <h2
               className={cn(
                 "font-serif font-medium tracking-tight text-foreground text-balance leading-[1.1] group-hover:underline decoration-1 underline-offset-4",
-                compact ? "text-2xl md:text-[1.6rem]" : "text-3xl md:text-4xl",
+                compact ? "text-[1.6rem] md:text-[1.8rem]" : "text-2xl md:text-3xl",
               )}
             >
               {article.title}
@@ -57,15 +57,16 @@ export function ArticleCard({
             <button
               onClick={() => onToggleFavorite(article)}
               aria-label={article.is_favorited ? "Remove from saved" : "Save article"}
+              aria-pressed={!!article.is_favorited}
               className={cn(
-                "shrink-0 mt-1 transition-colors",
+                "shrink-0 mt-1 inline-flex items-center justify-center size-9 rounded-full border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                 article.is_favorited
-                  ? "text-foreground"
-                  : "text-muted-foreground/50 hover:text-foreground",
+                  ? "text-foreground border-border bg-accent/50"
+                  : "text-muted-foreground/70 border-border hover:text-foreground hover:bg-accent/50",
               )}
             >
               <Star
-                className="size-5"
+                className="size-[18px]"
                 fill={article.is_favorited ? "currentColor" : "none"}
                 strokeWidth={1.5}
               />
@@ -74,18 +75,16 @@ export function ArticleCard({
         </div>
 
         {article.summary && (
-          <p className="text-base md:text-lg text-muted-foreground max-w-[65ch] leading-relaxed text-pretty">
+          <p className="text-base text-muted-foreground max-w-[65ch] leading-relaxed text-pretty line-clamp-3">
             {article.summary}
           </p>
         )}
 
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-3 mt-2 pt-4 border-t border-border">
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2.5 mt-2 pt-3 border-t border-border">
           {article.has_verified_stats && <VerifiedBadge />}
+          <LeanPill score={article.political_lean} />
           <SentimentDot sentiment={article.sentiment} />
-          <LeanMeter score={article.political_lean} />
-          {article.frameworks?.slice(0, 2).map((fp, i) => (
-            <FrameworkChip key={i}>{fp.framework?.name}</FrameworkChip>
-          ))}
+          <FrameworkCue placement={article.frameworks?.[0]} className="min-w-0" />
         </div>
       </div>
     </article>

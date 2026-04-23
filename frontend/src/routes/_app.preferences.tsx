@@ -5,10 +5,15 @@ import { api, ApiError } from "@/lib/api";
 import type { Source, Topic } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
+import { FilterChip } from "@/components/ui/filter-chip";
 
 type PrefSearch = { tab: "topics" | "sources" | "settings" };
 type PreferenceSummary = { topics?: Array<{ id: number; is_active: boolean }> };
-type SourcePreference = Source & { source_id?: number; subscribed?: boolean; organizational_bias?: string };
+type SourcePreference = Source & {
+  source_id?: number;
+  subscribed?: boolean;
+  organizational_bias?: string;
+};
 type UserSettings = {
   source_discovery_mode?: "none" | "some" | "open";
   article_order_preference?: "good_first" | "good_last" | "mixed";
@@ -59,7 +64,9 @@ function PreferencesPage() {
         setActiveSources(new Set(list.filter((s) => s.active !== false).map((s) => s.id)));
       })
       .catch(() => {});
-    api<typeof settings>("/preferences/settings").then(setSettings).catch(() => {});
+    api<typeof settings>("/preferences/settings")
+      .then(setSettings)
+      .catch(() => {});
   }, []);
 
   async function toggleTopic(t: Topic) {
@@ -141,17 +148,9 @@ function PreferencesPage() {
               {topics.map((t) => {
                 const on = subscribed.has(t.id);
                 return (
-                  <button
-                    key={t.id}
-                    onClick={() => toggleTopic(t)}
-                    className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-                      on
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "border-border text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
+                  <FilterChip key={t.id} selected={on} size="md" onClick={() => toggleTopic(t)}>
                     {t.name}
-                  </button>
+                  </FilterChip>
                 );
               })}
               {topics.length === 0 && (
@@ -163,9 +162,7 @@ function PreferencesPage() {
 
         {tab === "sources" && (
           <div>
-            <p className="text-muted-foreground mb-6">
-              Choose which outlets feed into your Pulse.
-            </p>
+            <p className="text-muted-foreground mb-6">Choose which outlets feed into your Pulse.</p>
             <div className="border border-border rounded-lg divide-y divide-border">
               {sources.map((s) => {
                 const on = activeSources.has(s.id);

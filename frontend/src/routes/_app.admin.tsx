@@ -122,10 +122,8 @@ const JOB_TRIGGER_IDS = [
   "reanalyze_unanalyzed_failed",
 ] as const;
 
-export const Route = createFileRoute("/_app/admin")<{
-  tab?: AdminTab;
-}>({
-  validateSearch: (search) => {
+export const Route = createFileRoute("/_app/admin")({
+  validateSearch: (search: Record<string, unknown>) => {
     const tab = search.tab;
     if (
       tab === "dashboard" ||

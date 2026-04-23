@@ -7,7 +7,8 @@ export const Route = createFileRoute("/_app/how-it-works")({
       { title: "How Pulse works" },
       {
         name: "description",
-        content: "From RSS aggregation to AI analysis, framework mapping, statistic verification, and the morning newsletter.",
+        content:
+          "From RSS aggregation to AI analysis, framework mapping, statistic verification, and the morning newsletter.",
       },
     ],
   }),
@@ -15,12 +16,36 @@ export const Route = createFileRoute("/_app/how-it-works")({
 });
 
 const steps = [
-  { Icon: Rss, title: "Aggregate", body: "We pull continuously from a roster of trusted RSS sources, each rated on bias and credibility." },
-  { Icon: Brain, title: "Analyze", body: "An LLM generates a summary, sentiment reading, and political lean — surfaced never sensationalized." },
-  { Icon: Filter, title: "Frame", body: "Each story is mapped onto ethical frameworks like liberty vs. welfare or sovereignty vs. cooperation." },
-  { Icon: ShieldCheck, title: "Verify", body: "Statistical claims are traced through a multi-stage pipeline, scored for confidence and credibility." },
-  { Icon: Sparkles, title: "Personalize", body: "Your topics, sources, and reading shape what surfaces in your feed." },
-  { Icon: Mail, title: "Deliver", body: "Optional daily newsletter brings the day's signal — not noise — to your inbox." },
+  {
+    Icon: Rss,
+    title: "Aggregate",
+    body: "We pull continuously from a roster of trusted RSS sources, each rated on bias and credibility.",
+  },
+  {
+    Icon: Brain,
+    title: "Analyze",
+    body: "An LLM generates a summary, sentiment reading, and political lean — surfaced never sensationalized.",
+  },
+  {
+    Icon: Filter,
+    title: "Frame",
+    body: "Each story is mapped onto ethical frameworks like liberty vs. welfare or sovereignty vs. cooperation.",
+  },
+  {
+    Icon: ShieldCheck,
+    title: "Verify",
+    body: "Statistical claims are traced through a multi-stage pipeline, scored for confidence and credibility.",
+  },
+  {
+    Icon: Sparkles,
+    title: "Personalize",
+    body: "Your topics, sources, and reading shape what surfaces in your feed.",
+  },
+  {
+    Icon: Mail,
+    title: "Deliver",
+    body: "Optional daily newsletter brings the day's signal — not noise — to your inbox.",
+  },
 ];
 
 function HowItWorks() {
