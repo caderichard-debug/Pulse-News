@@ -1,8 +1,3 @@
-databases:
-  - name: pulse-db
-    databaseName: news_db
-    plan: free
-
 services:
   # Backend API Service
   - type: web
@@ -20,7 +15,7 @@ services:
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: pulse-db
+          name: pulse-news-postgres
           property: connectionString
       - key: SECRETS_FILE
         value: /etc/secrets/.env
