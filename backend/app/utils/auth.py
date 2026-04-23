@@ -23,6 +23,9 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash"""
+    if not hashed_password:
+        return False
+
     # Bcrypt has a 72-byte limit
     password_bytes = plain_password.encode('utf-8')
     if len(password_bytes) > 72:
@@ -31,7 +34,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     hashed_bytes = hashed_password.encode('utf-8')
     try:
         return bcrypt.checkpw(password_bytes, hashed_bytes)
-    except ValueError:
+    except (ValueError, TypeError):
         # Gracefully handle legacy/corrupt password values that are not valid bcrypt hashes.
         return False
 
