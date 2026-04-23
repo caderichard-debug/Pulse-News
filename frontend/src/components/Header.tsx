@@ -5,10 +5,14 @@ import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
-  { to: "/feed", label: "Feed" },
+  {
+    to: "/feed",
+    label: "Feed",
+    search: { page: 1, q: "", topic: "", lean: "", sort: "newest", fav: false },
+  },
   { to: "/analyze", label: "Analyze" },
   { to: "/insights", label: "Insights" },
-  { to: "/preferences", label: "Preferences" },
+  { to: "/preferences", label: "Preferences", search: { tab: "topics" } },
   { to: "/analytics", label: "Dashboard" },
 ] as const;
 
@@ -32,6 +36,7 @@ export function Header() {
                 <Link
                   key={l.to}
                   to={l.to}
+                  {...("search" in l ? { search: l.search } : {})}
                   className={cn(
                     "pb-1 border-b transition-colors",
                     active
@@ -46,6 +51,7 @@ export function Header() {
             {hasAdminAccess && (
               <Link
                 to="/admin"
+                search={{ tab: "dashboard" }}
                 className={cn(
                   "pb-1 border-b transition-colors",
                   path === "/admin" || path.startsWith("/admin/")

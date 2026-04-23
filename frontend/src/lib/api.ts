@@ -4,8 +4,7 @@
 const configuredApiUrl = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "");
 
 export const API_BASE =
-  configuredApiUrl ||
-  (import.meta.env.DEV ? "http://localhost:8000" : "https://api.pulsenews.app");
+  configuredApiUrl || (import.meta.env.DEV ? "http://localhost:8000" : "https://api.pulsenews.app");
 
 const TOKEN_KEY = "token";
 
@@ -71,12 +70,7 @@ export async function api<T = unknown>(path: string, opts: FetchOpts = {}): Prom
     res = await fetch(url, {
       ...rest,
       headers: finalHeaders,
-      body:
-        body === undefined
-          ? undefined
-          : body instanceof FormData
-            ? body
-            : JSON.stringify(body),
+      body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
     });
   } catch (e) {
     throw new ApiError(0, "Network error — could not reach Pulse API");
