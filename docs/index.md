@@ -10,6 +10,7 @@ New to Pulse? Start here with our complete setup and development guides.
 - **[API Documentation](api/API.md)** - Complete REST API reference
 - **[Testing Guide](testing/TESTING.md)** - Running and writing tests
 - **[Deployment Guide](guides/DEPLOYMENT_GUIDE.md)** - Production deployment
+- **[Supabase Schema Isolation](guides/SUPABASE_SCHEMA_ISOLATION_PORTABLE_GUIDE.md)** - Multi-app safe database setup
 
 ## 📖 Table of Contents
 
@@ -26,6 +27,7 @@ api/API.md
 architecture/ARCHITECTURE.md
 architecture/STATISTICS_VERIFICATION_V2_PLAN.md
 guides/DEPLOYMENT_GUIDE.md
+guides/SUPABASE_SCHEMA_ISOLATION_PORTABLE_GUIDE.md
 guides/HOW_TO_SEND_TEST_EMAIL.md
 guides/ADMIN_PANEL_QUICK_START.md
 planning/ADMIN_PANEL_PLAN.md
@@ -48,7 +50,7 @@ Pulse is an AI-powered news aggregation platform that provides:
 ### Technology Stack
 - **Backend**: FastAPI, SQLModel, PostgreSQL, OpenAI GPT-4o-mini
 - **Frontend**: Next.js, TypeScript, Tailwind CSS, React Query
-- **Infrastructure**: Docker, Render, PostgreSQL
+- **Infrastructure**: Docker, Railway, Supabase PostgreSQL
 
 ## 🎯 Getting Started
 
@@ -82,6 +84,7 @@ Pulse is an AI-powered news aggregation platform that provides:
 
 ### 📋 Planning & Guides
 - **[Deployment Guide](guides/DEPLOYMENT_GUIDE.md)** - Production deployment
+- **[Supabase Schema Isolation](guides/SUPABASE_SCHEMA_ISOLATION_PORTABLE_GUIDE.md)** - Database isolation pattern
 - **[Email Testing Guide](guides/HOW_TO_SEND_TEST_EMAIL.md)** - Email testing
 - **[Admin Panel Quick Start](guides/ADMIN_PANEL_QUICK_START.md)** - Admin interface
 - **[Admin Panel Plan](planning/ADMIN_PANEL_PLAN.md)** - Implementation plan

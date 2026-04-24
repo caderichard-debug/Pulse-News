@@ -63,7 +63,7 @@ For detailed setup instructions, see [Development Setup Guide](docs/development/
 
 ### 🔧 Environment Configuration
 
-**Important**: When updating environment variables, update both `.env` (local) and `render.yaml` (production).
+**Important**: When updating environment variables, update both `.env` (local) and Railway service variables (production).
 
 Key environment variables:
 ```bash
@@ -95,7 +95,7 @@ DOCUMENTATION_URL=https://docs.pulsenews.app
 
 ### Infrastructure
 - **Docker & Docker Compose** - Containerization
-- **Render/Railway** - Deployment platforms
+- **Railway + Supabase** - Deployment platform + managed Postgres
 - **Resend** - Email delivery
 - **RSS Feeds** - News source integration
 
@@ -149,6 +149,7 @@ DOCUMENTATION_URL=https://docs.pulsenews.app
 - **[Development Setup](docs/development/SETUP.md)** - Installation & configuration
 - **[Testing Guide](docs/testing/TESTING.md)** - Running and writing tests
 - **[Deployment Guide](docs/guides/DEPLOYMENT_GUIDE.md)** - Production deployment
+- **[Supabase Schema Isolation Guide](docs/guides/SUPABASE_SCHEMA_ISOLATION_PORTABLE_GUIDE.md)** - Safe multi-app schema setup
 
 ### 🏗️ Technical Documentation
 - **[System Architecture](docs/architecture/ARCHITECTURE.md)** - Complete system design
@@ -197,7 +198,8 @@ Pulse/
 ├── scripts/              # Development scripts
 ├── .github/workflows/      # CI/CD pipelines
 ├── docker-compose.yml     # Development environment
-├── render.yaml           # Production deployment config
+├── backend/railway.toml   # Railway backend service config
+├── frontend/railway.toml  # Railway frontend service config
 ├── Makefile             # Build automation
 └── package.json         # Project metadata
 ```

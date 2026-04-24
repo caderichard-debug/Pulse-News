@@ -89,7 +89,7 @@ class Settings(BaseSettings):
     admin_token_rotation_days: int = 90  # Rotate admin token every 90 days
 
     model_config = {
-        # Check for Render secret file first, then fall back to local .env
+        # Support optional platform-mounted secret file, then fall back to local .env
         "env_file": os.getenv("SECRETS_FILE", ".env"),
         "case_sensitive": False,
         "extra": "ignore"  # Allow extra fields in environment variables

@@ -27,6 +27,12 @@ Pulse is a backend/frontend system that ingests news articles, analyzes them wit
 - `mobile/` only contains the `app/` workspace; unused Replit scaffold packages (`artifacts/api-server`, `artifacts/mockup-sandbox`), nested `.git`, and unused `lib/db` were removed to keep the tree lean.
 - Mobile `info/*` stack (`editorial-standards`, `how-we-rate-lean`, `appearance`) is registered in the root Stack as `info` for in-app help from Profile and Analytics.
 
+## Deployment Platform (Current)
+- Production hosting is standardized on Railway (backend + frontend services).
+- Managed Postgres is standardized on Supabase with per-app schema isolation.
+- Service deploy configs live at `backend/railway.toml` and `frontend/railway.toml`.
+- Use `docs/guides/DEPLOYMENT_GUIDE.md` and `docs/guides/SUPABASE_SCHEMA_ISOLATION_PORTABLE_GUIDE.md` for deploy + DB setup.
+
 ## Web UI polish (feed parity with mobile)
 - Feed and card surfaces in `frontend/src/routes/_app.feed.tsx` and `frontend/src/components/ArticleCard.tsx` were tuned for faster scanning: reduced vertical density, clearer control affordances, and stronger focus-visible states.
 - Signal presentation moved to clearer hierarchy in `frontend/src/components/Signals.tsx`: lean now uses a compact pill cue, sentiment adds icon + text (not color-only), and verified badge contrast was increased.

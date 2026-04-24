@@ -43,6 +43,10 @@
 - Request timeouts configurable via `ai_request_timeout_seconds`
 - Retry limits configurable via `ai_max_retries`
 
+## Deployment Context
+- Current production target is Railway services with Supabase Postgres.
+- Database URLs should use schema-scoped Supabase connection strings (for example, `...?schema=proj_pulse`) aligned with `docs/guides/SUPABASE_SCHEMA_ISOLATION_PORTABLE_GUIDE.md`.
+
 ## Cost and Throughput Knobs
 - `max_tokens_per_request`
 - stage batch sizes (`analysis_batch_size`, etc.)
