@@ -12,7 +12,7 @@ from ..utils.openai_client import openai_client
 from ..utils.pipeline_metrics import incr, TimedStage
 from ..config import settings
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Sequence
 import logging
 
 logger = logging.getLogger(__name__)
@@ -53,6 +53,7 @@ def analyze_articles_batch(
     session: Session,
     batch_size: int = 5,
     include_failed_status: bool = False,
+    target_article_ids: Optional[Sequence[int]] = None,
 ) -> int:
     """
     Analyze a batch of articles using Claude API.
@@ -61,6 +62,8 @@ def analyze_articles_batch(
     Args:
         session: Database session (injected for testing)
         batch_size: Number of articles to process in one API call (max 5 recommended)
+        target_article_ids: If set, only consider these article IDs (still requires content
+            and no existing ArticleAnalysis). Order matches the sequence.
 
     Returns:
         Number of articles successfully analyzed
@@ -71,23 +74,38 @@ def analyze_articles_batch(
 
     analyzed_count = 0
 
-    # Get extracted articles that haven't been analyzed yet.
-    # Optionally include FAILED rows to recover analysis candidates that still have content.
-    status_filter = (
-        or_(
-            Article.processing_status == ProcessingStatus.COMPLETED,
-            Article.processing_status == ProcessingStatus.FAILED,
+    if target_article_ids:
+        id_list = [int(i) for i in target_article_ids if i is not None]
+        if not id_list:
+            return 0
+        articles_to_analyze = session.exec(
+            select(Article)
+            .where(Article.id.in_(id_list))
+            .where(Article.content_text.isnot(None))
+            .where(~Article.id.in_(select(ArticleAnalysis.article_id)))
+        ).all()
+        order = {aid: idx for idx, aid in enumerate(id_list)}
+        articles_to_analyze.sort(key=lambda a: order.get(a.id, 10**9))
+        if len(articles_to_analyze) > batch_size:
+            articles_to_analyze = articles_to_analyze[:batch_size]
+    else:
+        # Get extracted articles that haven't been analyzed yet.
+        # Optionally include FAILED rows to recover analysis candidates that still have content.
+        status_filter = (
+            or_(
+                Article.processing_status == ProcessingStatus.COMPLETED,
+                Article.processing_status == ProcessingStatus.FAILED,
+            )
+            if include_failed_status
+            else (Article.processing_status == ProcessingStatus.COMPLETED)
         )
-        if include_failed_status
-        else (Article.processing_status == ProcessingStatus.COMPLETED)
-    )
-    articles_to_analyze = session.exec(
-        select(Article)
-        .where(status_filter)
-        .where(Article.content_text.isnot(None))
-        .where(~Article.id.in_(select(ArticleAnalysis.article_id)))
-        .limit(batch_size)
-    ).all()
+        articles_to_analyze = session.exec(
+            select(Article)
+            .where(status_filter)
+            .where(Article.content_text.isnot(None))
+            .where(~Article.id.in_(select(ArticleAnalysis.article_id)))
+            .limit(batch_size)
+        ).all()
 
     if not articles_to_analyze:
         logger.info("No articles ready for analysis")
@@ -245,12 +263,55 @@ def get_unanalyzed_article_count(
         if include_failed_status
         else (Article.processing_status == ProcessingStatus.COMPLETED)
     )
-    return session.exec(
+    raw = session.exec(
         select(func.count(Article.id))
         .where(status_filter)
         .where(Article.content_text.isnot(None))
         .where(~Article.id.in_(select(ArticleAnalysis.article_id)))
     ).one()
+    if isinstance(raw, (int, float)):
+        return int(raw)
+    return int(raw[0])
+
+
+def get_pending_extraction_count(session: Session) -> int:
+    """Articles waiting for content extraction (not yet COMPLETED for pipeline purposes)."""
+    raw = session.exec(
+        select(func.count(Article.id))
+        .where(Article.processing_status == ProcessingStatus.PENDING)
+    ).one()
+    if isinstance(raw, (int, float)):
+        return int(raw)
+    return int(raw[0])
+
+
+def get_recent_unanalyzed_article_ids(session: Session, limit: int = 5) -> List[int]:
+    """
+    Most recently scraped articles that have body text but no ArticleAnalysis row yet.
+
+    Includes COMPLETED, FAILED, and PENDING so backlog items with content are not skipped
+    when status and analysis are out of sync.
+    """
+    status_filter = or_(
+        Article.processing_status == ProcessingStatus.COMPLETED,
+        Article.processing_status == ProcessingStatus.FAILED,
+        Article.processing_status == ProcessingStatus.PENDING,
+    )
+    rows = session.exec(
+        select(Article.id)
+        .where(status_filter)
+        .where(Article.content_text.isnot(None))
+        .where(~Article.id.in_(select(ArticleAnalysis.article_id)))
+        .order_by(Article.scraped_at.desc(), Article.id.desc())
+        .limit(limit)
+    ).all()
+    ids: List[int] = []
+    for r in rows:
+        if isinstance(r, (list, tuple)):
+            ids.append(int(r[0]))
+        else:
+            ids.append(int(r))
+    return ids
 
 
 if __name__ == "__main__":

@@ -10,7 +10,8 @@ from ..database import get_session
 from ..jobs.tasks import (
     scrape_job, extract_job, analyze_job, framework_job,
     statistics_verification_job, article_clustering_job, context_generation_job,
-    process_articles_job, process_unprocessed_articles_job, regenerate_viewpoints_job
+    process_articles_job, process_unprocessed_articles_job, regenerate_viewpoints_job,
+    analyze_recent_articles_job,
 )
 from ..jobs.scheduler import get_job_status
 from datetime import datetime, timedelta
@@ -307,6 +308,29 @@ def trigger_process_unprocessed_job(background_tasks: BackgroundTasks) -> Dict[s
         "status": "triggered",
         "job": "process_unprocessed",
         "message": "Unprocessed articles scan started in background"
+    }
+
+
+@router.post("/jobs/analyze-recent")
+def trigger_analyze_recent_job(
+    background_tasks: BackgroundTasks,
+    limit: int = 5,
+) -> Dict[str, str]:
+    """
+    Analyze the most recent articles that have content but no AI analysis (cap ``limit``).
+
+    Use after fixing pipeline or keys when a full backlog scan is unnecessary.
+    """
+    lim = max(1, min(limit, 25))
+
+    def _run():
+        analyze_recent_articles_job(limit=lim)
+
+    background_tasks.add_task(_run)
+    return {
+        "status": "triggered",
+        "job": "analyze_recent",
+        "message": f"Analyze-recent job started in background (limit={lim})",
     }
 
 

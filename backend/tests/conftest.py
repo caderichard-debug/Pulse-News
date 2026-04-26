@@ -2,6 +2,12 @@
 Pytest configuration and fixtures.
 """
 
+# Clear Supabase isolation env before Settings / app import so SQLite + local PG tests work.
+import os
+
+os.environ["SUPABASE_DB_SCHEMA"] = ""
+os.environ["SUPABASE_DB_ROLE"] = ""
+
 import pytest
 from sqlmodel import Session, create_engine, SQLModel
 from sqlmodel.pool import StaticPool

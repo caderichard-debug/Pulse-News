@@ -220,12 +220,14 @@ class TestArticleDetailEndpoints:
         assert data["sentiment_score"] == 5.0
         assert data["political_lean"] == "center"
 
-    def test_article_detail_requires_auth(self, client, test_article):
-        """Test that article detail requires authentication."""
+    def test_article_detail_allows_anonymous_access(self, client, test_article):
+        """Article detail is readable without a token (same as feed); favorites stay false."""
         article_id = test_article["article"].id
         response = client.get(f"/articles/{article_id}")
-        # FastAPI returns 403 when auth dependency fails
-        assert response.status_code == 403
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == article_id
+        assert data.get("is_favorited") is False
 
     def test_article_detail_includes_statistics(self, client, auth_token, test_article):
         """Test that article detail includes verified statistics."""

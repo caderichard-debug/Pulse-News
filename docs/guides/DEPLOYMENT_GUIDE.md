@@ -28,15 +28,31 @@ Follow `docs/guides/SUPABASE_SCHEMA_ISOLATION_PORTABLE_GUIDE.md` and create:
 - Schema: `proj_pulse`
 - Runtime role: `app_pulse_rw`
 
-Set backend DB URL in this format:
+Set backend DB URL in one of these formats:
+
+**Direct host** (works when your runtime has IPv6 to Supabase, or the host resolves to reachable IPv4):
 
 ```bash
 DATABASE_URL=postgresql://app_pulse_rw:<PASSWORD>@db.<SUPABASE_PROJECT_REF>.supabase.co:5432/postgres?sslmode=require&schema=proj_pulse
 ```
 
+**Session pooler (recommended for Railway / IPv4-only egress)** — use the region from Supabase **Connect** → **Session pooler**:
+
+```bash
+DATABASE_URL=postgresql://app_pulse_rw.<SUPABASE_PROJECT_REF>:<PASSWORD>@aws-0-<REGION>.pooler.supabase.com:5432/postgres?sslmode=require&schema=proj_pulse
+```
+
+Also set (so SQLModel binds to `proj_pulse`, Alembic stores `alembic_version` there, `/health` pings DB, and connect-time isolation checks run):
+
+```bash
+SUPABASE_DB_SCHEMA=proj_pulse
+SUPABASE_DB_ROLE=app_pulse_rw
+```
+
 Important:
 - Do not use `service_role` for request-path database access.
 - Keep schema-qualified migrations and app access scoped to `proj_pulse`.
+- Use pooler **port 5432** (session mode), not **6543** (transaction mode), unless you know you need transaction pooling.
 
 ## Step 2: Create Railway Backend Service
 
@@ -47,7 +63,9 @@ Important:
 
 ### Required backend variables
 
-- `DATABASE_URL` (Supabase URL with `schema=proj_pulse`)
+- `DATABASE_URL` (Supabase URL with `schema=proj_pulse`; prefer Session pooler on Railway)
+- `SUPABASE_DB_SCHEMA=proj_pulse`
+- `SUPABASE_DB_ROLE=app_pulse_rw`
 - `SECRET_KEY`
 - `OPENAI_API_KEY`
 - `ENVIRONMENT=production`
@@ -111,7 +129,8 @@ The backend container startup already runs migration/init helpers; running `alem
 ## Migration Checklist (Render -> Railway)
 
 - [ ] Create Supabase schema-scoped runtime role.
-- [ ] Set `DATABASE_URL` with `schema=proj_pulse`.
+- [ ] Set `DATABASE_URL` with `schema=proj_pulse` (Session pooler URL on Railway).
+- [ ] Set `SUPABASE_DB_SCHEMA` and `SUPABASE_DB_ROLE` for runtime isolation checks and metadata.
 - [ ] Create Railway `backend` service (root `backend`).
 - [ ] Create Railway `frontend` service (root `frontend`).
 - [ ] Set `VITE_API_URL`, `FRONTEND_URL`, `BACKEND_URL`.
@@ -121,4 +140,4 @@ The backend container startup already runs migration/init helpers; running `alem
 
 ---
 
-Last updated: 2026-04-23
+Last updated: 2026-04-26

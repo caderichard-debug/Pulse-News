@@ -2,10 +2,10 @@ import asyncio
 import os
 import re
 from fastapi import FastAPI, Request
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from .database import create_db_and_tables
+from .database import create_db_and_tables, health_db_ping
 from .jobs.scheduler import start_scheduler, stop_scheduler
 from .routes import admin, auth, preferences, articles, test_email, analytics, feed, sources, admin_panel, password_reset, analyze, favorites, oauth, challenge, newsletter_links
 import logging
@@ -132,7 +132,13 @@ def root():
 
 @app.get("/health")
 def health_check():
-    """Health check endpoint for monitoring"""
+    """Health check endpoint for monitoring (includes DB ping when schema isolation is enabled)."""
+    ok, err = health_db_ping()
+    if not ok:
+        return JSONResponse(
+            {"status": "unhealthy", "error": err},
+            status_code=503,
+        )
     return {"status": "healthy"}
 
 # Expose port for render

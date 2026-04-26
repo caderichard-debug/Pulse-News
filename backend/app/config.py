@@ -3,6 +3,19 @@ from typing import Optional
 import os
 
 
+def _resolve_env_file() -> str:
+    """Pick env file in priority order for local and production runtimes."""
+    explicit_file = os.getenv("SECRETS_FILE") or os.getenv("ENV_FILE")
+    if explicit_file:
+        return explicit_file
+
+    environment = (os.getenv("ENVIRONMENT") or "").strip().lower()
+    if environment == "production" and os.path.exists(".env.production"):
+        return ".env.production"
+
+    return ".env"
+
+
 class Settings(BaseSettings):
     """Application configuration settings"""
 
@@ -10,6 +23,9 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "postgresql://postgres:password@db:5432/news_db"
     pulse_access_token: Optional[str] = None
+    # Supabase schema isolation (set in production; leave unset for local Docker / CI)
+    supabase_db_schema: Optional[str] = None
+    supabase_db_role: Optional[str] = None
 
     # API Keys
     openai_api_key: Optional[str] = None
@@ -89,8 +105,8 @@ class Settings(BaseSettings):
     admin_token_rotation_days: int = 90  # Rotate admin token every 90 days
 
     model_config = {
-        # Support optional platform-mounted secret file, then fall back to local .env
-        "env_file": os.getenv("SECRETS_FILE", ".env"),
+        # Support platform secret file, explicit ENV_FILE, then .env(.production) fallback.
+        "env_file": _resolve_env_file(),
         "case_sensitive": False,
         "extra": "ignore"  # Allow extra fields in environment variables
     }

@@ -1,16 +1,19 @@
 from sqlmodel import create_engine, Session, SQLModel
 import time
+from sqlalchemy import event, text
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.orm import sessionmaker
-from typing import Generator
+from typing import Generator, Optional, Tuple
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
-import os
 import logging
 from dotenv import load_dotenv
 from .config import settings
+from .db_metadata import configure_sqlmodel_metadata
 
 load_dotenv()
 logger = logging.getLogger(__name__)
+
+# Pin metadata to app schema before any route imports models (when configured).
+configure_sqlmodel_metadata()
 
 # Get DATABASE_URL from environment variable, fallback to default
 DATABASE_URL = settings.database_url
@@ -54,6 +57,44 @@ def _normalize_database_url_for_psycopg2(url: str) -> str:
 engine = create_engine(_normalize_database_url_for_psycopg2(DATABASE_URL), echo=True)  # echo=True for development
 
 
+def _assert_isolation_on_connect(dbapi_conn, _connection_record) -> None:
+    """Fail fast if pooler/DSN dropped search_path or wrong role (Supabase isolation)."""
+    expected_schema = (settings.supabase_db_schema or "").strip()
+    if not expected_schema:
+        return
+    cur = dbapi_conn.cursor()
+    cur.execute("SELECT current_user, current_database(), current_schemas(true)")
+    row = cur.fetchone()
+    cur.close()
+    if not row:
+        raise RuntimeError("Isolation check: empty result from current_user/current_schemas")
+    user, db, schemas = row[0], row[1], row[2]
+    expected_role = (settings.supabase_db_role or "").strip()
+    if expected_role and user != expected_role:
+        raise RuntimeError(
+            f"DB connected as {user!r}, expected {expected_role!r} "
+            f"(set SUPABASE_DB_ROLE in env or clear it to skip role check)"
+        )
+    # psycopg2 returns list for array types; normalize to list of str
+    path_list: list[str]
+    if schemas is None:
+        path_list = []
+    elif isinstance(schemas, (list, tuple)):
+        path_list = [str(s) for s in schemas]
+    else:
+        path_list = [str(s) for s in str(schemas).strip("{}").split(",") if s]
+    if not path_list or path_list[0] != expected_schema:
+        raise RuntimeError(
+            f"search_path head is {path_list!r}, expected {expected_schema!r} first "
+            f"(check DATABASE_URL options=-csearch_path=... and Session Pooler port 5432)"
+        )
+    logger.info("DB isolation OK: user=%s db=%s search_path=%s", user, db, path_list)
+
+
+if settings.supabase_db_schema:
+    event.listen(engine, "connect", _assert_isolation_on_connect)
+
+
 def create_db_and_tables():
     """Create all database tables"""
     #SQLModel.metadata.create_all(engine)
@@ -77,3 +118,17 @@ def get_session() -> Generator[Session, None, None]:
     with Session(engine) as session:
         yield session
 
+
+def health_db_ping() -> Tuple[bool, Optional[str]]:
+    """
+    Lightweight connectivity check for /health when schema isolation is enabled.
+    Returns (ok, error_message).
+    """
+    if not settings.supabase_db_schema:
+        return True, None
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return True, None
+    except Exception as e:
+        return False, str(e)

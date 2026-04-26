@@ -1,5 +1,4 @@
 from logging.config import fileConfig
-import os
 import sys
 from pathlib import Path
 
@@ -10,6 +9,13 @@ from alembic import context
 
 # Add parent directory to path to import app modules
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from app.config import settings
+from app.db_metadata import configure_sqlmodel_metadata
+from app.database import _normalize_database_url_for_psycopg2
+
+# Bind metadata to app schema before any table=True models load.
+configure_sqlmodel_metadata()
 
 # Import SQLModel and all models
 from sqlmodel import SQLModel
@@ -33,14 +39,13 @@ from app.models import (
     ArticleContext,
     SourceCredibilityRating,
 )
-from app.config import settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
 # Override sqlalchemy.url with environment variable if available
-database_url = settings.database_url
+database_url = _normalize_database_url_for_psycopg2(settings.database_url)
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
 
@@ -52,10 +57,7 @@ if config.config_file_name is not None:
 # Set target metadata for autogenerate support
 target_metadata = SQLModel.metadata
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+_isolated = bool((settings.supabase_db_schema or "").strip())
 
 
 def run_migrations_offline() -> None:
@@ -71,13 +73,18 @@ def run_migrations_offline() -> None:
 
     """
     url = config.get_main_option("sqlalchemy.url")
-    context.configure(
+    configure_kwargs = dict(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         render_as_batch=True,
     )
+    if _isolated:
+        configure_kwargs["version_table_schema"] = settings.supabase_db_schema
+        configure_kwargs["include_schemas"] = True
+
+    context.configure(**configure_kwargs)
 
     with context.begin_transaction():
         context.run_migrations()
@@ -96,11 +103,18 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
 
+    configure_kwargs = dict(
+        target_metadata=target_metadata,
+        render_as_batch=True,
+    )
+    if _isolated:
+        configure_kwargs["version_table_schema"] = settings.supabase_db_schema
+        configure_kwargs["include_schemas"] = True
+
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
-            target_metadata=target_metadata,
-            render_as_batch=True,
+            **configure_kwargs,
         )
 
         with context.begin_transaction():
