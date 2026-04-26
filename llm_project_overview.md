@@ -32,6 +32,9 @@ Pulse is a backend/frontend system that ingests news articles, analyzes them wit
 - Managed Postgres is standardized on Supabase with per-app schema isolation.
 - Service deploy configs live at `backend/railway.toml` and `frontend/railway.toml`.
 - Use `docs/guides/DEPLOYMENT_GUIDE.md` and `docs/guides/SUPABASE_SCHEMA_ISOLATION_PORTABLE_GUIDE.md` for deploy + DB setup.
+- Frontend Railway build command was simplified to `npm run build` (Nixpacks already installs dependencies), and Node is pinned via `frontend/.node-version` to avoid Node 18 engine mismatches during deploy.
+- Supabase isolation bootstrap SQL is at `backend/sql/supabase_schema_isolation.sql` (`proj_pulse` + `app_pulse_rw`).
+- Production env template is `backend/.env.production`; backend settings auto-load it when `ENVIRONMENT=production` and no explicit secrets file is set.
 
 ## Web UI polish (feed parity with mobile)
 - Feed and card surfaces in `frontend/src/routes/_app.feed.tsx` and `frontend/src/components/ArticleCard.tsx` were tuned for faster scanning: reduced vertical density, clearer control affordances, and stronger focus-visible states.

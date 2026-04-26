@@ -1,6 +1,6 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm ci && npm run build"
+buildCommand = "npm run build"
 
 [deploy]
 startCommand = "mkdir -p public && rm -rf public/assets && cp -R dist/client/assets public/assets && npx srvx serve --entry dist/server/index.js --port $PORT --prod"

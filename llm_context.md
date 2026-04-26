@@ -46,6 +46,9 @@
 ## Deployment Context
 - Current production target is Railway services with Supabase Postgres.
 - Database URLs should use schema-scoped Supabase connection strings (for example, `...?schema=proj_pulse`) aligned with `docs/guides/SUPABASE_SCHEMA_ISOLATION_PORTABLE_GUIDE.md`.
+- Frontend Railway deploys should use `frontend/railway.toml` with `buildCommand = "npm run build"` and `frontend/.node-version` set to `22` to avoid Nixpacks `npm ci` cache-lock conflicts and Node engine mismatches.
+- Supabase schema bootstrap SQL for this repo lives at `backend/sql/supabase_schema_isolation.sql`.
+- Backend config loads `.env.production` automatically when `ENVIRONMENT=production` (unless `SECRETS_FILE` or `ENV_FILE` is set).
 
 ## Cost and Throughput Knobs
 - `max_tokens_per_request`
