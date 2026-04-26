@@ -3,7 +3,7 @@ import time
 from sqlalchemy import event, text
 from sqlalchemy.exc import OperationalError
 from typing import Generator, Optional, Tuple
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit, urlparse
+from urllib.parse import parse_qsl, quote, unquote, urlencode, urlsplit, urlunsplit, urlparse, urlunparse
 import logging
 from dotenv import load_dotenv
 from .config import settings
@@ -53,6 +53,43 @@ def _normalize_database_url_for_psycopg2(url: str) -> str:
     return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(filtered), parts.fragment))
 
 
+def _percent_encode_userinfo_in_database_url(url: str) -> str:
+    """
+    Re-encode username and password for libpq/psycopg2.
+
+    Passwords with ``+``, ``=``, ``@``, etc. must be percent-encoded in the URI;
+    otherwise ``+`` is often misread and authentication fails against Supabase pooler.
+    """
+    try:
+        p = urlparse(url)
+    except Exception:
+        return url
+    if p.scheme not in ("postgresql", "postgres"):
+        return url
+    if not p.hostname or not p.username:
+        return url
+    user_raw = unquote(p.username)
+    if p.password is not None:
+        pass_raw = unquote(p.password)
+        userinfo = f"{quote(user_raw)}:{quote(pass_raw)}"
+    else:
+        userinfo = quote(user_raw)
+    host = p.hostname
+    if p.port:
+        netloc = f"{userinfo}@{host}:{p.port}"
+    else:
+        netloc = f"{userinfo}@{host}"
+    rebuilt = urlunparse((p.scheme, netloc, p.path, p.params, p.query, p.fragment))
+    if rebuilt != url:
+        logger.info("Re-encoded DATABASE_URL userinfo for safe libpq parsing (special characters in password)")
+    return rebuilt
+
+
+def prepare_database_url_for_engine(url: str) -> str:
+    """Normalize schema query param and percent-encode credentials for psycopg2."""
+    return _percent_encode_userinfo_in_database_url(_normalize_database_url_for_psycopg2(url))
+
+
 def _validate_supabase_pooler_username(url: str) -> None:
     """
     Supabase pooler hosts reject a bare ``postgres`` login; the username must include
@@ -82,9 +119,9 @@ def _validate_supabase_pooler_username(url: str) -> None:
 
 
 # Create engine with SQLModel
-_normalized_url = _normalize_database_url_for_psycopg2(DATABASE_URL)
-_validate_supabase_pooler_username(_normalized_url)
-engine = create_engine(_normalized_url, echo=True)  # echo=True for development
+_prepared_url = prepare_database_url_for_engine(DATABASE_URL)
+_validate_supabase_pooler_username(_prepared_url)
+engine = create_engine(_prepared_url, echo=True)  # echo=True for development
 
 
 def _assert_isolation_on_connect(dbapi_conn, _connection_record) -> None:

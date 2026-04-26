@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.config import settings
 from app.db_metadata import configure_sqlmodel_metadata
-from app.database import _normalize_database_url_for_psycopg2
+from app.database import prepare_database_url_for_engine
 
 # Bind metadata to app schema before any table=True models load.
 configure_sqlmodel_metadata()
@@ -45,7 +45,7 @@ from app.models import (
 config = context.config
 
 # Override sqlalchemy.url with environment variable if available
-database_url = _normalize_database_url_for_psycopg2(settings.database_url)
+database_url = prepare_database_url_for_engine(settings.database_url)
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
 

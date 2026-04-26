@@ -65,7 +65,7 @@ Notes:
 - **Port 5432** = session mode (one server backend per client session). **Port 6543** = transaction mode (PgBouncer); avoid for apps that rely on session-persistent `search_path` unless you fully understand transaction pooling.
 - **`?schema=`** is a Supabase dashboard convenience, not a libpq parameter. **`psycopg2` rejects `schema=`** as an invalid DSN option. Normalize at engine creation to PostgreSQL startup options, e.g.  
   `?options=-csearch_path=proj_<project_name>,public`  
-  (Pulse: [`backend/app/database.py`](../../backend/app/database.py) — `_normalize_database_url_for_psycopg2`.)
+  (Pulse: [`backend/app/database.py`](../../backend/app/database.py) — `prepare_database_url_for_engine` applies `?schema=` → `options=-csearch_path=...` and percent-encodes userinfo for libpq.)
 - Do **not** rely on the URL alone: keep **`ALTER ROLE ... IN DATABASE postgres SET search_path = proj_<name>, public`** in bootstrap SQL, and optionally a **runtime assertion** on connect (Pulse: `_assert_isolation_on_connect` in the same module).
 
 ### Driver matrix (quick reference)

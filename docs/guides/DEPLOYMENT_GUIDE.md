@@ -52,6 +52,8 @@ SUPABASE_PROJECT_REF=<your_supabase_project_ref>
 
 **Critical:** On `*.pooler.supabase.com`, the database username **must** include the project ref (e.g. `app_pulse_rw.jbfyozuygjtbrxyreiie` or `postgres.jbfyozuygjtbrxyreiie`). A bare `postgres` user (no `.` suffix) always returns `password authentication failed for user "postgres"` and can trip Supabase’s `(ECIRCUITBREAKER) too many authentication failures`.
 
+**If you see `password authentication failed for user "app_pulse_rw"`** (or the pooler shows only the role name): the username is often correct but the **password is wrong** or **not URL-encoded**. Custom role passwords with `+`, `=`, `/`, `@`, or `#` must be percent-encoded in `DATABASE_URL`, or paste the **Session pooler** URI from the Supabase dashboard (it encodes credentials for you). The backend reapplies safe encoding via `prepare_database_url_for_engine` in `backend/app/database.py`, but a password containing an **unencoded `@`** will still break parsing—use `%40` for `@` in that case.
+
 Important:
 - Do not use `service_role` for request-path database access.
 - Keep schema-qualified migrations and app access scoped to `proj_pulse`.
