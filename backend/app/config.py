@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://postgres:password@db:5432/news_db"
     pulse_access_token: Optional[str] = None
     # Supabase schema isolation (set in production; leave unset for local Docker / CI)
+    supabase_project_ref: Optional[str] = None
     supabase_db_schema: Optional[str] = None
     supabase_db_role: Optional[str] = None
 

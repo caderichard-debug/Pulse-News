@@ -61,7 +61,7 @@ DATABASE_URL=postgresql://app_<project_name>_rw.<SUPABASE_PROJECT_REF>:<PASSWORD
 
 Notes:
 
-- **Username** must be `app_<project>_rw.<SUPABASE_PROJECT_REF>` so the pooler routes to the correct tenant.
+- **Username** must be tenant-qualified so the pooler routes to the correct project: `app_<project>_rw.<SUPABASE_PROJECT_REF>` or `postgres.<SUPABASE_PROJECT_REF>`. A bare `postgres` user (no `.` suffix) **always fails** authentication on the pooler with `password authentication failed for user "postgres"` and may trigger `(ECIRCUITBREAKER) too many authentication failures`.
 - **Port 5432** = session mode (one server backend per client session). **Port 6543** = transaction mode (PgBouncer); avoid for apps that rely on session-persistent `search_path` unless you fully understand transaction pooling.
 - **`?schema=`** is a Supabase dashboard convenience, not a libpq parameter. **`psycopg2` rejects `schema=`** as an invalid DSN option. Normalize at engine creation to PostgreSQL startup options, e.g.  
   `?options=-csearch_path=proj_<project_name>,public`  

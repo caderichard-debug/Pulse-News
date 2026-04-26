@@ -3,7 +3,7 @@ import time
 from sqlalchemy import event, text
 from sqlalchemy.exc import OperationalError
 from typing import Generator, Optional, Tuple
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit, urlparse
 import logging
 from dotenv import load_dotenv
 from .config import settings
@@ -53,8 +53,38 @@ def _normalize_database_url_for_psycopg2(url: str) -> str:
     return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(filtered), parts.fragment))
 
 
+def _validate_supabase_pooler_username(url: str) -> None:
+    """
+    Supabase pooler hosts reject a bare ``postgres`` login; the username must include
+    the project ref (e.g. ``postgres.<ref>`` or ``app_pulse_rw.<ref>``).
+    """
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return
+    host = (parsed.hostname or "").lower()
+    if "pooler.supabase.com" not in host:
+        return
+    user = parsed.username or ""
+    if not user:
+        raise RuntimeError(
+            f"DATABASE_URL points at Supabase pooler ({host}) but has no username. "
+            "Use postgres.<PROJECT_REF> or app_<role>_<PROJECT_REF> from Dashboard → Connect → Session pooler."
+        )
+    if "." not in user:
+        ref = (settings.supabase_project_ref or "").strip() or "<PROJECT_REF>"
+        raise RuntimeError(
+            f"DATABASE_URL uses Supabase Session pooler ({host}) but username {user!r} is not tenant-qualified. "
+            f"Use postgres.{ref} or app_pulse_rw.{ref} (replace with your project ref from the Supabase dashboard URL). "
+            "Dashboard: Project Settings → Database → Connect → Session pooler. "
+            "A bare 'postgres' user fails authentication on the pooler."
+        )
+
+
 # Create engine with SQLModel
-engine = create_engine(_normalize_database_url_for_psycopg2(DATABASE_URL), echo=True)  # echo=True for development
+_normalized_url = _normalize_database_url_for_psycopg2(DATABASE_URL)
+_validate_supabase_pooler_username(_normalized_url)
+engine = create_engine(_normalized_url, echo=True)  # echo=True for development
 
 
 def _assert_isolation_on_connect(dbapi_conn, _connection_record) -> None:

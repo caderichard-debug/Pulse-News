@@ -47,7 +47,10 @@ Also set (so SQLModel binds to `proj_pulse`, Alembic stores `alembic_version` th
 ```bash
 SUPABASE_DB_SCHEMA=proj_pulse
 SUPABASE_DB_ROLE=app_pulse_rw
+SUPABASE_PROJECT_REF=<your_supabase_project_ref>
 ```
+
+**Critical:** On `*.pooler.supabase.com`, the database username **must** include the project ref (e.g. `app_pulse_rw.jbfyozuygjtbrxyreiie` or `postgres.jbfyozuygjtbrxyreiie`). A bare `postgres` user (no `.` suffix) always returns `password authentication failed for user "postgres"` and can trip Supabase’s `(ECIRCUITBREAKER) too many authentication failures`.
 
 Important:
 - Do not use `service_role` for request-path database access.
