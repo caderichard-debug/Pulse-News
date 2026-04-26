@@ -49,6 +49,7 @@
 - Frontend Railway deploys should use `frontend/railway.toml` with `buildCommand = "npm run build"` and `frontend/.node-version` set to `22` to avoid Nixpacks `npm ci` cache-lock conflicts and Node engine mismatches.
 - Supabase schema bootstrap SQL for this repo lives at `backend/sql/supabase_schema_isolation.sql`.
 - Backend config loads `.env.production` automatically when `ENVIRONMENT=production` (unless `SECRETS_FILE` or `ENV_FILE` is set).
+- Backend DB bootstrap now normalizes `DATABASE_URL` query param `schema=<name>` into PostgreSQL `options=-csearch_path=<schema>,public` so psycopg2 accepts schema-isolated URLs on Railway.
 
 ## Cost and Throughput Knobs
 - `max_tokens_per_request`
