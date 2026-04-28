@@ -1,5 +1,5 @@
 # Deprecated: Render blueprint retained for historical reference during migration.
-# Active production deployment uses Railway configs in backend/railway.toml and frontend/railway.toml.
+# Active production deployment uses Railway backend config and Vercel frontend config.
 services:
   # Backend API Service
   - type: web

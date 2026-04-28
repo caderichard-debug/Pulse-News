@@ -1,4 +1,4 @@
-# After Deployment (Railway + Supabase)
+# After Deployment (Railway + Vercel + Neon)
 
 Use this checklist right after a production deploy.
 
@@ -7,13 +7,13 @@ Use this checklist right after a production deploy.
 - Backend health endpoint returns 200:
   - `GET /health`
 - Backend startup logs show migration/init completed.
-- Frontend returns 200 and loads JS/CSS assets successfully.
+- Frontend (Vercel) returns 200 and loads JS/CSS assets successfully.
 
 ## 2) Database State
 
 - Confirm Alembic is at head:
   - `alembic current`
-- Confirm Supabase runtime role is schema-scoped as expected (see isolation guide).
+- Confirm Neon connection and runtime role are correct for production.
 - Confirm baseline data exists (topics/sources/framework seeds).
 
 ## 3) Functional Smoke Tests
@@ -40,11 +40,11 @@ Use this checklist right after a production deploy.
 
 ## 6) Rollback Readiness
 
-- Verify prior Railway deployment is available in history.
+- Verify prior Railway deployment is available in history (backend).
+- Verify prior Vercel deployment is available in history (frontend).
 - Keep a tested rollback path for backend and frontend separately.
 
 ---
 
 Related docs:
 - `docs/guides/DEPLOYMENT_GUIDE.md`
-- `docs/guides/SUPABASE_SCHEMA_ISOLATION_PORTABLE_GUIDE.md`

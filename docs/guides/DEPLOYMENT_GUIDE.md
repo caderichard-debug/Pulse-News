@@ -1,63 +1,39 @@
-# Railway + Supabase Deployment Guide
+# Railway Backend + Vercel Frontend + Neon DB
 
-This guide migrates Pulse production deployment from Render to Railway (app hosting) and Supabase (Postgres).
+This guide deploys Pulse with Railway (backend API), Vercel (frontend SPA), and Neon (Postgres).
 
 ## Architecture
 
 - `backend` service runs on Railway using `backend/Dockerfile` and `backend/railway.toml`.
-- `frontend` service runs on Railway using Nixpacks and `frontend/railway.toml`.
-- Database is Supabase Postgres with an app-specific schema + runtime role.
-
-Use the schema isolation standard in `docs/guides/SUPABASE_SCHEMA_ISOLATION_PORTABLE_GUIDE.md`.
+- `frontend` service runs on Vercel using `frontend/vercel.json`.
+- Database is Neon Postgres.
 
 ## Prerequisites
 
 1. Railway account and project.
-2. Supabase project.
-3. GitHub repo connected to Railway.
+2. Vercel account.
+3. Neon project.
+4. GitHub repo connected to Railway and Vercel.
 4. Secrets ready:
    - `SECRET_KEY`
    - `OPENAI_API_KEY`
    - `RESEND_API_KEY`
    - optional Google fact-check/search keys
 
-## Step 1: Configure Supabase Isolation
+## Step 1: Configure Neon
 
-Follow `docs/guides/SUPABASE_SCHEMA_ISOLATION_PORTABLE_GUIDE.md` and create:
-
-- Schema: `proj_pulse`
-- Runtime role: `app_pulse_rw`
-
-Set backend DB URL in one of these formats:
-
-**Direct host** (works when your runtime has IPv6 to Supabase, or the host resolves to reachable IPv4):
+Set backend DB URL using Neon connection details from the Neon project dashboard:
 
 ```bash
-DATABASE_URL=postgresql://app_pulse_rw:<PASSWORD>@db.<SUPABASE_PROJECT_REF>.supabase.co:5432/postgres?sslmode=require&schema=proj_pulse
+DATABASE_URL=postgresql://<ROLE>:<PASSWORD>@<ENDPOINT>-pooler.c-3.us-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
 ```
 
-**Session pooler (recommended for Railway / IPv4-only egress)** — use the region from Supabase **Connect** → **Session pooler**:
+Optional isolation settings (provider-agnostic, only if you intentionally use a non-public schema):
 
 ```bash
-DATABASE_URL=postgresql://app_pulse_rw.<SUPABASE_PROJECT_REF>:<PASSWORD>@aws-0-<REGION>.pooler.supabase.com:5432/postgres?sslmode=require&schema=proj_pulse
+APP_DB_SCHEMA=<schema_name>
+APP_DB_ROLE=<role_name>
 ```
-
-Also set (so SQLModel binds to `proj_pulse`, Alembic stores `alembic_version` there, `/health` pings DB, and connect-time isolation checks run):
-
-```bash
-SUPABASE_DB_SCHEMA=proj_pulse
-SUPABASE_DB_ROLE=app_pulse_rw
-SUPABASE_PROJECT_REF=<your_supabase_project_ref>
-```
-
-**Critical:** On `*.pooler.supabase.com`, the database username **must** include the project ref (e.g. `app_pulse_rw.jbfyozuygjtbrxyreiie` or `postgres.jbfyozuygjtbrxyreiie`). A bare `postgres` user (no `.` suffix) always returns `password authentication failed for user "postgres"` and can trip Supabase’s `(ECIRCUITBREAKER) too many authentication failures`.
-
-**If you see `password authentication failed for user "app_pulse_rw"`** (or the pooler shows only the role name): the username is often correct but the **password is wrong** or **not URL-encoded**. Custom role passwords with `+`, `=`, `/`, `@`, or `#` must be percent-encoded in `DATABASE_URL`, or paste the **Session pooler** URI from the Supabase dashboard (it encodes credentials for you). The backend reapplies safe encoding via `prepare_database_url_for_engine` in `backend/app/database.py`, but a password containing an **unencoded `@`** will still break parsing—use `%40` for `@` in that case.
-
-Important:
-- Do not use `service_role` for request-path database access.
-- Keep schema-qualified migrations and app access scoped to `proj_pulse`.
-- Use pooler **port 5432** (session mode), not **6543** (transaction mode), unless you know you need transaction pooling.
 
 ## Step 2: Create Railway Backend Service
 
@@ -68,9 +44,7 @@ Important:
 
 ### Required backend variables
 
-- `DATABASE_URL` (Supabase URL with `schema=proj_pulse`; prefer Session pooler on Railway)
-- `SUPABASE_DB_SCHEMA=proj_pulse`
-- `SUPABASE_DB_ROLE=app_pulse_rw`
+- `DATABASE_URL` (Neon URL; use pooler endpoint for Railway)
 - `SECRET_KEY`
 - `OPENAI_API_KEY`
 - `ENVIRONMENT=production`
@@ -87,11 +61,14 @@ Important:
 - `FROM_NAME`
 - any tuning vars from `backend/.env.example`
 
-## Step 3: Create Railway Frontend Service
+## Step 3: Create Vercel Frontend Project
 
-1. Create a second service from the same repo.
+1. Import the same GitHub repo in Vercel.
 2. Set **Root Directory** to `frontend`.
-3. Railway uses `frontend/railway.toml`.
+3. Vercel uses `frontend/vercel.json`:
+   - build command: `npm run build`
+   - output directory: `dist/client`
+   - SPA rewrite: `/(.*) -> /index.html`
 4. Set frontend environment variable:
 
 ```bash
@@ -99,8 +76,8 @@ VITE_API_URL=https://<your-backend-service>.up.railway.app
 ```
 
 If you attach a custom domain, update both:
-- `VITE_API_URL` (frontend service)
-- `FRONTEND_URL` (backend service)
+- `VITE_API_URL` (Vercel project env)
+- `FRONTEND_URL` (Railway backend env)
 
 ## Step 4: Deploy + Migrate
 
@@ -119,7 +96,7 @@ The backend container startup already runs migration/init helpers; running `alem
    - `GET https://<backend-domain>/health`
 2. Backend docs:
    - `GET https://<backend-domain>/docs`
-3. Frontend:
+3. Frontend (Vercel):
    - open `https://<frontend-domain>`
 4. Auth/API smoke test:
    - login and load feed/article detail/analytics paths
@@ -133,11 +110,10 @@ The backend container startup already runs migration/init helpers; running `alem
 
 ## Migration Checklist (Render -> Railway)
 
-- [ ] Create Supabase schema-scoped runtime role.
-- [ ] Set `DATABASE_URL` with `schema=proj_pulse` (Session pooler URL on Railway).
-- [ ] Set `SUPABASE_DB_SCHEMA` and `SUPABASE_DB_ROLE` for runtime isolation checks and metadata.
+- [ ] Create Neon database role/credentials for app runtime.
+- [ ] Set `DATABASE_URL` using Neon pooler URL on Railway.
 - [ ] Create Railway `backend` service (root `backend`).
-- [ ] Create Railway `frontend` service (root `frontend`).
+- [ ] Create Vercel frontend project (root `frontend`).
 - [ ] Set `VITE_API_URL`, `FRONTEND_URL`, `BACKEND_URL`.
 - [ ] Run `alembic upgrade head`.
 - [ ] Verify `/health`, login flow, feed, and admin jobs.

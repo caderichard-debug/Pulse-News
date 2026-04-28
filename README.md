@@ -95,7 +95,7 @@ DOCUMENTATION_URL=https://docs.pulsenews.app
 
 ### Infrastructure
 - **Docker & Docker Compose** - Containerization
-- **Railway + Supabase** - Deployment platform + managed Postgres
+- **Railway + Vercel + Neon** - Backend hosting + frontend hosting + managed Postgres
 - **Resend** - Email delivery
 - **RSS Feeds** - News source integration
 
@@ -149,7 +149,6 @@ DOCUMENTATION_URL=https://docs.pulsenews.app
 - **[Development Setup](docs/development/SETUP.md)** - Installation & configuration
 - **[Testing Guide](docs/testing/TESTING.md)** - Running and writing tests
 - **[Deployment Guide](docs/guides/DEPLOYMENT_GUIDE.md)** - Production deployment
-- **[Supabase Schema Isolation Guide](docs/guides/SUPABASE_SCHEMA_ISOLATION_PORTABLE_GUIDE.md)** - Safe multi-app schema setup
 
 ### 🏗️ Technical Documentation
 - **[System Architecture](docs/architecture/ARCHITECTURE.md)** - Complete system design
@@ -199,7 +198,7 @@ Pulse/
 ├── .github/workflows/      # CI/CD pipelines
 ├── docker-compose.yml     # Development environment
 ├── backend/railway.toml   # Railway backend service config
-├── frontend/railway.toml  # Railway frontend service config
+├── frontend/vercel.json   # Vercel frontend project config
 ├── Makefile             # Build automation
 └── package.json         # Project metadata
 ```
