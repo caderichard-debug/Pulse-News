@@ -28,15 +28,15 @@ Pulse is a backend/frontend system that ingests news articles, analyzes them wit
 - Mobile `info/*` stack (`editorial-standards`, `how-we-rate-lean`, `appearance`) is registered in the root Stack as `info` for in-app help from Profile and Analytics.
 
 ## Deployment Platform (Current)
-- Production hosting is standardized on Railway (backend + frontend services).
-- Managed Postgres is standardized on Supabase with per-app schema isolation.
-- Service deploy configs live at `backend/railway.toml` and `frontend/railway.toml`.
-- Use `docs/guides/DEPLOYMENT_GUIDE.md` and `docs/guides/SUPABASE_SCHEMA_ISOLATION_PORTABLE_GUIDE.md` for deploy + DB setup.
+- Production hosting is standardized on Railway (backend API) + Vercel (frontend SPA).
+- Managed Postgres is standardized on Neon.
+- Neon project `holy-tooth-45390293` in org `org-bitter-tooth-16919735` (region `aws-us-west-2`) is the active managed Postgres target.
+- Service deploy configs live at `backend/railway.toml` and `frontend/vercel.json`.
+- Use `docs/guides/DEPLOYMENT_GUIDE.md` for deploy + DB setup.
 - Frontend Railway build command was simplified to `npm run build` (Nixpacks already installs dependencies), and Node is pinned via `frontend/.node-version` to avoid Node 18 engine mismatches during deploy.
-- Supabase isolation bootstrap SQL is at `backend/sql/supabase_schema_isolation.sql` (`proj_pulse` + `app_pulse_rw`).
 - Production env template is `backend/.env.production`; backend settings auto-load it when `ENVIRONMENT=production` and no explicit secrets file is set.
-- On Railway (IPv4-only egress), use the **Session pooler** `DATABASE_URL` from `docs/guides/SUPABASE_SCHEMA_ISOLATION_PORTABLE_GUIDE.md` and set `SUPABASE_DB_SCHEMA` / `SUPABASE_DB_ROLE` so metadata pinning, connect-time checks, and `/health` DB pings apply.
-- Isolation checks: admin SQL `backend/sql/verify_isolation.sql`, runtime `backend/scripts/verify_isolation.py` (CI runs it as a no-op when schema env is unset).
+- On Railway (IPv4-only egress), prefer the Neon pooler `DATABASE_URL`.
+- Optional isolation checks are at `backend/sql/verify_isolation.sql` and `backend/scripts/verify_isolation.py` (CI runs script as a no-op when `APP_DB_SCHEMA` is unset).
 
 ## Web UI polish (feed parity with mobile)
 - Feed and card surfaces in `frontend/src/routes/_app.feed.tsx` and `frontend/src/components/ArticleCard.tsx` were tuned for faster scanning: reduced vertical density, clearer control affordances, and stronger focus-visible states.

@@ -24,9 +24,9 @@ logger = logging.getLogger(__name__)
 
 
 def _target_schema() -> str:
-    """Resolve app schema: SUPABASE_DB_SCHEMA first, then DATABASE_URL ?schema=, else public."""
-    if getattr(settings, "supabase_db_schema", None):
-        return str(settings.supabase_db_schema).strip()
+    """Resolve app schema: APP_DB_SCHEMA first, then DATABASE_URL ?schema=, else public."""
+    if getattr(settings, "app_db_schema", None):
+        return str(settings.app_db_schema).strip()
     try:
         url = make_url(str(engine.url))
         schema_values = url.query.get("schema")
@@ -117,7 +117,7 @@ def drop_all_tables():
     schema_name = _target_schema()
 
     with engine.connect() as conn:
-        # Only reset the app schema so shared Supabase schemas stay untouched.
+        # Only reset the app schema so shared schemas stay untouched.
         conn.execute(text(f'DROP SCHEMA IF EXISTS "{schema_name}" CASCADE;'))
         conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{schema_name}";'))
         conn.execute(

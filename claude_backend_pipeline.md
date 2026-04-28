@@ -25,7 +25,7 @@
 7. **`POST /admin/jobs/analyze-recent?limit=5`** runs `analyze_recent_articles_job` to analyze the newest unanalyzed rows (including `PENDING` with `content_text`) without draining the full queue.
 8. **Newsletter job** returns `skipped_reason` and `noop` when Resend is not configured or there are no eligible subscribers (still `success: true` for the HTTP job wrapper).
 9. **Auth login hardening**: `verify_password` now treats invalid/legacy non-bcrypt hashes as a normal auth failure (`False`) instead of raising `ValueError: Invalid salt` and returning 500.
-10. **Supabase schema isolation**: With `SUPABASE_DB_SCHEMA` / `SUPABASE_DB_ROLE` set, `backend/app/database.py` pins SQLModel metadata, normalizes `?schema=` for psycopg2, asserts `search_path` on every new connection, and `/health` runs a DB ping. Admin catalog checks live in `backend/sql/verify_isolation.sql`; runtime smoke: `backend/scripts/verify_isolation.py`.
+10. **Optional schema isolation**: With `APP_DB_SCHEMA` / `APP_DB_ROLE` set, `backend/app/database.py` pins SQLModel metadata, normalizes `?schema=` for psycopg2, asserts `search_path` on every new connection, and `/health` runs a DB ping. Admin catalog checks live in `backend/sql/verify_isolation.sql`; runtime smoke: `backend/scripts/verify_isolation.py`.
 
 ## Mobile consumer notes
 - Expo mobile app now calls backend endpoints directly (bearer JWT) for feed/detail/analytics/favorites/preferences/challenge flows.

@@ -57,7 +57,7 @@ if config.config_file_name is not None:
 # Set target metadata for autogenerate support
 target_metadata = SQLModel.metadata
 
-_isolated = bool((settings.supabase_db_schema or "").strip())
+_isolated = bool((settings.app_db_schema or "").strip())
 
 
 def run_migrations_offline() -> None:
@@ -81,7 +81,7 @@ def run_migrations_offline() -> None:
         render_as_batch=True,
     )
     if _isolated:
-        configure_kwargs["version_table_schema"] = settings.supabase_db_schema
+        configure_kwargs["version_table_schema"] = settings.app_db_schema
         configure_kwargs["include_schemas"] = True
 
     context.configure(**configure_kwargs)
@@ -108,7 +108,7 @@ def run_migrations_online() -> None:
         render_as_batch=True,
     )
     if _isolated:
-        configure_kwargs["version_table_schema"] = settings.supabase_db_schema
+        configure_kwargs["version_table_schema"] = settings.app_db_schema
         configure_kwargs["include_schemas"] = True
 
     with connectable.connect() as connection:

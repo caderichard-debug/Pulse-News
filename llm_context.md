@@ -44,14 +44,14 @@
 - Retry limits configurable via `ai_max_retries`
 
 ## Deployment Context
-- Current production target is Railway services with Supabase Postgres.
-- Database URLs should use schema-scoped Supabase connection strings (for example, `...?schema=proj_pulse`) aligned with `docs/guides/SUPABASE_SCHEMA_ISOLATION_PORTABLE_GUIDE.md`.
-- Sync backends on IPv4-only hosts should use the **Session pooler** (`aws-0-<REGION>.pooler.supabase.com:5432`, username `app_<proj>_rw.<PROJECT_REF>`); set `SUPABASE_DB_SCHEMA=proj_pulse` and `SUPABASE_DB_ROLE=app_pulse_rw` so SQLModel metadata + `/health` DB checks enforce isolation.
-- Frontend Railway deploys should use `frontend/railway.toml` with `buildCommand = "npm run build"` and `frontend/.node-version` set to `22` to avoid Nixpacks `npm ci` cache-lock conflicts and Node engine mismatches.
-- Supabase schema bootstrap SQL for this repo lives at `backend/sql/supabase_schema_isolation.sql`.
+- Current production target is Railway (backend) + Vercel (frontend) with Neon Postgres.
+- Neon org `org-bitter-tooth-16919735` and project `holy-tooth-45390293` are active; default branch is `production`.
+- Database URLs should use Neon connection strings with `sslmode=require` and `channel_binding=require`.
+- Sync backends on IPv4-only hosts should use the Neon pooler endpoint.
+- Frontend deploys should use Vercel project root `frontend/`, `npm run build`, output directory `dist/client`, and `VITE_API_URL` pointing at Railway backend.
 - Backend config loads `.env.production` automatically when `ENVIRONMENT=production` (unless `SECRETS_FILE` or `ENV_FILE` is set).
-- Backend DB bootstrap now normalizes `DATABASE_URL` query param `schema=<name>` into PostgreSQL `options=-csearch_path=<schema>,public` so psycopg2 accepts schema-isolated URLs on Railway.
-- Isolation verification: `backend/sql/verify_isolation.sql` (admin SQL), `backend/scripts/verify_isolation.py` (runtime, CI no-op without schema), connect-time assertions in `backend/app/database.py`.
+- Backend DB bootstrap normalizes `DATABASE_URL` query param `schema=<name>` into PostgreSQL `options=-csearch_path=<schema>,public` for optional schema isolation.
+- Isolation verification: `backend/sql/verify_isolation.sql` (admin SQL), `backend/scripts/verify_isolation.py` (runtime, CI no-op without `APP_DB_SCHEMA`), connect-time assertions in `backend/app/database.py`.
 
 ## Cost and Throughput Knobs
 - `max_tokens_per_request`

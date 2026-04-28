@@ -56,7 +56,7 @@ jobs:
         run: |
           pytest backend/tests/ -v --cov=backend/app --cov-report=xml || echo "No tests found yet - skipping"
 
-      - name: Verify DB isolation script (no-op without SUPABASE_DB_SCHEMA)
+      - name: Verify DB isolation script (no-op without APP_DB_SCHEMA)
         env:
           DATABASE_URL: postgresql://postgres:testpassword@localhost:5432/test_db
           SECRET_KEY: test-secret-key-for-ci-only

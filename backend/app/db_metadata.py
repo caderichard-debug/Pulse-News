@@ -1,8 +1,8 @@
 """
 Configure SQLModel metadata before any `table=True` models are imported.
 
-Isolated Supabase deploys set SUPABASE_DB_SCHEMA=proj_<name> so all tables are
-schema-qualified. Local/CI leave it unset so metadata stays default (public).
+If APP_DB_SCHEMA is set, all SQLModel tables are schema-qualified.
+If unset, metadata stays default (public).
 """
 
 from __future__ import annotations
@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 
 def configure_sqlmodel_metadata() -> None:
-    """Bind SQLModel to an app schema when SUPABASE_DB_SCHEMA is set."""
-    schema = (settings.supabase_db_schema or "").strip()
+    """Bind SQLModel to an app schema when APP_DB_SCHEMA is set."""
+    schema = (settings.app_db_schema or "").strip()
     if not schema:
         return
     if getattr(SQLModel.metadata, "schema", None) == schema:

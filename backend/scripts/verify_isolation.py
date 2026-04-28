@@ -2,9 +2,9 @@
 """
 Runtime DB isolation check (same invariants as the SQLAlchemy connect listener).
 
-- Exits 0 immediately if SUPABASE_DB_SCHEMA is unset (local Docker / CI).
+- Exits 0 immediately if APP_DB_SCHEMA is unset (local Docker / CI).
 - Otherwise opens a connection via app.database and validates current_user
-  (when SUPABASE_DB_ROLE is set) and leading search_path.
+  (when APP_DB_ROLE is set) and leading search_path.
 
 Run from repo root or backend dir, e.g.:
 
@@ -27,9 +27,9 @@ def main() -> int:
 
     from app.config import settings
 
-    schema = (settings.supabase_db_schema or "").strip()
+    schema = (settings.app_db_schema or "").strip()
     if not schema:
-        print("[verify_isolation] Skip: SUPABASE_DB_SCHEMA not set")
+        print("[verify_isolation] Skip: APP_DB_SCHEMA not set")
         return 0
 
     # Import engine after settings resolved (applies URL normalization + listeners).
@@ -51,11 +51,11 @@ def main() -> int:
             else:
                 path_list = [s for s in str(schemas).strip("{}").split(",") if s]
 
-            role = (settings.supabase_db_role or "").strip()
+            role = (settings.app_db_role or "").strip()
             if role and user != role:
                 print(
                     f"[verify_isolation] FAIL: current_user={user!r} expected {role!r} "
-                    "(set SUPABASE_DB_ROLE or clear it to skip role check)"
+                    "(set APP_DB_ROLE or clear it to skip role check)"
                 )
                 return 1
             if not path_list or path_list[0] != schema:

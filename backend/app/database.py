@@ -90,43 +90,14 @@ def prepare_database_url_for_engine(url: str) -> str:
     return _percent_encode_userinfo_in_database_url(_normalize_database_url_for_psycopg2(url))
 
 
-def _validate_supabase_pooler_username(url: str) -> None:
-    """
-    Supabase pooler hosts reject a bare ``postgres`` login; the username must include
-    the project ref (e.g. ``postgres.<ref>`` or ``app_pulse_rw.<ref>``).
-    """
-    try:
-        parsed = urlparse(url)
-    except Exception:
-        return
-    host = (parsed.hostname or "").lower()
-    if "pooler.supabase.com" not in host:
-        return
-    user = parsed.username or ""
-    if not user:
-        raise RuntimeError(
-            f"DATABASE_URL points at Supabase pooler ({host}) but has no username. "
-            "Use postgres.<PROJECT_REF> or app_<role>_<PROJECT_REF> from Dashboard → Connect → Session pooler."
-        )
-    if "." not in user:
-        ref = (settings.supabase_project_ref or "").strip() or "<PROJECT_REF>"
-        raise RuntimeError(
-            f"DATABASE_URL uses Supabase Session pooler ({host}) but username {user!r} is not tenant-qualified. "
-            f"Use postgres.{ref} or app_pulse_rw.{ref} (replace with your project ref from the Supabase dashboard URL). "
-            "Dashboard: Project Settings → Database → Connect → Session pooler. "
-            "A bare 'postgres' user fails authentication on the pooler."
-        )
-
-
 # Create engine with SQLModel
 _prepared_url = prepare_database_url_for_engine(DATABASE_URL)
-_validate_supabase_pooler_username(_prepared_url)
 engine = create_engine(_prepared_url, echo=True)  # echo=True for development
 
 
 def _assert_isolation_on_connect(dbapi_conn, _connection_record) -> None:
-    """Fail fast if pooler/DSN dropped search_path or wrong role (Supabase isolation)."""
-    expected_schema = (settings.supabase_db_schema or "").strip()
+    """Fail fast if pooler/DSN dropped search_path or wrong role."""
+    expected_schema = (settings.app_db_schema or "").strip()
     if not expected_schema:
         return
     cur = dbapi_conn.cursor()
@@ -136,11 +107,11 @@ def _assert_isolation_on_connect(dbapi_conn, _connection_record) -> None:
     if not row:
         raise RuntimeError("Isolation check: empty result from current_user/current_schemas")
     user, db, schemas = row[0], row[1], row[2]
-    expected_role = (settings.supabase_db_role or "").strip()
+    expected_role = (settings.app_db_role or "").strip()
     if expected_role and user != expected_role:
         raise RuntimeError(
             f"DB connected as {user!r}, expected {expected_role!r} "
-            f"(set SUPABASE_DB_ROLE in env or clear it to skip role check)"
+            f"(set APP_DB_ROLE in env or clear it to skip role check)"
         )
     # psycopg2 returns list for array types; normalize to list of str
     path_list: list[str]
@@ -158,7 +129,7 @@ def _assert_isolation_on_connect(dbapi_conn, _connection_record) -> None:
     logger.info("DB isolation OK: user=%s db=%s search_path=%s", user, db, path_list)
 
 
-if settings.supabase_db_schema:
+if settings.app_db_schema:
     event.listen(engine, "connect", _assert_isolation_on_connect)
 
 
@@ -191,8 +162,6 @@ def health_db_ping() -> Tuple[bool, Optional[str]]:
     Lightweight connectivity check for /health when schema isolation is enabled.
     Returns (ok, error_message).
     """
-    if not settings.supabase_db_schema:
-        return True, None
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))

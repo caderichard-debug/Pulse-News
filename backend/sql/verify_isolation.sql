@@ -1,5 +1,5 @@
--- Pulse / Supabase: verify runtime role isolation (run as postgres / supabase_admin).
--- Replace app_pulse_rw / proj_pulse if your project uses different names.
+-- Pulse: verify runtime role isolation (run as postgres/superuser).
+-- Replace app_pulse_rw / proj_pulse with your runtime role and schema.
 -- Expect: zero rows for checks A–D (or review D intentionally).
 
 -- A. Runtime role must NOT have USAGE on any schema other than proj_pulse (+ system catalogs)
