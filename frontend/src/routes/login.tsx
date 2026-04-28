@@ -28,7 +28,17 @@ function LoginPage() {
         search: { page: 1, q: "", topic: "", lean: "", sort: "newest", fav: false },
       });
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Sign in failed");
+      if (err instanceof ApiError) {
+        if (err.status === 0) {
+          toast.error("Network error: unable to reach Pulse API");
+        } else if (err.status >= 500) {
+          toast.error("Pulse API is reachable but sign-in failed on the server. Please try again.");
+        } else {
+          toast.error(err.message);
+        }
+      } else {
+        toast.error("Sign in failed");
+      }
     } finally {
       setLoading(false);
     }

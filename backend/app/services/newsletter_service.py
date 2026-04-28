@@ -42,7 +42,12 @@ def generate_and_send_newsletters(session: Session = None) -> Dict[str, int]:
     """
     if not settings.resend_api_key:
         logger.error("Resend API key not configured - cannot send newsletters")
-        return {"generated": 0, "sent": 0, "failed": 0}
+        return {
+            "generated": 0,
+            "sent": 0,
+            "failed": 0,
+            "skipped_reason": "resend_api_key_not_configured",
+        }
 
     stats = {"generated": 0, "sent": 0, "failed": 0}
 
@@ -58,6 +63,7 @@ def generate_and_send_newsletters(session: Session = None) -> Dict[str, int]:
 
         if not active_users:
             logger.info("No active users to send newsletters to")
+            stats["skipped_reason"] = "no_eligible_subscribers"
             return stats
 
         logger.info(f"Generating newsletters for {len(active_users)} users...")

@@ -63,7 +63,7 @@ For detailed setup instructions, see [Development Setup Guide](docs/development/
 
 ### 🔧 Environment Configuration
 
-**Important**: When updating environment variables, update both `.env` (local) and `render.yaml` (production).
+**Important**: When updating environment variables, update both `.env` (local) and Railway service variables (production).
 
 Key environment variables:
 ```bash
@@ -95,7 +95,7 @@ DOCUMENTATION_URL=https://docs.pulsenews.app
 
 ### Infrastructure
 - **Docker & Docker Compose** - Containerization
-- **Render/Railway** - Deployment platforms
+- **Railway + Vercel + Neon** - Backend hosting + frontend hosting + managed Postgres
 - **Resend** - Email delivery
 - **RSS Feeds** - News source integration
 
@@ -197,7 +197,8 @@ Pulse/
 ├── scripts/              # Development scripts
 ├── .github/workflows/      # CI/CD pipelines
 ├── docker-compose.yml     # Development environment
-├── render.yaml           # Production deployment config
+├── backend/railway.toml   # Railway backend service config
+├── frontend/vercel.json   # Vercel frontend project config
 ├── Makefile             # Build automation
 └── package.json         # Project metadata
 ```

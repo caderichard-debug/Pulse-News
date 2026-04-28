@@ -1,84 +1,50 @@
-# Deployment Strategy
+# After Deployment (Railway + Vercel + Neon)
 
-## You Need TWO Separate Deployments
+Use this checklist right after a production deploy.
 
-**Why?** Render deploys the latest commit on the branch. If you remove FORCE_REBUILD before merging, the rebuild won't happen.
+## 1) Health + Logs
 
----
+- Backend health endpoint returns 200:
+  - `GET /health`
+- Backend startup logs show migration/init completed.
+- Frontend (Vercel) returns 200 and loads JS/CSS assets successfully.
 
-## Deployment 1: Force Rebuild (⚠️ WIPES DATABASE)
+## 2) Database State
 
-This merges your current branch to main with `FORCE_REBUILD=true`, triggering a complete database reset.
+- Confirm Alembic is at head:
+  - `alembic current`
+- Confirm Neon connection and runtime role are correct for production.
+- Confirm baseline data exists (topics/sources/framework seeds).
 
-```bash
-# Make sure you're on fix/enum-fix branch
-git checkout fix/enum-fix
+## 3) Functional Smoke Tests
 
-# Merge to main and push
-git checkout main
-git merge fix/enum-fix
-git push origin main
+- Login/signup works.
+- Feed, article detail, analytics routes load.
+- Admin-only actions are restricted to admin users.
+- Optional newsletter/send flows work if `RESEND_API_KEY` is configured.
 
-# ⏳ Wait for Render to deploy (check logs for "🔥 FORCE_REBUILD=true detected")
-```
+## 4) Jobs + Monitoring
 
----
+- Check backend logs for scheduler registration.
+- Trigger one admin job manually to verify:
+  - scrape
+  - analyze
+- Check monitoring endpoint:
+  - `GET /monitoring/pipeline`
 
-## Deployment 2: Remove FORCE_REBUILD (REQUIRED!)
+## 5) Config Drift Prevention
 
-**⚠️ DO THIS IMMEDIATELY** after Deployment 1 succeeds, or every future deployment will wipe your database!
+- Keep Railway service env vars aligned with documented values.
+- Update docs when changing deploy commands, domains, or env requirements.
+- Never store secrets in repo files.
 
-### Step 1: Remove the flag from render.yaml
+## 6) Rollback Readiness
 
-Edit [render.yaml](render.yaml) and **delete** these lines:
-
-```yaml
-      - key: FORCE_REBUILD
-        value: "true"
-```
-
-### Step 2: Commit directly to main
-
-```bash
-# On main branch
-git add render.yaml
-git commit -m "Remove FORCE_REBUILD flag after successful rebuild"
-git push origin main
-
-# ✅ This triggers Deployment 2 with normal migrations
-```
-
-### Why This Matters
-
-- `FORCE_REBUILD=true` drops ALL tables and rebuilds the database from scratch
-- This should **ONLY** happen once to clean up the production database
-- If left enabled, every deployment will wipe your production data!
-- After the first rebuild, all future deployments will use normal migrations
-
-### Verification
-
-After removing the flag, the next deployment should show:
-```
-Alembic version tracking exists (current: ...)
-Running normal migration upgrade...
-```
-
-Instead of:
-```
-🔥 FORCE_REBUILD=true detected - This will drop all tables!
-```
+- Verify prior Railway deployment is available in history (backend).
+- Verify prior Vercel deployment is available in history (frontend).
+- Keep a tested rollback path for backend and frontend separately.
 
 ---
 
-## Normal Deployment Process (After Initial Rebuild)
-
-Once FORCE_REBUILD is removed, deployments will:
-
-1. ✅ Check existing Alembic version
-2. ✅ Run only new migrations (incremental updates)
-3. ✅ Preserve all existing data
-4. ✅ Seed any missing reference data (sources, topics, frameworks)
-5. ✅ Start the server
-6. ✅ Trigger initial jobs only if database is empty
-
-This is the standard, safe deployment process you'll use going forward.
+Related docs:
+- `docs/guides/DEPLOYMENT_GUIDE.md`

@@ -10,6 +10,7 @@ from app.services.ai_analyzer import (
     analyze_articles_batch,
     get_article_analysis,
     get_unanalyzed_article_count,
+    get_recent_unanalyzed_article_ids,
     _normalize_analysis_payload,
 )
 from app.models import (
@@ -238,6 +239,48 @@ class TestAnalyzeArticlesBatch:
         ).first()
         assert len(analysis.summary) <= 1000
 
+    @patch('app.services.ai_analyzer.openai_client')
+    def test_analyze_target_article_ids_order(self, mock_client, session: Session, sample_source: Source):
+        """target_article_ids selects those rows and preserves caller order for the API payload."""
+        older = Article(
+            source_id=sample_source.id,
+            title="Older",
+            url="https://testnews.com/old",
+            content_text="older body",
+            published_at=datetime.utcnow(),
+            scraped_at=datetime.utcnow(),
+            processing_status=ProcessingStatus.COMPLETED,
+        )
+        newer = Article(
+            source_id=sample_source.id,
+            title="Newer",
+            url="https://testnews.com/new",
+            content_text="newer body",
+            published_at=datetime.utcnow(),
+            scraped_at=datetime.utcnow(),
+            processing_status=ProcessingStatus.COMPLETED,
+        )
+        session.add(older)
+        session.add(newer)
+        session.commit()
+        session.refresh(older)
+        session.refresh(newer)
+
+        mock_client.is_available.return_value = True
+        mock_client.analyze_articles_batch.return_value = [
+            {"summary": "A", "sentiment_score": 0, "political_lean": "CENTER", "topic_category": "general"},
+            {"summary": "B", "sentiment_score": 0, "political_lean": "CENTER", "topic_category": "general"},
+        ]
+        count = analyze_articles_batch(
+            session,
+            batch_size=5,
+            target_article_ids=[newer.id, older.id],
+        )
+        assert count == 2
+        sent = mock_client.analyze_articles_batch.call_args[0][0]
+        assert sent[0]["content"] == "newer body"
+        assert sent[1]["content"] == "older body"
+
 
 class TestAnalysisNormalization:
     def test_normalize_payload_applies_fallbacks(self):
@@ -307,3 +350,36 @@ class TestGetUnanalyzedArticleCount:
 
         count = get_unanalyzed_article_count(session)
         assert count == 0
+
+
+class TestGetRecentUnanalyzedArticleIds:
+    def test_includes_pending_with_content_newest_first(
+        self, session: Session, sample_source: Source
+    ):
+        old = Article(
+            source_id=sample_source.id,
+            title="Old",
+            url="https://testnews.com/r1",
+            content_text="c1",
+            published_at=datetime.utcnow(),
+            scraped_at=datetime(2021, 1, 1),
+            processing_status=ProcessingStatus.COMPLETED,
+        )
+        recent_pending = Article(
+            source_id=sample_source.id,
+            title="Recent pending",
+            url="https://testnews.com/r2",
+            content_text="c2",
+            published_at=datetime.utcnow(),
+            scraped_at=datetime(2025, 1, 1),
+            processing_status=ProcessingStatus.PENDING,
+        )
+        session.add(old)
+        session.add(recent_pending)
+        session.commit()
+        session.refresh(old)
+        session.refresh(recent_pending)
+
+        ids = get_recent_unanalyzed_article_ids(session, limit=5)
+        assert ids[0] == recent_pending.id
+        assert old.id in ids

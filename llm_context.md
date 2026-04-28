@@ -43,6 +43,16 @@
 - Request timeouts configurable via `ai_request_timeout_seconds`
 - Retry limits configurable via `ai_max_retries`
 
+## Deployment Context
+- Current production target is Railway (backend) + Vercel (frontend) with Neon Postgres.
+- Neon org `org-bitter-tooth-16919735` and project `holy-tooth-45390293` are active; default branch is `production`.
+- Database URLs should use Neon connection strings with `sslmode=require` and `channel_binding=require`.
+- Sync backends on IPv4-only hosts should use the Neon pooler endpoint.
+- Frontend deploys should use Vercel project root `frontend/`, `npm run build`, output directory `dist/client`, and `VITE_API_URL` pointing at Railway backend.
+- Backend config loads `.env.production` automatically when `ENVIRONMENT=production` (unless `SECRETS_FILE` or `ENV_FILE` is set).
+- Backend DB bootstrap normalizes `DATABASE_URL` query param `schema=<name>` into PostgreSQL `options=-csearch_path=<schema>,public` for optional schema isolation.
+- Isolation verification: `backend/sql/verify_isolation.sql` (admin SQL), `backend/scripts/verify_isolation.py` (runtime, CI no-op without `APP_DB_SCHEMA`), connect-time assertions in `backend/app/database.py`.
+
 ## Cost and Throughput Knobs
 - `max_tokens_per_request`
 - stage batch sizes (`analysis_batch_size`, etc.)

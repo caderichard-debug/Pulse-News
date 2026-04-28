@@ -247,6 +247,13 @@ def login(
             detail="Incorrect email or password"
         )
 
+    # OAuth-only accounts may not have a local password hash.
+    if not user.hashed_password:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="This account uses Google sign-in. Continue with Google or reset your password to enable email login."
+        )
+
     # Verify password
     if not verify_password(request.password, user.hashed_password):
         raise HTTPException(

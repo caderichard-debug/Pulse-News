@@ -359,6 +359,72 @@ def analyze_job(session: Session = None, chain_processing: bool = False):
         return {"success": False, "error": str(e)}
 
 
+@track_job_execution(job_id="analyze_recent", job_name="Analyze Recent Unanalyzed Articles")
+def analyze_recent_articles_job(
+    session: Session = None,
+    limit: int = 5,
+    chain_processing: bool = True,
+):
+    """
+    Analyze up to `limit` most recently scraped articles that have body text but no analysis.
+
+    Used for targeted recovery (e.g. after fixing pipeline gaps) without scanning the full backlog.
+    """
+    try:
+        from ..services.ai_analyzer import analyze_articles_batch, get_recent_unanalyzed_article_ids
+
+        logger.info("=" * 60)
+        logger.info("Starting analyze-recent job (limit=%s)", limit)
+        logger.info("=" * 60)
+
+        article_ids: list = []
+        n = 0
+        if session is None:
+            with Session(engine) as s:
+                article_ids = get_recent_unanalyzed_article_ids(s, limit=limit)
+                if not article_ids:
+                    logger.info("No recent unanalyzed articles found")
+                    return {
+                        "success": True,
+                        "articles_analyzed": 0,
+                        "article_ids": [],
+                        "message": "no_candidates",
+                    }
+                n = analyze_articles_batch(
+                    s,
+                    batch_size=len(article_ids),
+                    target_article_ids=article_ids,
+                )
+        else:
+            article_ids = get_recent_unanalyzed_article_ids(session, limit=limit)
+            if not article_ids:
+                return {
+                    "success": True,
+                    "articles_analyzed": 0,
+                    "article_ids": [],
+                    "message": "no_candidates",
+                }
+            n = analyze_articles_batch(
+                session,
+                batch_size=len(article_ids),
+                target_article_ids=article_ids,
+            )
+
+        logger.info("Analyze-recent completed: %s articles", n)
+
+        if chain_processing and n > 0:
+            logger.info("Chaining post-analysis processing job...")
+            try:
+                process_articles_job(session=None)
+            except Exception as e:
+                logger.error("Chained process_articles_job failed: %s", e, exc_info=True)
+
+        return {"success": True, "articles_analyzed": n, "article_ids": article_ids}
+    except Exception as e:
+        logger.error("Analyze-recent job failed: %s", e, exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
 @track_job_execution(job_id="reanalyze_unanalyzed_failed", job_name="Re-analyze Unanalyzed/Failed Articles")
 def reanalyze_unanalyzed_failed_job(session: Session = None):
     """
@@ -523,7 +589,9 @@ def newsletter_job(session: Session = None):
             "success": True,
             "newsletters_generated": stats["generated"],
             "newsletters_sent": stats["sent"],
-            "newsletters_failed": stats["failed"]
+            "newsletters_failed": stats["failed"],
+            "skipped_reason": stats.get("skipped_reason"),
+            "noop": stats["generated"] == 0 and stats["sent"] == 0 and stats["failed"] == 0,
         }
     except Exception as e:
         logger.error(f"Newsletter job failed: {e}", exc_info=True)
@@ -935,56 +1003,72 @@ def process_unprocessed_articles_job(session: Session = None):
         logger.info("Starting unprocessed articles scan job")
         logger.info("=" * 60)
 
-        from ..services.ai_analyzer import get_unanalyzed_article_count
+        from ..services.ai_analyzer import get_unanalyzed_article_count, get_pending_extraction_count
         from sqlmodel import select
         from ..models import Article, ArticleAnalysis, ArticleFrameworkLink
 
         stats = {
+            "pending_extraction_found": 0,
             "unanalyzed_found": 0,
             "analyzed_unprocessed_found": 0,
-            "actions_taken": []
+            "actions_taken": [],
         }
 
         with Session(engine) as job_session:
-            # Step 1: Find extracted but unanalyzed articles
-            unanalyzed_count = get_unanalyzed_article_count(job_session)
+            # Step 0: Pending extraction — without this, get_unanalyzed_article_count stays at 0
+            # while every article remains PENDING with no analysis updates.
+            pending_count = int(get_pending_extraction_count(job_session))
+            stats["pending_extraction_found"] = pending_count
+            if pending_count > 0:
+                logger.info("Found %s pending articles; running extraction (chained analysis)", pending_count)
+                stats["actions_taken"].append(f"extract_pending_{pending_count}")
+                try:
+                    extract_job(session=None, chain_analysis=True)
+                except Exception as e:
+                    logger.error("Triggered extraction job failed: %s", e, exc_info=True)
+
+            # Step 1: Extracted but unanalyzed (COMPLETED path)
+            unanalyzed_count = int(get_unanalyzed_article_count(job_session))
             stats["unanalyzed_found"] = unanalyzed_count
 
             if unanalyzed_count > 0:
-                logger.info(f"Found {unanalyzed_count} extracted but unanalyzed articles")
+                logger.info("Found %s extracted but unanalyzed articles", unanalyzed_count)
                 logger.info("Triggering analysis job...")
                 stats["actions_taken"].append(f"analyze_{unanalyzed_count}_articles")
-                # Run analysis with chaining to process
                 try:
                     analyze_job(session=None, chain_processing=True)
                 except Exception as e:
-                    logger.error(f"Triggered analysis job failed: {e}", exc_info=True)
-                    # Don't fail the unprocessed scan if triggered job fails
+                    logger.error("Triggered analysis job failed: %s", e, exc_info=True)
             else:
-                logger.info("All extracted articles have been analyzed ✓")
+                logger.info("No COMPLETED+content articles awaiting analysis ✓")
 
-                # Step 2: Find analyzed but unprocessed articles (missing frameworks)
-                analyzed_unprocessed = job_session.exec(
-                    select(Article)
-                    .join(ArticleAnalysis)
-                    .where(~Article.id.in_(
+            # Step 2: Analyzed but missing post-analysis (framework links, etc.) — always check,
+            # including after the branches above (unanalyzed path previously skipped this).
+            analyzed_unprocessed = job_session.exec(
+                select(Article)
+                .join(ArticleAnalysis)
+                .where(
+                    ~Article.id.in_(
                         select(ArticleFrameworkLink.article_id)
-                    ))
-                ).all()
+                    )
+                )
+            ).all()
 
-                stats["analyzed_unprocessed_found"] = len(analyzed_unprocessed)
+            stats["analyzed_unprocessed_found"] = len(analyzed_unprocessed)
 
-                if analyzed_unprocessed:
-                    logger.info(f"Found {len(analyzed_unprocessed)} analyzed but unprocessed articles")
-                    logger.info("Triggering processing job...")
-                    stats["actions_taken"].append(f"process_{len(analyzed_unprocessed)}_articles")
-                    try:
-                        process_articles_job(session=None)
-                    except Exception as e:
-                        logger.error(f"Triggered processing job failed: {e}", exc_info=True)
-                        # Don't fail the unprocessed scan if triggered job fails
-                else:
-                    logger.info("All analyzed articles have been processed ✓")
+            if analyzed_unprocessed:
+                logger.info(
+                    "Found %s analyzed but unprocessed articles",
+                    len(analyzed_unprocessed),
+                )
+                logger.info("Triggering processing job...")
+                stats["actions_taken"].append(f"process_{len(analyzed_unprocessed)}_articles")
+                try:
+                    process_articles_job(session=None)
+                except Exception as e:
+                    logger.error("Triggered processing job failed: %s", e, exc_info=True)
+            else:
+                logger.info("All analyzed articles have framework links (or none pending) ✓")
 
         logger.info("=" * 60)
         logger.info(f"Unprocessed articles scan completed")
@@ -993,9 +1077,10 @@ def process_unprocessed_articles_job(session: Session = None):
 
         return {
             "success": True,
+            "pending_extraction_found": stats["pending_extraction_found"],
             "unanalyzed_found": stats["unanalyzed_found"],
             "analyzed_unprocessed_found": stats["analyzed_unprocessed_found"],
-            "actions_taken": stats["actions_taken"]
+            "actions_taken": stats["actions_taken"],
         }
     except Exception as e:
         logger.error(f"Unprocessed articles scan job failed: {e}", exc_info=True)

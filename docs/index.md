@@ -47,8 +47,8 @@ Pulse is an AI-powered news aggregation platform that provides:
 
 ### Technology Stack
 - **Backend**: FastAPI, SQLModel, PostgreSQL, OpenAI GPT-4o-mini
-- **Frontend**: Next.js, TypeScript, Tailwind CSS, React Query
-- **Infrastructure**: Docker, Render, PostgreSQL
+- **Frontend**: TanStack Start (SPA), TypeScript, Tailwind CSS, React Query
+- **Infrastructure**: Docker, Railway, Vercel, Neon PostgreSQL
 
 ## 🎯 Getting Started
 

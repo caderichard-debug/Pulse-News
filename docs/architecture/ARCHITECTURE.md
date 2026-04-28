@@ -416,16 +416,16 @@ ERROR level:
 
 ### Phase 1: MVP (Free Tier)
 ```
-Railway/Render (Free)
-├── FastAPI Backend (1 instance)
-├── PostgreSQL (500MB)
-└── Static files (Next.js build)
+Railway + Supabase
+├── Railway backend service (FastAPI, Docker)
+├── Railway frontend service (TanStack Start SSR)
+└── Supabase Postgres (schema-isolated app role)
 
 External:
 ├── Resend (3k emails/month free)
 └── OpenAI API ($5 credit)
 
-Cost: $0-5/month
+Cost: varies by Railway/Supabase plan + usage
 ```
 
 ### Phase 2: Growth (DigitalOcean)

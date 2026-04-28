@@ -1,558 +1,124 @@
-# Render Deployment Guide
+# Railway Backend + Vercel Frontend + Neon DB
 
-This guide walks you through deploying Pulse to Render using the included Blueprint (`render.yaml`).
+This guide deploys Pulse with Railway (backend API), Vercel (frontend SPA), and Neon (Postgres).
 
-## Overview
+## Architecture
 
-Pulse uses a Render Blueprint to manage the entire infrastructure:
-- **PostgreSQL Database** (Free tier)
-- **Backend API** (FastAPI with Docker) - Starter tier
-- **Frontend** (Next.js) - Starter tier
-
-The Blueprint automatically:
-- Creates and configures all services
-- Links the database to the backend
-- Sets up environment variables
-- Configures health checks
-- Links frontend to backend API
-- **Enables Pull Request Previews** for testing before merge
-
-> 📚 **See Also**: [PR Previews Guide](./PR_PREVIEWS.md) for detailed information about preview environments
-
----
+- `backend` service runs on Railway using `backend/Dockerfile` and `backend/railway.toml`.
+- `frontend` service runs on Vercel using `frontend/vercel.json`.
+- Database is Neon Postgres.
 
 ## Prerequisites
 
-1. **GitHub Repository**: Your code must be in a GitHub repository
-2. **Render Account**: Sign up at https://render.com
-3. **API Keys**: Have these ready:
-   - OpenAI API key (for AI features)
-   - Resend API key (for newsletters)
-   - Google Fact Check API key (optional)
-   - Google Search Engine ID (optional)
+1. Railway account and project.
+2. Vercel account.
+3. Neon project.
+4. GitHub repo connected to Railway and Vercel.
+4. Secrets ready:
+   - `SECRET_KEY`
+   - `OPENAI_API_KEY`
+   - `RESEND_API_KEY`
+   - optional Google fact-check/search keys
 
----
+## Step 1: Configure Neon
 
-## Step 1: Prepare Your Repository
-
-1. Ensure your repository has the `render.yaml` file in the root
-2. Commit and push all changes to your main branch:
-   ```bash
-   git add .
-   git commit -m "Prepare for Render deployment"
-   git push origin main
-   ```
-
----
-
-## Step 2: Deploy from Blueprint
-
-### Option A: Deploy via Render Dashboard
-
-1. Go to https://dashboard.render.com
-2. Click **"New" → "Blueprint"**
-3. Connect your GitHub repository
-4. Select the repository containing Pulse
-5. Render will automatically detect `render.yaml`
-6. Click **"Apply"**
-
-### Option B: Deploy via Direct Link
-
-Use this format (replace with your GitHub URL):
-```
-https://dashboard.render.com/blueprints?repo=https://github.com/YOUR_USERNAME/Pulse-News
-```
-
----
-
-## Step 3: Configure Secret Environment Variables
-
-After deployment starts, you need to add the secret environment variables manually:
-
-### For `pulse-backend` service:
-
-1. Go to your Render Dashboard
-2. Click on the **pulse-backend** service
-3. Go to **Environment** tab
-4. Add the following environment variables:
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `SECRET_KEY` | JWT secret key (generate a long random string) | `your-256-bit-secret-key-here` |
-| `OPENAI_API_KEY` | OpenAI API key | `sk-proj-...` |
-| `RESEND_API_KEY` | Resend email API key | `re_...` |
-| `GOOGLE_FACT_CHECK_API_KEY` | (Optional) Google Fact Check API | `AIza...` |
-| `GOOGLE_SEARCH_ENGINE_ID` | (Optional) Google Custom Search ID | `012345...` |
-
-5. Click **"Save Changes"**
-
-**Note**: The Blueprint marks these as `sync: false` to prevent them from being stored in version control.
-
----
-
-## Step 4: Run Database Migrations
-
-Once the backend service is deployed and healthy:
-
-1. Go to the **pulse-backend** service in Render Dashboard
-2. Click **"Shell"** tab
-3. Run the migration command:
-   ```bash
-   alembic upgrade head
-   ```
-
-This will create all the database tables and initial data.
-
-**Note**: The seed script runs automatically on backend startup via the Dockerfile. It will:
-- Create default topics (politics, technology, science, etc.)
-- Add news sources (AP, Reuters, NYT, BBC, etc.)
-- Generate seed ethical frameworks
-- **Create a test user** for immediate login
-
-### Test User Credentials
-
-The seed script automatically creates a test user you can use immediately:
-
-**Default credentials:**
-- Email: `test@pulse.com`
-- Password: `testpassword123`
-
-**Custom credentials (optional):**
-You can customize the test user by setting these environment variables in the backend service:
-- `TEST_USER_EMAIL` - Custom email (default: test@pulse.com)
-- `TEST_USER_PASSWORD` - Custom password (default: testpassword123)
-- `TEST_USER_NAME` - Custom name (default: Test User)
-
-⚠️ **Security Note**: For production deployments, either:
-1. Change the test user password via environment variables
-2. Delete the test user after creating your admin account
-3. Set `TEST_USER_EMAIL` to a non-obvious email address
-
----
-
-## Step 5: Verify Deployment
-
-### Check Service Health
-
-1. **Backend**: Visit `https://pulse-backend.onrender.com/health`
-   - Should return: `{"status": "healthy"}`
-
-2. **Backend API Docs**: Visit `https://pulse-backend.onrender.com/docs`
-   - Should show FastAPI Swagger UI
-
-3. **Frontend**: Visit `https://pulse-frontend.onrender.com`
-   - Should show the Pulse landing page
-
-### Test Backend Connection
-
-From the frontend, try to:
-1. Log in with the test user (`test@pulse.com` / `testpassword123`)
-2. View the dashboard
-3. Browse articles
-4. Update preferences
-
-You can also test the API directly:
-```bash
-curl -X POST https://pulse-backend.onrender.com/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@pulse.com","password":"testpassword123"}'
-```
-
-Expected response:
-```json
-{
-  "access_token": "eyJ...",
-  "token_type": "bearer",
-  "user": {
-    "id": 1,
-    "email": "test@pulse.com",
-    "name": "Test User",
-    "email_verified": true
-  }
-}
-```
-
----
-
-## Step 6: (Optional) Trigger Initial Data Load
-
-To populate the database with articles:
-
-1. Get an authentication token using the test user:
-   ```bash
-   TOKEN=$(curl -s -X POST https://pulse-backend.onrender.com/auth/login \
-     -H "Content-Type: application/json" \
-     -d '{"email":"test@pulse.com","password":"testpassword123"}' \
-     | jq -r '.access_token')
-   ```
-
-2. Trigger article scraping:
-   ```bash
-   curl -X POST https://pulse-backend.onrender.com/admin/jobs/scrape \
-     -H "Authorization: Bearer $TOKEN"
-   ```
-
-3. Trigger analysis:
-   ```bash
-   curl -X POST https://pulse-backend.onrender.com/admin/jobs/analyze \
-     -H "Authorization: Bearer $TOKEN"
-   ```
-
-**Note**: The scheduled jobs will automatically run every few hours, so manual triggering is optional.
-
----
-
-## Architecture Overview
-
-```
-┌─────────────────┐
-│  pulse-frontend │  (Next.js)
-│  onrender.com   │
-└────────┬────────┘
-         │ API calls via NEXT_PUBLIC_API_URL
-         ▼
-┌─────────────────┐
-│  pulse-backend  │  (FastAPI)
-│  onrender.com   │
-└────────┬────────┘
-         │ DATABASE_URL
-         ▼
-┌─────────────────┐
-│    pulse-db     │  (PostgreSQL)
-│   (internal)    │
-└─────────────────┘
-```
-
----
-
-## Environment Variables Reference
-
-### Backend Environment Variables
-
-Auto-configured by Blueprint:
-- `DATABASE_URL` - Postgres connection string (from pulse-db)
-- `ENVIRONMENT` - Set to "production"
-- `DEBUG` - Set to "false"
-- `AI_MODEL` - Set to "gpt-4o-mini"
-- `FROM_EMAIL` - Set to "onboarding@resend.dev"
-- `FROM_NAME` - Set to "Pulse News"
-- All other non-secret configuration values
-
-Must be set manually (secrets):
-- `SECRET_KEY` - JWT signing key
-- `OPENAI_API_KEY` - OpenAI API access
-- `RESEND_API_KEY` - Email sending
-- `GOOGLE_FACT_CHECK_API_KEY` - (Optional) Fact checking
-- `GOOGLE_SEARCH_ENGINE_ID` - (Optional) Web search
-
-### Frontend Environment Variables
-
-Auto-configured by Blueprint:
-- `NODE_ENV` - Set to "production"
-- `NEXT_PUBLIC_API_URL` - Auto-linked to pulse-backend URL
-
----
-
-## Updating Your Deployment
-
-### Automatic Deployments
-
-By default, Render automatically deploys when you push to your `main` branch:
+Set backend DB URL using Neon connection details from the Neon project dashboard:
 
 ```bash
-git add .
-git commit -m "Update feature"
-git push origin main
+DATABASE_URL=postgresql://<ROLE>:<PASSWORD>@<ENDPOINT>-pooler.c-3.us-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
 ```
 
-Render will:
-1. Pull the latest code
-2. Rebuild the services
-3. Run health checks
-4. Deploy if successful
+Optional isolation settings (provider-agnostic, only if you intentionally use a non-public schema):
 
-### Manual Deployments
-
-From the Render Dashboard:
-1. Go to the service you want to redeploy
-2. Click **"Manual Deploy" → "Deploy latest commit"**
-
-### Frontend Route/Admin Guardrails (Anti-Regression)
-
-Treat these as mandatory checks on every frontend deploy:
-
-1. **Canonical dashboard route is `/analytics`**
-   - Do not switch primary links back to `/dashboard`.
-   - Keep backward compatibility by retaining `/dashboard` redirect to `/analytics`.
-
-2. **Admin dashboard route is `/admin`**
-   - Frontend admin page must exist at `frontend/src/routes/_app.admin.tsx`.
-   - It reads backend admin summary from `GET /admin-panel/dashboard`.
-
-3. **Admin visibility rule**
-   - Admin nav/button should only render for admin users (`is_admin`) and must not appear for regular users.
-
-4. **Release verification checklist**
-   - `/analytics` returns 200
-   - `/dashboard` redirects and resolves to `/analytics`
-   - Admin user can access `/admin` and receives data from `/admin-panel/dashboard`
-   - Non-admin user sees an access error (403-handled UI), not a blank screen
-
-### Preventing Frontend Asset Regressions
-
-Use this checklist whenever frontend deploy/start commands change:
-
-1. **Pin the known-good frontend commands** (dashboard and `render.yaml` must match exactly):
-   - Build:
-     ```bash
-     NODE_ENV=development npm ci && npm run build
-     ```
-   - Start:
-     ```bash
-     mkdir -p public && rm -rf public/assets && cp -R dist/client/assets public/assets && npx srvx serve --entry dist/server/index.js --port $PORT --prod
-     ```
-
-2. **Treat Render Dashboard settings as runtime truth**:
-   - `render.yaml` can drift from live service settings.
-   - After any dashboard tweak, sync the same commands back into `render.yaml` in git.
-
-3. **Run a post-deploy asset smoke test**:
-   - Open app in browser and verify styling.
-   - In Render logs, confirm:
-     - `GET /` is `200`
-     - `GET /assets/*.css` and `GET /assets/*.js` are `200` (not `404`)
-
-4. **Know the failure signature**:
-   - If logs show `Static files: (create public/ dir)` and `/assets/*` 404s, the service is not exposing built assets correctly.
-   - Re-apply the known-good start command above and redeploy.
-
-5. **Mandatory verification before declaring success**:
-   - Confirm latest deploy status is `live`.
-   - Confirm startup log includes the actual static root being used.
-   - Confirm both conditions from real traffic:
-     - `GET /` or `HEAD /` returns `200`
-     - `GET /assets/*.css` and `GET /assets/*.js` return `200`
-   - Confirm at least one direct JS and CSS asset URL responds `200` from the public domain.
-
-6. **Migration safety rule (until static-site cutover is complete)**:
-   - Keep compatibility outputs in `frontend/postbuild.mjs`:
-     - `dist/server/index.js` copied from `dist/server/server.js`
-     - `dist/client/index.html` copied from `dist/client/_shell.html`
-     - `dist/client/assets` synced to `dist/server/public/assets`
-   - This prevents regressions when runtime static root resolution changes across Render instances.
-
----
-
-## Monitoring & Logs
-
-### View Logs
-
-1. Go to your service in Render Dashboard
-2. Click the **"Logs"** tab
-3. View real-time logs
-
-### Health Checks
-
-- Backend health check: `/health` endpoint
-- Render automatically monitors this endpoint
-- If health check fails, Render will not route traffic to the instance
-
-### Database Backups
-
-Free tier databases do not include automatic backups. For production:
-1. Upgrade to a paid database plan
-2. Render will automatically create daily backups
-3. Configure backup retention in database settings
-
----
-
-## Troubleshooting
-
-### Backend Won't Start
-
-**Issue**: Backend service shows "Unhealthy" status
-
-**Solution**:
-1. Check logs for errors: `Logs` tab in Render Dashboard
-2. Verify all secret environment variables are set
-3. Check database connection:
-   - Ensure `DATABASE_URL` is correctly linked
-   - Verify database is healthy
-
-### Frontend Can't Connect to Backend
-
-**Issue**: Frontend shows API errors
-
-**Solution**:
-1. Verify `NEXT_PUBLIC_API_URL` is set correctly
-2. Check CORS settings in backend:
-   - Ensure frontend URL is allowed
-   - May need to add frontend URL to `FRONTEND_URL` env var
-3. Check backend health: Visit `/health` endpoint
-
-### Frontend Loads as Plain HTML (No CSS/JS)
-
-**Issue**: `pulsenews.app` renders content, but has no styling or interactivity.
-
-**Symptoms in Render logs**:
-- `GET /` returns `200`
-- `GET /assets/*.css` and `GET /assets/*.js` return `404`
-- `srvx` startup logs show `Static files: (create public/ dir)`
-
-**Root cause**:
-- SSR HTML is served correctly, but static client assets are not being served from the path `srvx` is actually using at runtime.
-- In this service, relying on `--static dist/client` was not sufficient in production; explicit runtime asset placement was required.
-
-**Final working fix (Render Dashboard service settings)**:
-
-Build command:
 ```bash
-NODE_ENV=development npm ci && npm run build
+APP_DB_SCHEMA=<schema_name>
+APP_DB_ROLE=<role_name>
 ```
 
-Start command:
+## Step 2: Create Railway Backend Service
+
+1. In Railway, create a service from this repo.
+2. Set **Root Directory** to `backend`.
+3. Railway uses `backend/railway.toml` and `backend/Dockerfile`.
+4. Add environment variables:
+
+### Required backend variables
+
+- `DATABASE_URL` (Neon URL; use pooler endpoint for Railway)
+- `SECRET_KEY`
+- `OPENAI_API_KEY`
+- `ENVIRONMENT=production`
+- `DEBUG=false`
+- `FRONTEND_URL` (your frontend Railway public URL)
+- `BACKEND_URL` (your backend Railway public URL)
+
+### Optional backend variables
+
+- `RESEND_API_KEY`
+- `GOOGLE_FACT_CHECK_API_KEY`
+- `GOOGLE_SEARCH_ENGINE_ID`
+- `FROM_EMAIL`
+- `FROM_NAME`
+- any tuning vars from `backend/.env.example`
+
+## Step 3: Create Vercel Frontend Project
+
+1. Import the same GitHub repo in Vercel.
+2. Set **Root Directory** to `frontend`.
+3. Vercel uses `frontend/vercel.json`:
+   - build command: `npm run build`
+   - output directory: `dist/client`
+   - SPA rewrite: `/(.*) -> /index.html`
+4. Set frontend environment variable:
+
 ```bash
-mkdir -p public && rm -rf public/assets && cp -R dist/client/assets public/assets && npx srvx serve --entry dist/server/index.js --port $PORT --prod
+VITE_API_URL=https://<your-backend-service>.up.railway.app
 ```
 
-**Verification checklist**:
-1. Deploy completes and service is live.
-2. Render app logs show requests to `/assets/*` returning `200` (not `404`).
-3. Browser DevTools network confirms CSS and JS bundles are loaded successfully.
-4. UI renders with styling and client-side interactions.
+If you attach a custom domain, update both:
+- `VITE_API_URL` (Vercel project env)
+- `FRONTEND_URL` (Railway backend env)
 
-**Important note about config drift**:
-- `render.yaml` and Render Dashboard settings can diverge.
-- If behavior in production does not match repository config, treat dashboard `Build Command` and `Start Command` as the runtime source of truth, then sync validated values back to `render.yaml`.
+## Step 4: Deploy + Migrate
 
-### Database Migration Errors
+1. Deploy backend service.
+2. Run migrations in backend shell:
 
-**Issue**: Alembic migration fails
+```bash
+alembic upgrade head
+```
 
-**Solution**:
-1. Connect to the backend shell (Render Dashboard → Shell)
-2. Check migration status:
-   ```bash
-   alembic current
-   ```
-3. View migration history:
-   ```bash
-   alembic history
-   ```
-4. If stuck, check which migration failed:
-   ```bash
-   alembic upgrade head --sql
-   ```
+The backend container startup already runs migration/init helpers; running `alembic upgrade head` manually is still the safest explicit post-deploy check during migration.
 
-### Scheduled Jobs Not Running
+## Step 5: Verify
 
-**Issue**: Articles not being scraped automatically
+1. Backend health:
+   - `GET https://<backend-domain>/health`
+2. Backend docs:
+   - `GET https://<backend-domain>/docs`
+3. Frontend (Vercel):
+   - open `https://<frontend-domain>`
+4. Auth/API smoke test:
+   - login and load feed/article detail/analytics paths
 
-**Solution**:
-1. Check APScheduler logs in backend logs
-2. Verify jobs are registered: Check `/admin/scheduler/status`
-3. Manually trigger jobs to test:
-   ```bash
-   curl -X POST https://pulse-backend.onrender.com/admin/jobs/scrape
-   ```
+## Operational Notes
 
----
+- Railway replaces Render Blueprint automation; deploy behavior is controlled by each service's settings plus `railway.toml`.
+- Keep secrets in Railway environment variables (never commit them).
+- For rollbacks, use Railway Deployments history per service.
+- Scheduler/background jobs are in the backend process; monitor backend logs to confirm job execution.
 
-## Scaling & Performance
+## Migration Checklist (Render -> Railway)
 
-### Free Tier Limitations
-
-- **Backend/Frontend**: Services spin down after 15 minutes of inactivity
-  - First request after spin-down will take ~30-60 seconds
-  - Consider upgrading to paid plans to prevent spin-down
-
-- **Database**: Free tier includes:
-  - 256MB storage
-  - Expires after 90 days (must upgrade or migrate)
-
-### Upgrading Plans
-
-To upgrade service plans:
-1. Go to service in Render Dashboard
-2. Click **"Settings"** tab
-3. Change **"Instance Type"**
-4. Save changes
-
-Recommended for production:
-- **Backend**: Starter ($7/month) or Standard ($25/month)
-- **Frontend**: Starter ($7/month)
-- **Database**: Starter ($7/month) with 1GB storage and backups
+- [ ] Create Neon database role/credentials for app runtime.
+- [ ] Set `DATABASE_URL` using Neon pooler URL on Railway.
+- [ ] Create Railway `backend` service (root `backend`).
+- [ ] Create Vercel frontend project (root `frontend`).
+- [ ] Set `VITE_API_URL`, `FRONTEND_URL`, `BACKEND_URL`.
+- [ ] Run `alembic upgrade head`.
+- [ ] Verify `/health`, login flow, feed, and admin jobs.
+- [ ] Decommission Render services after Railway is stable.
 
 ---
 
-## Cost Estimate
-
-### Free Tier (Development/Testing)
-- Database: Free (256MB, 90 days)
-- Backend: Free (spins down)
-- Frontend: Free (spins down)
-- **Total**: $0/month
-
-### Starter Tier (Production)
-- Database: Starter $7/month
-- Backend: Starter $7/month
-- Frontend: Starter $7/month
-- **Total**: $21/month
-
----
-
-## Security Best Practices
-
-1. **Use Strong Secret Keys**
-   - Generate `SECRET_KEY` with: `openssl rand -hex 32`
-   - Never commit secrets to git
-
-2. **Restrict CORS**
-   - Update `FRONTEND_URL` env var with actual frontend domain
-   - Remove wildcard `*` CORS in production
-
-3. **Use Environment Variables**
-   - All secrets should be in Render environment variables
-   - Never hardcode API keys
-
-4. **Enable HTTPS**
-   - Render automatically provides HTTPS
-   - Ensure all API calls use HTTPS
-
-5. **Database Access**
-   - Use Render's internal connection for backend
-   - External connections: Use SSL/TLS
-   - Restrict IP access if possible
-
----
-
-## Support & Resources
-
-- **Render Documentation**: https://render.com/docs
-- **Render Status**: https://status.render.com
-- **Pulse Documentation**: See [docs/](../docs/) folder
-- **API Reference**: [API.md](./API.md)
-- **Architecture**: [ARCHITECTURE.md](./ARCHITECTURE.md)
-
----
-
-## Rollback Procedure
-
-If a deployment fails:
-
-1. **Via Dashboard**:
-   - Go to service → Deploys tab
-   - Find the last successful deploy
-   - Click **"Rollback to this deploy"**
-
-2. **Via Git**:
-   ```bash
-   git revert HEAD
-   git push origin main
-   ```
-
----
-
-**Last Updated**: 2026-04-20
-**Blueprint Version**: 1.0
-**Maintained by**: Pulse Development Team
+Last updated: 2026-04-26

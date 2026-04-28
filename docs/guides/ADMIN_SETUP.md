@@ -33,18 +33,18 @@ If you have SSH/exec access to your production container:
 
 ```bash
 # SSH into your production server or use your platform's exec command
-# For Render.com, use the Shell tab in the dashboard
+# For Railway, use the service shell in the dashboard
 
 python scripts/make_admin.py your-email@example.com
 ```
 
 ### Option 2: Direct Database Update
 
-**For Render.com PostgreSQL:**
+**For Supabase Postgres:**
 
-1. Go to your [Render Dashboard](https://dashboard.render.com)
-2. Navigate to your PostgreSQL database
-3. Click "Connect" → Copy the External Database URL
+1. Go to your Supabase project dashboard
+2. Open **Project Settings -> Database**
+3. Copy the connection string for the role you use to run admin SQL
 4. Use a SQL client to connect:
 
 ```bash

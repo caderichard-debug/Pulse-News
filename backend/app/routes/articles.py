@@ -12,7 +12,7 @@ from ..models import (
     Framework, Source, StatisticVerification, ArticleClusterMember,
     ArticleCluster, ArticleContext, ArticleFavorite, ViewpointRelationship
 )
-from ..routes.auth import get_current_user
+from ..routes.auth import get_current_user, get_optional_user
 from ..services.viewpoint_analyzer import ViewpointAnalyzer
 from ..jobs.tasks import analyze_single_article_viewpoints_job
 from ..services.article_clusterer import get_enhanced_coverage_comparison, trigger_realtime_clustering
@@ -197,7 +197,7 @@ async def get_article_detail(
     coverage_bias_filter: Optional[str] = None,
     coverage_sentiment_range: Optional[str] = None,
     coverage_max_results: int = 10,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_user),
     session: Session = Depends(get_session)
 ):
     """
@@ -315,15 +315,16 @@ async def get_article_detail(
             significance=context_data.significance
         )
 
-    # Check if favorited by current user
+    # Check if favorited by current user (guests: no token → not favorited)
     is_favorited = False
-    favorite = session.exec(
-        select(ArticleFavorite).where(
-            ArticleFavorite.user_id == current_user.id,
-            ArticleFavorite.article_id == article_id
-        )
-    ).first()
-    is_favorited = favorite is not None
+    if current_user:
+        favorite = session.exec(
+            select(ArticleFavorite).where(
+                ArticleFavorite.user_id == current_user.id,
+                ArticleFavorite.article_id == article_id
+            )
+        ).first()
+        is_favorited = favorite is not None
 
     # Build response
     content_preview = article.content_text[:500] if article.content_text else ""
