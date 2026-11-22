@@ -5,9 +5,9 @@ Handles OAuth initiation, callbacks, account linking, and token management.
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import RedirectResponse
-from sqlmodel import Session, select
+from sqlmodel import Session
 from typing import Dict, Any, Optional
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from datetime import datetime
 import logging
 import urllib.parse
@@ -16,7 +16,7 @@ import requests
 from ..config import settings
 
 from ..database import get_session
-from ..models import User, OAuthAccount
+from ..models import User
 from ..services.oauth_service import OAuthService
 from .auth import get_current_user
 
@@ -82,6 +82,14 @@ def google_oauth_login(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to initiate OAuth flow"
         )
+
+
+# NOTE: JSON endpoints that accepted client-supplied Google identity (POST /signin,
+# POST /link, POST /verify/{provider}) were removed. They trusted unverified
+# email/provider IDs from the request body, which allowed signing in as -- or
+# linking into -- any account. Google sign-in goes through the server-side
+# authorization-code flow (/google -> /google/callback), which gets the identity
+# from Google directly.
 
 
 @router.get("/google/callback")
@@ -166,6 +174,15 @@ def google_oauth_callback(
 
         user_info = user_response.json()
 
+        # Accounts are matched/linked by email, so only accept addresses Google
+        # has verified; otherwise an unverified Google account could claim an
+        # existing user's email.
+        if not user_info.get("verified_email") or not user_info.get("email"):
+            logger.warning("Rejected Google sign-in with unverified or missing email")
+            frontend_url = settings.frontend_url if settings.environment == "development" else settings.frontend_custom_url
+            origin_page = state if state in ["login", "signup"] else "login"
+            return RedirectResponse(url=f"{frontend_url}/{origin_page}?error=email_not_verified")
+
         # Create or update user
         oauth_service = OAuthService(session)
         user, created = oauth_service.find_or_create_oauth_user(
@@ -221,25 +238,8 @@ def google_oauth_callback(
 
 
 # Request/Response Models
-class OAuthSignInRequest(BaseModel):
-    """Request model for Google OAuth sign-in."""
-    provider_user_id: str = Field(..., description="Google-specific user ID")
-    email: EmailStr = Field(..., description="User email from Google")
-    name: Optional[str] = Field(default=None, description="User name from Google")
-    avatar_url: Optional[str] = Field(default=None, description="Avatar URL from Google")
-    access_token: Optional[str] = Field(default=None, description="OAuth access token")
-    refresh_token: Optional[str] = Field(default=None, description="OAuth refresh token")
-    token_expires_at: Optional[datetime] = Field(default=None, description="Token expiration time")
-    provider_data: Optional[Dict[str, Any]] = Field(default=None, description="Additional Google provider data")
 
 
-class OAuthLinkRequest(BaseModel):
-    """Request model for linking Google OAuth account."""
-    provider_user_id: str = Field(..., description="Google-specific user ID")
-    access_token: Optional[str] = Field(default=None, description="OAuth access token")
-    refresh_token: Optional[str] = Field(default=None, description="OAuth refresh token")
-    token_expires_at: Optional[datetime] = Field(default=None, description="Token expiration time")
-    provider_data: Optional[Dict[str, Any]] = Field(default=None, description="Additional Google provider data")
 
 
 class OAuthTokenUpdateRequest(BaseModel):
@@ -265,137 +265,8 @@ class AuthResponse(BaseModel):
     user: Dict[str, Any]
 
 
-@router.post("/signin", response_model=AuthResponse, status_code=status.HTTP_200_OK)
-def oauth_signin(
-    request: OAuthSignInRequest,
-    session: Session = Depends(get_session)
-):
-    """
-    Sign in or sign up user using Google OAuth.
-
-    Handles both new user creation and existing user sign-in.
-    Automatically creates default topic preferences for new users.
-    """
-    try:
-        oauth_service = OAuthService(session)
-
-        # Find or create user (Google is hardcoded as provider)
-        user, created = oauth_service.find_or_create_oauth_user(
-            provider="google",
-            provider_user_id=request.provider_user_id,
-            email=request.email,
-            name=request.name,
-            avatar_url=request.avatar_url,
-            provider_data=request.provider_data
-        )
-
-        # Update OAuth tokens if provided
-        if request.access_token:
-            oauth_service.update_oauth_tokens(
-                user_id=user.id,
-                provider="google",
-                access_token=request.access_token,
-                refresh_token=request.refresh_token,
-                token_expires_at=request.token_expires_at
-            )
-
-        # Update last login
-        user.last_login = datetime.utcnow()
-        session.add(user)
-        session.commit()
-
-        # Create JWT token
-        access_token = oauth_service.create_auth_token_for_user(user)
-
-        action = "created" if created else "signed in"
-        logger.info(f"User {action} via Google OAuth: {user.email}")
-
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "user": {
-                "id": user.id,
-                "email": user.email,
-                "name": user.name,
-                "email_verified": user.email_verified,
-                "is_admin": user.is_admin,
-                "oauth_provider": user.oauth_provider,
-                "oauth_avatar_url": user.oauth_avatar_url,
-                "created_at": user.created_at.isoformat() if user.created_at else None,
-                "new_user": created
-            }
-        }
-
-    except ValueError as e:
-        logger.warning(f"OAuth sign-in validation error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-    except Exception as e:
-        logger.error(f"Google OAuth sign-in error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Google OAuth sign-in failed: {str(e)}"
-        )
 
 
-@router.post("/link", response_model=OAuthAccountResponse)
-def link_oauth_account(
-    request: OAuthLinkRequest,
-    current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session)
-):
-    """
-    Link Google OAuth account to authenticated user.
-
-    Allows users to connect Google OAuth to their existing account.
-    """
-    try:
-        oauth_service = OAuthService(session)
-
-        # Check if user already has Google linked
-        existing_accounts = oauth_service.get_user_oauth_accounts(current_user.id)
-        for account in existing_accounts:
-            if account.provider == "google":
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Google account is already linked"
-                )
-
-        # Link Google OAuth account
-        oauth_account = oauth_service.link_oauth_account(
-            user_id=current_user.id,
-            provider="google",
-            provider_user_id=request.provider_user_id,
-            provider_data=request.provider_data,
-            access_token=request.access_token,
-            refresh_token=request.refresh_token,
-            token_expires_at=request.token_expires_at
-        )
-
-        logger.info(f"Linked Google account to user: {current_user.email}")
-
-        return OAuthAccountResponse(
-            provider=oauth_account.provider,
-            provider_user_id=oauth_account.provider_user_id,
-            created_at=oauth_account.created_at,
-            updated_at=oauth_account.updated_at,
-            has_tokens=bool(oauth_account.access_token)
-        )
-
-    except ValueError as e:
-        logger.warning(f"OAuth link validation error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-    except Exception as e:
-        logger.error(f"OAuth link error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to link OAuth account: {str(e)}"
-        )
 
 
 @router.delete("/unlink/{provider}")
@@ -560,51 +431,3 @@ def get_supported_oauth_providers():
     }
 
 
-@router.post("/verify/{provider}")
-def verify_oauth_account(
-    provider: str,
-    provider_data: Dict[str, Any],
-    session: Session = Depends(get_session)
-):
-    """
-    Verify OAuth account information without creating user account.
-
-    Used to check if an OAuth account is already linked to another user
-    before proceeding with account linking.
-    """
-    try:
-        # Validate provider
-        if provider not in ["google", "apple"]:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unsupported OAuth provider: {provider}"
-            )
-
-        provider_user_id = provider_data.get("provider_user_id")
-        if not provider_user_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="provider_user_id is required"
-            )
-
-        oauth_service = OAuthService(session)
-        existing_user = oauth_service.find_user_by_oauth(provider, provider_user_id)
-
-        if existing_user:
-            return {
-                "already_linked": True,
-                "user_info": {
-                    "id": existing_user.id,
-                    "email": existing_user.email,
-                    "name": existing_user.name
-                }
-            }
-        else:
-            return {"already_linked": False}
-
-    except Exception as e:
-        logger.error(f"Error verifying OAuth account: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to verify OAuth account"
-        )

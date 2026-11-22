@@ -130,7 +130,6 @@ def register(
     request: RegisterRequest,
     session: Session = Depends(get_session)
 ):
-    enforce_auth_rate_limit(request_obj, "auth_register")
     """
     Register a new user account.
 
@@ -139,6 +138,7 @@ def register(
     - **password**: Minimum 8 characters
     - **topic_ids**: Optional list of topic IDs for initial preferences
     """
+    enforce_auth_rate_limit(request_obj, "auth_register")
     # Check if user already exists
     existing_user = session.exec(
         select(User).where(User.email == request.email)
@@ -230,12 +230,12 @@ def login(
     request: LoginRequest,
     session: Session = Depends(get_session)
 ):
-    enforce_auth_rate_limit(request_obj, "auth_login")
     """
     Login with email and password.
 
     Returns a JWT access token for authenticated requests.
     """
+    enforce_auth_rate_limit(request_obj, "auth_login")
     # Find user
     user = session.exec(
         select(User).where(User.email == request.email)
@@ -349,12 +349,12 @@ def resend_verification_email(
     request_obj: Request,
     current_user: User = Depends(get_current_user)
 ):
-    enforce_auth_rate_limit(request_obj, "auth_resend_verification")
     """
     Resend email verification link to current user.
 
     Requires: Authorization header with Bearer token
     """
+    enforce_auth_rate_limit(request_obj, "auth_resend_verification")
     if current_user.email_verified:
         return {"message": "Email already verified"}
 

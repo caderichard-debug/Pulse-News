@@ -28,8 +28,14 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     if len(password_bytes) > 72:
         password_bytes = password_bytes[:72]
 
-    hashed_bytes = hashed_password.encode('utf-8')
-    return bcrypt.checkpw(password_bytes, hashed_bytes)
+    # OAuth-only accounts have no password hash; never match (and never raise).
+    if not hashed_password:
+        return False
+    try:
+        return bcrypt.checkpw(password_bytes, hashed_password.encode('utf-8'))
+    except ValueError:
+        # Malformed hash ("Invalid salt") - treat as a failed login, not a server error
+        return False
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
