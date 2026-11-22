@@ -382,6 +382,8 @@ def trigger_coverage_analysis(
                 detail=result.get("error", "Failed to analyze coverage")
             )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error in coverage analysis for article {article_id}: {e}")
         raise HTTPException(
@@ -409,6 +411,8 @@ def get_enhanced_coverage(
         try:
             min_sent, max_sent = map(float, sentiment_range.split(','))
             parsed_sentiment_range = (min_sent, max_sent)
+        except HTTPException:
+            raise
         except ValueError:
             logger.warning(f"Invalid sentiment range format: {sentiment_range}")
 
@@ -429,6 +433,8 @@ def get_enhanced_coverage(
                 detail=coverage_data.get("error", "Failed to get coverage data")
             )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error getting coverage for article {article_id}: {e}")
         raise HTTPException(

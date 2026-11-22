@@ -757,6 +757,14 @@ class UserChallengeResponse(SQLModel, table=True):
     # Relationships
     user: Optional["User"] = Relationship(back_populates="challenge_responses")
     weekly_challenge: Optional[WeeklyChallenge] = Relationship(back_populates="user_responses")
+
+    @property
+    def week_start_date(self) -> Optional[str]:
+        """Challenge week start (YYYY-MM-DD), taken from the parent WeeklyChallenge."""
+        challenge = self.weekly_challenge
+        if challenge is None or challenge.week_start_date is None:
+            return None
+        return challenge.week_start_date.strftime("%Y-%m-%d")
     selected_claim: Optional[ChallengeClaim] = Relationship(back_populates="user_responses")
     article_assignments: List["ChallengeArticleAssignment"] = Relationship(back_populates="user_response")
 

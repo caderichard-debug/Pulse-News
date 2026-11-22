@@ -15,7 +15,7 @@ from ..database import get_session
 from ..models import (
     User, WeeklyChallenge, ChallengeClaim, UserChallengeResponse,
     AgreementLevel, ChallengeResponseStatus, ChallengeArticleAssignment,
-    Article, Source,
+    Article, ArticleAnalysis, Source,
 )
 from ..routes.auth import get_current_user
 from ..services.challenge_manager import ChallengeManager
@@ -23,6 +23,34 @@ from ..services.challenge_article_matcher import ChallengeArticleMatcher
 from ..services.challenge_analytics import ChallengeAnalytics
 
 router = APIRouter(prefix="/challenge", tags=["challenge"])
+
+
+# 1 (strongly disagree) .. 5 (strongly agree)
+_AGREEMENT_SCALE = {
+    AgreementLevel.STRONGLY_DISAGREE: 1,
+    AgreementLevel.DISAGREE: 2,
+    AgreementLevel.NEUTRAL: 3,
+    AgreementLevel.AGREE: 4,
+    AgreementLevel.STRONGLY_AGREE: 5,
+}
+
+
+def _week_bounds(week_start) -> tuple:
+    """[start, end) datetimes for the calendar day a challenge week starts on."""
+    start = datetime.combine(week_start, datetime.min.time())
+    return start, start + timedelta(days=1)
+
+
+def _responses_for_week(user_id: int, week_start):
+    """Query for a user's responses to the challenge whose week starts on `week_start` (a date)."""
+    start, end = _week_bounds(week_start)
+    return (
+        select(UserChallengeResponse)
+        .join(WeeklyChallenge, UserChallengeResponse.weekly_challenge_id == WeeklyChallenge.id)
+        .where(UserChallengeResponse.user_id == user_id)
+        .where(WeeklyChallenge.week_start_date >= start)
+        .where(WeeklyChallenge.week_start_date < end)
+    )
 
 
 # Pydantic models for request/response
@@ -221,9 +249,6 @@ def submit_challenge_response(
         session.add(user_response)
         session.flush()  # Get the ID
 
-        # Update claim selection count
-        selected_claim.selection_count += 1
-
         # Create 7-day article assignments for the user
         article_matcher = ChallengeArticleMatcher(session)
         assignments = article_matcher.create_challenge_articles_for_user(user_response)
@@ -366,7 +391,7 @@ def get_challenge_statistics(
                 ChallengeClaim.claim_type,
                 func.count(UserChallengeResponse.id)
             )
-            .join(ChallengeClaim, UserChallengeResponse.claim_id == ChallengeClaim.id)
+            .join(ChallengeClaim, UserChallengeResponse.selected_claim_id == ChallengeClaim.id)
             .where(UserChallengeResponse.user_id == current_user.id)
             .group_by(ChallengeClaim.claim_type)
         ).all()
@@ -377,9 +402,10 @@ def get_challenge_statistics(
 
         # Calculate participation streak
         responses_with_dates = session.exec(
-            select(UserChallengeResponse.week_start_date)
+            select(WeeklyChallenge.week_start_date)
+            .join(UserChallengeResponse, UserChallengeResponse.weekly_challenge_id == WeeklyChallenge.id)
             .where(UserChallengeResponse.user_id == current_user.id)
-            .order_by(UserChallengeResponse.week_start_date.desc())
+            .order_by(WeeklyChallenge.week_start_date.desc())
             .limit(10)  # Check last 10 responses for streak
         ).all()
 
@@ -387,8 +413,8 @@ def get_challenge_statistics(
         if responses_with_dates:
             current_streak = 1
             for i in range(1, len(responses_with_dates)):
-                prev_date = datetime.strptime(responses_with_dates[i-1], "%Y-%m-%d").date()
-                curr_date = datetime.strptime(responses_with_dates[i], "%Y-%m-%d").date()
+                prev_date = responses_with_dates[i-1].date()
+                curr_date = responses_with_dates[i].date()
 
                 # Check if dates are exactly 7 days apart (consecutive weeks)
                 if (prev_date - curr_date).days == 7:
@@ -399,16 +425,9 @@ def get_challenge_statistics(
 
         # Check if user responded to current week
         current_week_start = datetime.now().date() - timedelta(days=datetime.now().weekday())
-        current_week_start_str = current_week_start.strftime("%Y-%m-%d")
 
         current_response = session.exec(
-            select(UserChallengeResponse.id)
-            .where(
-                and_(
-                    UserChallengeResponse.user_id == current_user.id,
-                    UserChallengeResponse.week_start_date == current_week_start_str
-                )
-            )
+            _responses_for_week(current_user.id, current_week_start).with_only_columns(UserChallengeResponse.id)
         ).first()
 
         current_week_responded = current_response is not None
@@ -444,62 +463,59 @@ def get_user_assignments(
             # user can't read another's assignments by guessing response IDs.
             assignments = session.exec(
                 select(ChallengeArticleAssignment)
-                .join(UserChallengeResponse, ChallengeArticleAssignment.challenge_response_id == UserChallengeResponse.id)
-                .where(ChallengeArticleAssignment.challenge_response_id == response_id)
+                .join(UserChallengeResponse, ChallengeArticleAssignment.user_challenge_response_id == UserChallengeResponse.id)
+                .where(ChallengeArticleAssignment.user_challenge_response_id == response_id)
                 .where(UserChallengeResponse.user_id == current_user.id)
-                .order_by(ChallengeArticleAssignment.sequence_day)
+                .order_by(ChallengeArticleAssignment.day_number)
                 .limit(limit)
             ).all()
         else:
             # Get all user assignments
             assignments = session.exec(
                 select(ChallengeArticleAssignment)
-                .join(UserChallengeResponse, ChallengeArticleAssignment.challenge_response_id == UserChallengeResponse.id)
+                .join(UserChallengeResponse, ChallengeArticleAssignment.user_challenge_response_id == UserChallengeResponse.id)
                 .where(UserChallengeResponse.user_id == current_user.id)
-                .order_by(ChallengeArticleAssignment.sequence_day.desc())
+                .order_by(ChallengeArticleAssignment.day_number.desc())
                 .limit(limit)
             ).all()
 
         result = []
         for assignment in assignments:
-            # Get article details with opposition score
-            article_query = session.exec(
-                select(Article, Source)
+            row = session.exec(
+                select(Article, Source, ArticleAnalysis)
                 .join(Source, Article.source_id == Source.id)
+                .outerjoin(ArticleAnalysis, ArticleAnalysis.article_id == Article.id)
                 .where(Article.id == assignment.article_id)
             ).first()
+            if not row:
+                continue
+            article, source, analysis = row
 
-            if article_query:
-                article, source = article_query
-
-                # Get opposition score if available
-                opposition_score = None
-                if hasattr(assignment, 'opposition_score'):
-                    opposition_score = assignment.opposition_score
-
-                result.append({
-                    "id": str(assignment.id),
-                    "challenge_response_id": str(assignment.challenge_response_id),
-                    "article_id": article.id,
-                    "sequence_day": assignment.sequence_day,
-                    "article": {
-                        "id": article.id,
-                        "title": article.title,
-                        "url": article.url,
-                        "source": {
-                            "name": source.name,
-                            "organizational_bias": source.organizational_bias
-                        },
-                        "published_at": article.published_at.isoformat(),
-                        "summary": article.summary,
-                        "sentiment_score": None,  # Would need to join with ArticleAnalysis
-                        "political_lean": None,  # Would need to join with ArticleAnalysis
-                        "opposition_score": opposition_score
+            result.append({
+                "id": str(assignment.id),
+                "challenge_response_id": str(assignment.user_challenge_response_id),
+                "article_id": article.id,
+                "sequence_day": assignment.day_number,
+                "assignment_date": assignment.assignment_date.isoformat() if assignment.assignment_date else None,
+                "article": {
+                    "id": article.id,
+                    "title": article.title,
+                    "url": article.url,
+                    "source": {
+                        "name": source.name,
+                        "organizational_bias": source.organizational_bias.value if source.organizational_bias else None,
                     },
-                    "is_completed": assignment.is_completed,
-                    "completed_at": assignment.completed_at.isoformat() if assignment.completed_at else None,
-                    "engagement_score": assignment.engagement_score
-                })
+                    "published_at": article.published_at.isoformat() if article.published_at else None,
+                    "summary": analysis.summary if analysis else None,
+                    "sentiment_score": analysis.sentiment_score if analysis else None,
+                    "political_lean": analysis.political_lean.value if analysis and analysis.political_lean else None,
+                    "opposition_score": assignment.opposition_strength,
+                },
+                "is_completed": assignment.is_clicked,
+                "completed_at": assignment.clicked_at.isoformat() if assignment.clicked_at else None,
+                "is_sent": assignment.is_sent,
+                "is_opened": assignment.is_opened,
+            })
 
         return result
 
@@ -520,9 +536,9 @@ def get_challenge_responses(
     try:
         responses = session.exec(
             select(UserChallengeResponse, ChallengeClaim)
-            .join(ChallengeClaim, UserChallengeResponse.claim_id == ChallengeClaim.id)
+            .join(ChallengeClaim, UserChallengeResponse.selected_claim_id == ChallengeClaim.id)
             .where(UserChallengeResponse.user_id == current_user.id)
-            .order_by(UserChallengeResponse.submitted_at.desc())
+            .order_by(UserChallengeResponse.responded_at.desc())
         ).all()
 
         result = []
@@ -530,15 +546,15 @@ def get_challenge_responses(
             # Get assignment counts
             assigned_count = session.exec(
                 select(func.count(ChallengeArticleAssignment.id))
-                .where(ChallengeArticleAssignment.challenge_response_id == str(response.id))
+                .where(ChallengeArticleAssignment.user_challenge_response_id == response.id)
             ).one() or 0
 
             engaged_count = session.exec(
                 select(func.count(ChallengeArticleAssignment.id))
                 .where(
                     and_(
-                        ChallengeArticleAssignment.challenge_response_id == str(response.id),
-                        ChallengeArticleAssignment.is_completed == True
+                        ChallengeArticleAssignment.user_challenge_response_id == response.id,
+                        ChallengeArticleAssignment.is_clicked == True
                     )
                 )
             ).one() or 0
@@ -546,12 +562,12 @@ def get_challenge_responses(
             result.append({
                 "id": str(response.id),
                 "week_start_date": response.week_start_date,
-                "claim_id": str(response.claim_id),
+                "claim_id": str(response.selected_claim_id),
                 "claim_text": claim.claim_text,
                 "claim_type": claim.claim_type.value,
-                "agreement_level": int(response.agreement_level.value.split('_')[1]) if response.agreement_level else 3,
-                "justification": response.justification,
-                "submitted_at": response.submitted_at.isoformat() if response.submitted_at else None,
+                "agreement_level": _AGREEMENT_SCALE.get(response.agreement_level, 3),
+                "justification": response.feedback_text,
+                "submitted_at": response.responded_at.isoformat() if response.responded_at else None,
                 "assigned_articles_count": assigned_count,
                 "engaged_articles_count": engaged_count
             })
@@ -578,7 +594,7 @@ def update_assignment(
         # Get the assignment with user verification
         assignment = session.exec(
             select(ChallengeArticleAssignment)
-            .join(UserChallengeResponse, ChallengeArticleAssignment.challenge_response_id == UserChallengeResponse.id)
+            .join(UserChallengeResponse, ChallengeArticleAssignment.user_challenge_response_id == UserChallengeResponse.id)
             .where(
                 and_(
                     ChallengeArticleAssignment.id == assignment_id,
@@ -592,9 +608,9 @@ def update_assignment(
 
         # Update assignment
         if "is_completed" in update_data:
-            assignment.is_completed = update_data["is_completed"]
-            if update_data["is_completed"] and not assignment.completed_at:
-                assignment.completed_at = datetime.utcnow()
+            assignment.is_clicked = bool(update_data["is_completed"])
+            if assignment.is_clicked and not assignment.clicked_at:
+                assignment.clicked_at = datetime.utcnow()
 
         session.commit()
 
@@ -603,6 +619,8 @@ def update_assignment(
             "message": "Assignment updated successfully"
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=500, detail=f"Error updating assignment: {str(e)}")
@@ -668,30 +686,22 @@ def get_participation_trends(
             week_start_str = week_start.strftime("%Y-%m-%d")
 
             # Check if user responded to challenge that week
-            response = session.exec(
-                select(UserChallengeResponse)
-                .where(
-                    and_(
-                        UserChallengeResponse.user_id == current_user.id,
-                        UserChallengeResponse.week_start_date == week_start_str
-                    )
-                )
-            ).first()
+            response = session.exec(_responses_for_week(current_user.id, week_start)).first()
 
             # Get assignment data for that week
             assignments_data = {"assigned": 0, "completed": 0}
             if response:
                 assigned_count = session.exec(
                     select(func.count(ChallengeArticleAssignment.id))
-                    .where(ChallengeArticleAssignment.challenge_response_id == str(response.id))
+                    .where(ChallengeArticleAssignment.user_challenge_response_id == response.id)
                 ).one() or 0
 
                 completed_count = session.exec(
                     select(func.count(ChallengeArticleAssignment.id))
                     .where(
                         and_(
-                            ChallengeArticleAssignment.challenge_response_id == str(response.id),
-                            ChallengeArticleAssignment.is_completed == True
+                            ChallengeArticleAssignment.user_challenge_response_id == response.id,
+                            ChallengeArticleAssignment.is_clicked == True
                         )
                     )
                 ).one() or 0
@@ -701,7 +711,7 @@ def get_participation_trends(
             trends.append({
                 "week_start": week_start_str,
                 "participated": response is not None,
-                "claim_type": session.get(ChallengeClaim, response.claim_id).claim_type.value if response else None,
+                "claim_type": session.get(ChallengeClaim, response.selected_claim_id).claim_type.value if response else None,
                 "agreement_level": response.agreement_level.value if response and response.agreement_level else None,
                 "assignments": assignments_data,
                 "completion_rate": round((assignments_data["completed"] / assignments_data["assigned"] * 100), 1) if assignments_data["assigned"] > 0 else 0

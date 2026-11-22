@@ -6,7 +6,7 @@ Manages the weekly workflow from claim generation to challenge publication.
 """
 
 import logging
-from typing import List, Dict, Optional, Tuple
+from typing import Any, List, Dict, Optional, Tuple
 from datetime import datetime, timedelta
 from sqlmodel import Session, select, and_, or_, func
 from ..models import (
@@ -160,6 +160,19 @@ class ChallengeManager:
             self.session.rollback()
             return False
 
+    @staticmethod
+    def _starts_on(monday) -> Any:
+        """SQL condition: challenge week starts on the given calendar day.
+
+        A range rather than equality, so it doesn't depend on the stored time
+        component or on the database comparing DATE with TIMESTAMP.
+        """
+        start = datetime.combine(monday, datetime.min.time())
+        return and_(
+            WeeklyChallenge.week_start_date >= start,
+            WeeklyChallenge.week_start_date < start + timedelta(days=1),
+        )
+
     def get_current_challenge(self) -> Optional[WeeklyChallenge]:
         """Get the current week's published challenge."""
         today = datetime.utcnow().date()
@@ -167,7 +180,7 @@ class ChallengeManager:
 
         query = select(WeeklyChallenge).where(
             and_(
-                WeeklyChallenge.week_start_date == monday,
+                self._starts_on(monday),
                 WeeklyChallenge.is_published == True
             )
         )
@@ -180,7 +193,7 @@ class ChallengeManager:
 
         query = select(WeeklyChallenge).where(
             and_(
-                WeeklyChallenge.week_start_date == monday,
+                self._starts_on(monday),
                 WeeklyChallenge.is_published == True
             )
         )
@@ -243,7 +256,7 @@ class ChallengeManager:
         """Get upcoming challenges for admin review."""
         query = select(WeeklyChallenge).where(
             WeeklyChallenge.is_published == False
-        ).order_by(WeeklyChallenge.created_at.desc()).limit(limit)
+        ).order_by(WeeklyChallenge.generated_at.desc()).limit(limit)
 
         return list(self.session.exec(query).all())
 
@@ -308,9 +321,8 @@ class ChallengeManager:
 
     def _get_challenge_for_week(self, week_start_date: datetime) -> Optional[WeeklyChallenge]:
         """Check if a challenge already exists for the given week."""
-        query = select(WeeklyChallenge).where(
-            WeeklyChallenge.week_start_date == week_start_date
-        )
+        day = week_start_date.date() if isinstance(week_start_date, datetime) else week_start_date
+        query = select(WeeklyChallenge).where(self._starts_on(day))
         return self.session.exec(query).first()
 
     def _select_balanced_claims(self, candidate_claims: List[Dict]) -> List[Dict]:

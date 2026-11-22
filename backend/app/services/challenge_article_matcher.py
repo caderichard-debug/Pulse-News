@@ -76,55 +76,54 @@ class ChallengeArticleMatcher:
         Returns:
             List of created assignments (7 total, one for each day)
         """
+        # Runs inside the caller's transaction (the user's response is flushed but
+        # not committed yet), so never commit or roll back the whole session here:
+        # use a savepoint so a failure only discards the assignments.
         try:
-            # Get the selected claim
-            selected_claim = self.session.get(ChallengeClaim, user_response.selected_claim_id)
-            if not selected_claim:
-                logger.error(f"Selected claim {user_response.selected_claim_id} not found")
-                return []
+            with self.session.begin_nested():
+                # Get the selected claim
+                selected_claim = self.session.get(ChallengeClaim, user_response.selected_claim_id)
+                if not selected_claim:
+                    logger.error(f"Selected claim {user_response.selected_claim_id} not found")
+                    return []
 
-            # Determine the claim's position and find opposing articles
-            opposing_articles = self._find_opposing_articles(selected_claim)
+                # Determine the claim's position and find opposing articles
+                opposing_articles = self._find_opposing_articles(selected_claim)
+                if not opposing_articles:
+                    logger.warning(f"No opposing articles found for claim {selected_claim.id}; no assignments created")
+                    return []
+                if len(opposing_articles) < 7:
+                    logger.warning(f"Only {len(opposing_articles)} opposing articles found for claim {selected_claim.id}")
 
-            if len(opposing_articles) < 7:
-                logger.warning(f"Only {len(opposing_articles)} opposing articles found for claim {selected_claim.id}")
+                # Create 7 assignments (starting tomorrow)
+                assignments = []
+                start_date = datetime.utcnow().date() + timedelta(days=1)
 
-            # Create 7 assignments (starting tomorrow)
-            assignments = []
-            start_date = datetime.utcnow().date() + timedelta(days=1)
+                for day in range(7):
+                    assignment_date = start_date + timedelta(days=day)
 
-            for day in range(7):
-                assignment_date = start_date + timedelta(days=day)
+                    # Select article for this day (cycle if fewer than 7)
+                    article = opposing_articles[day % len(opposing_articles)]
 
-                # Select article for this day
-                article_index = day % len(opposing_articles)  # Cycle if needed
-                article = opposing_articles[article_index]
+                    assignment = ChallengeArticleAssignment(
+                        user_challenge_response_id=user_response.id,
+                        user_id=user_response.user_id,
+                        article_id=article.id,
+                        day_number=day + 1,
+                        assignment_date=datetime.combine(assignment_date, datetime.min.time()),
+                        opposition_strength=self._calculate_opposition_strength(selected_claim, article),
+                        match_algorithm="database",
+                        match_reasoning=f"Article opposes selected claim on {selected_claim.claim_type.value} topic"
+                    )
 
-                # Calculate opposition strength
-                opposition_strength = self._calculate_opposition_strength(selected_claim, article)
+                    self.session.add(assignment)
+                    assignments.append(assignment)
 
-                assignment = ChallengeArticleAssignment(
-                    user_challenge_response_id=user_response.id,
-                    user_id=user_response.user_id,
-                    article_id=article.id,
-                    day_number=day + 1,
-                    assignment_date=datetime.combine(assignment_date, datetime.min.time()),
-                    opposition_strength=opposition_strength,
-                    match_algorithm="database",
-                    match_reasoning=f"Article opposes selected claim on {selected_claim.claim_type.value} topic"
-                )
-
-                self.session.add(assignment)
-                assignments.append(assignment)
-
-            self.session.commit()
             logger.info(f"Created {len(assignments)} article assignments for user {user_response.user_id}")
-
             return assignments
 
         except Exception as e:
-            logger.error(f"Error creating challenge articles for user {user_response.user_id}: {e}")
-            self.session.rollback()
+            logger.error(f"Error creating challenge articles for user {user_response.user_id}: {e}", exc_info=True)
             return []
 
     def _get_pending_daily_assignments(self, date: datetime.date) -> List[UserChallengeResponse]:

@@ -188,6 +188,8 @@ def send_test_welcome_email(
                 detail="Failed to send welcome email. Check server logs for details."
             )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to send test welcome email: {e}", exc_info=True)
         raise HTTPException(

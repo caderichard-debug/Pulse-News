@@ -313,6 +313,8 @@ def unlink_oauth_account(
                 detail="Failed to unlink OAuth account"
             )
 
+    except HTTPException:
+        raise
     except ValueError as e:
         logger.warning(f"OAuth unlink validation error: {str(e)}")
         raise HTTPException(
@@ -398,6 +400,8 @@ def update_oauth_tokens(
                 detail=f"No {provider} account linked to this user"
             )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error updating OAuth tokens: {str(e)}")
         raise HTTPException(

@@ -34,7 +34,7 @@ class ChallengeAnalytics:
             responses = self.session.exec(
                 select(UserChallengeResponse)
                 .where(UserChallengeResponse.user_id == user_id)
-                .order_by(UserChallengeResponse.submitted_at.desc())
+                .order_by(UserChallengeResponse.responded_at.desc())
             ).all()
 
             if not responses:
@@ -50,17 +50,17 @@ class ChallengeAnalytics:
             # Get engagement metrics
             total_assignments = self.session.exec(
                 select(func.count(ChallengeArticleAssignment.id))
-                .join(UserChallengeResponse, ChallengeArticleAssignment.challenge_response_id == UserChallengeResponse.id)
+                .join(UserChallengeResponse, ChallengeArticleAssignment.user_challenge_response_id == UserChallengeResponse.id)
                 .where(UserChallengeResponse.user_id == user_id)
             ).one() or 0
 
             completed_assignments = self.session.exec(
                 select(func.count(ChallengeArticleAssignment.id))
-                .join(UserChallengeResponse, ChallengeArticleAssignment.challenge_response_id == UserChallengeResponse.id)
+                .join(UserChallengeResponse, ChallengeArticleAssignment.user_challenge_response_id == UserChallengeResponse.id)
                 .where(
                     and_(
                         UserChallengeResponse.user_id == user_id,
-                        ChallengeArticleAssignment.is_completed == True
+                        ChallengeArticleAssignment.is_clicked == True
                     )
                 )
             ).one() or 0
@@ -86,8 +86,8 @@ class ChallengeAnalytics:
                     "completion_rate": round((completed_challenges / total_participated) * 100, 1),
                     "current_streak": current_streak,
                     "longest_streak": self._calculate_longest_streak(responses),
-                    "first_participation": responses[-1].submitted_at.isoformat() if responses else None,
-                    "last_participation": responses[0].submitted_at.isoformat() if responses else None
+                    "first_participation": responses[-1].responded_at.isoformat() if responses else None,
+                    "last_participation": responses[0].responded_at.isoformat() if responses else None
                 },
                 "engagement_metrics": {
                     "total_articles_assigned": total_assignments,
@@ -183,7 +183,7 @@ class ChallengeAnalytics:
             # Claim-level analytics
             claim_performance = []
             for claim in challenge.claims:
-                claim_responses = [r for r in responses if r.claim_id == claim.id]
+                claim_responses = [r for r in responses if r.selected_claim_id == claim.id]
                 claim_performance.append(self._analyze_claim_performance_detail(claim, claim_responses))
 
             # Overall challenge metrics
@@ -328,7 +328,7 @@ class ChallengeAnalytics:
 
         for response in responses:
             # Get claim type
-            claim = self.session.get(ChallengeClaim, response.claim_id)
+            claim = self.session.get(ChallengeClaim, response.selected_claim_id)
             if claim:
                 claim_type = claim.claim_type.value
                 type_counts[claim_type] = type_counts.get(claim_type, 0) + 1
@@ -336,15 +336,15 @@ class ChallengeAnalytics:
                 # Calculate engagement for this response
                 assignment_count = self.session.exec(
                     select(func.count(ChallengeArticleAssignment.id))
-                    .where(ChallengeArticleAssignment.challenge_response_id == str(response.id))
+                    .where(ChallengeArticleAssignment.user_challenge_response_id == str(response.id))
                 ).one() or 0
 
                 completed_count = self.session.exec(
                     select(func.count(ChallengeArticleAssignment.id))
                     .where(
                         and_(
-                            ChallengeArticleAssignment.challenge_response_id == str(response.id),
-                            ChallengeArticleAssignment.is_completed == True
+                            ChallengeArticleAssignment.user_challenge_response_id == str(response.id),
+                            ChallengeArticleAssignment.is_clicked == True
                         )
                     )
                 ).one() or 0
@@ -375,25 +375,25 @@ class ChallengeAnalytics:
         # Day of week analysis
         day_counts = {}
         for response in responses:
-            if response.submitted_at:
-                day_name = response.submitted_at.strftime("%A")
+            if response.responded_at:
+                day_name = response.responded_at.strftime("%A")
                 day_counts[day_name] = day_counts.get(day_name, 0) + 1
 
         # Time of day analysis
         hour_counts = {}
         for response in responses:
-            if response.submitted_at:
-                hour = response.submitted_at.hour
+            if response.responded_at:
+                hour = response.responded_at.hour
                 hour_counts[hour] = hour_counts.get(hour, 0) + 1
 
         # Response time analysis (how quickly they respond after challenge opens)
         response_times = []
         for response in responses:
-            if response.submitted_at and response.week_start_date:
+            if response.responded_at and response.week_start_date:
                 challenge_date = datetime.strptime(response.week_start_date, "%Y-%m-%d")
                 # Challenges typically sent on Friday
                 challenge_sent = challenge_date + timedelta(days=4)  # Friday of challenge week
-                response_delay = (response.submitted_at - challenge_sent).total_seconds() / 3600  # hours
+                response_delay = (response.responded_at - challenge_sent).total_seconds() / 3600  # hours
                 response_times.append(response_delay)
 
         avg_response_time = sum(response_times) / len(response_times) if response_times else 0
@@ -416,7 +416,7 @@ class ChallengeAnalytics:
             score = 0
 
             # Has justification
-            if response.justification and len(response.justification.strip()) > 10:
+            if response.feedback_text and len(response.feedback_text.strip()) > 10:
                 score += 2
 
             # Strong agreement level (indicates thoughtful consideration)
@@ -428,8 +428,8 @@ class ChallengeAnalytics:
                 select(func.count(ChallengeArticleAssignment.id))
                 .where(
                     and_(
-                        ChallengeArticleAssignment.challenge_response_id == str(response.id),
-                        ChallengeArticleAssignment.is_completed == True
+                        ChallengeArticleAssignment.user_challenge_response_id == str(response.id),
+                        ChallengeArticleAssignment.is_clicked == True
                     )
                 )
             ).one() or 0
@@ -452,29 +452,29 @@ class ChallengeAnalytics:
 
     def _get_recent_performance(self, responses: List[UserChallengeResponse]) -> List[Dict[str, Any]]:
         """Get performance data for recent challenges."""
-        recent_responses = sorted(responses, key=lambda r: r.submitted_at or datetime.min, reverse=True)[:5]
+        recent_responses = sorted(responses, key=lambda r: r.responded_at or datetime.min, reverse=True)[:5]
 
         performance_data = []
         for response in recent_responses:
             # Get completion data
             total_assignments = self.session.exec(
                 select(func.count(ChallengeArticleAssignment.id))
-                .where(ChallengeArticleAssignment.challenge_response_id == str(response.id))
+                .where(ChallengeArticleAssignment.user_challenge_response_id == str(response.id))
             ).one() or 0
 
             completed_assignments = self.session.exec(
                 select(func.count(ChallengeArticleAssignment.id))
                 .where(
                     and_(
-                        ChallengeArticleAssignment.challenge_response_id == str(response.id),
-                        ChallengeArticleAssignment.is_completed == True
+                        ChallengeArticleAssignment.user_challenge_response_id == str(response.id),
+                        ChallengeArticleAssignment.is_clicked == True
                     )
                 )
             ).one() or 0
 
             performance_data.append({
                 "week_start_date": response.week_start_date,
-                "claim_type": self.session.get(ChallengeClaim, response.claim_id).claim_type.value if self.session.get(ChallengeClaim, response.claim_id) else "UNKNOWN",
+                "claim_type": self.session.get(ChallengeClaim, response.selected_claim_id).claim_type.value if self.session.get(ChallengeClaim, response.selected_claim_id) else "UNKNOWN",
                 "agreement_level": response.agreement_level.value if response.agreement_level else "NEUTRAL",
                 "articles_assigned": total_assignments,
                 "articles_completed": completed_assignments,
@@ -494,20 +494,28 @@ class ChallengeAnalytics:
             week_end = week_start + timedelta(days=6)
 
             # Count challenges and responses for this week
+            day_start = datetime.combine(week_start, datetime.min.time())
+            day_end = day_start + timedelta(days=1)
+            in_week = (
+                (WeeklyChallenge.week_start_date >= day_start)
+                & (WeeklyChallenge.week_start_date < day_end)
+            )
+
             challenges_this_week = self.session.exec(
-                select(func.count(WeeklyChallenge.id))
-                .where(WeeklyChallenge.week_start_date == week_start.isoformat())
+                select(func.count(WeeklyChallenge.id)).where(in_week)
             ).one() or 0
 
             responses_this_week = self.session.exec(
                 select(func.count(UserChallengeResponse.id))
-                .where(UserChallengeResponse.week_start_date == week_start.isoformat())
+                .join(WeeklyChallenge, UserChallengeResponse.weekly_challenge_id == WeeklyChallenge.id)
+                .where(in_week)
             ).one() or 0
 
             # Get unique participants
             participants_this_week = self.session.exec(
                 select(func.count(func.distinct(UserChallengeResponse.user_id)))
-                .where(UserChallengeResponse.week_start_date == week_start.isoformat())
+                .join(WeeklyChallenge, UserChallengeResponse.weekly_challenge_id == WeeklyChallenge.id)
+                .where(in_week)
             ).one() or 0
 
             trends.append({
@@ -541,7 +549,7 @@ class ChallengeAnalytics:
             # Get response metrics
             total_responses = self.session.exec(
                 select(func.count(UserChallengeResponse.id))
-                .where(UserChallengeResponse.claim_id.in_(claim_ids))
+                .where(UserChallengeResponse.selected_claim_id.in_(claim_ids))
             ).one() or 0
 
             # Calculate average engagement
@@ -551,17 +559,17 @@ class ChallengeAnalytics:
             for claim_id in claim_ids:
                 assignments = self.session.exec(
                     select(func.count(ChallengeArticleAssignment.id))
-                    .join(UserChallengeResponse, ChallengeArticleAssignment.challenge_response_id == UserChallengeResponse.id)
-                    .where(UserChallengeResponse.claim_id == claim_id)
+                    .join(UserChallengeResponse, ChallengeArticleAssignment.user_challenge_response_id == UserChallengeResponse.id)
+                    .where(UserChallengeResponse.selected_claim_id == claim_id)
                 ).one() or 0
 
                 completed = self.session.exec(
                     select(func.count(ChallengeArticleAssignment.id))
-                    .join(UserChallengeResponse, ChallengeArticleAssignment.challenge_response_id == UserChallengeResponse.id)
+                    .join(UserChallengeResponse, ChallengeArticleAssignment.user_challenge_response_id == UserChallengeResponse.id)
                     .where(
                         and_(
-                            UserChallengeResponse.claim_id == claim_id,
-                            ChallengeArticleAssignment.is_completed == True
+                            UserChallengeResponse.selected_claim_id == claim_id,
+                            ChallengeArticleAssignment.is_clicked == True
                         )
                     )
                 ).one() or 0
@@ -589,13 +597,13 @@ class ChallengeAnalytics:
 
         completed_assignments = self.session.exec(
             select(func.count(ChallengeArticleAssignment.id))
-            .where(ChallengeArticleAssignment.is_completed == True)
+            .where(ChallengeArticleAssignment.is_clicked == True)
         ).one() or 0
 
         # Calculate average opposition scores
         opposition_scores = self.session.exec(
-            select(ChallengeArticleAssignment.opposition_score)
-            .where(ChallengeArticleAssignment.opposition_score.is_not(None))
+            select(ChallengeArticleAssignment.opposition_strength)
+            .where(ChallengeArticleAssignment.opposition_strength.is_not(None))
         ).all()
 
         avg_opposition = sum(opposition_scores) / len(opposition_scores) if opposition_scores else 0
@@ -605,15 +613,15 @@ class ChallengeAnalytics:
         for day in range(1, 8):
             day_assignments = self.session.exec(
                 select(func.count(ChallengeArticleAssignment.id))
-                .where(ChallengeArticleAssignment.sequence_day == day)
+                .where(ChallengeArticleAssignment.day_number == day)
             ).one() or 0
 
             day_completed = self.session.exec(
                 select(func.count(ChallengeArticleAssignment.id))
                 .where(
                     and_(
-                        ChallengeArticleAssignment.sequence_day == day,
-                        ChallengeArticleAssignment.is_completed == True
+                        ChallengeArticleAssignment.day_number == day,
+                        ChallengeArticleAssignment.is_clicked == True
                     )
                 )
             ).one() or 0
@@ -641,12 +649,12 @@ class ChallengeAnalytics:
 
         recent_challenges = self.session.exec(
             select(func.count(WeeklyChallenge.id))
-            .where(WeeklyChallenge.created_at >= recent_date)
+            .where(WeeklyChallenge.generated_at >= recent_date)
         ).one() or 0
 
         recent_responses = self.session.exec(
             select(func.count(UserChallengeResponse.id))
-            .where(UserChallengeResponse.submitted_at >= recent_date)
+            .where(UserChallengeResponse.responded_at >= recent_date)
         ).one() or 0
 
         # Error rates (would need error logging to implement properly)
@@ -701,15 +709,15 @@ class ChallengeAnalytics:
         for response in responses:
             total = self.session.exec(
                 select(func.count(ChallengeArticleAssignment.id))
-                .where(ChallengeArticleAssignment.challenge_response_id == str(response.id))
+                .where(ChallengeArticleAssignment.user_challenge_response_id == str(response.id))
             ).one() or 0
 
             completed = self.session.exec(
                 select(func.count(ChallengeArticleAssignment.id))
                 .where(
                     and_(
-                        ChallengeArticleAssignment.challenge_response_id == str(response.id),
-                        ChallengeArticleAssignment.is_completed == True
+                        ChallengeArticleAssignment.user_challenge_response_id == str(response.id),
+                        ChallengeArticleAssignment.is_clicked == True
                     )
                 )
             ).one() or 0
@@ -735,9 +743,9 @@ class ChallengeAnalytics:
             select(ArticleAnalysis.political_lean)
             .join(Article, ArticleAnalysis.article_id == Article.id)
             .join(ChallengeArticleAssignment, ChallengeArticleAssignment.article_id == Article.id)
-            .join(UserChallengeResponse, ChallengeArticleAssignment.challenge_response_id == UserChallengeResponse.id)
+            .join(UserChallengeResponse, ChallengeArticleAssignment.user_challenge_response_id == UserChallengeResponse.id)
             .where(UserChallengeResponse.user_id == user_id)
-            .where(ChallengeArticleAssignment.is_completed == True)
+            .where(ChallengeArticleAssignment.is_clicked == True)
         ).all()
 
         unique_leans = set(political_leans)
@@ -752,7 +760,7 @@ class ChallengeAnalytics:
             return "insufficient_data"
 
         # Sort by submission date
-        sorted_responses = sorted([r for r in responses if r.submitted_at], key=lambda r: r.submitted_at)
+        sorted_responses = sorted([r for r in responses if r.responded_at], key=lambda r: r.responded_at)
 
         # Compare recent vs older engagement rates
         midpoint = len(sorted_responses) // 2
@@ -766,15 +774,15 @@ class ChallengeAnalytics:
             for response in response_list:
                 total = self.session.exec(
                     select(func.count(ChallengeArticleAssignment.id))
-                    .where(ChallengeArticleAssignment.challenge_response_id == str(response.id))
+                    .where(ChallengeArticleAssignment.user_challenge_response_id == str(response.id))
                 ).one() or 0
 
                 completed = self.session.exec(
                     select(func.count(ChallengeArticleAssignment.id))
                     .where(
                         and_(
-                            ChallengeArticleAssignment.challenge_response_id == str(response.id),
-                            ChallengeArticleAssignment.is_completed == True
+                            ChallengeArticleAssignment.user_challenge_response_id == str(response.id),
+                            ChallengeArticleAssignment.is_clicked == True
                         )
                     )
                 ).one() or 0
@@ -834,15 +842,15 @@ class ChallengeAnalytics:
 
         total_assignments = self.session.exec(
             select(func.count(ChallengeArticleAssignment.id))
-            .where(ChallengeArticleAssignment.challenge_response_id.in_(response_ids))
+            .where(ChallengeArticleAssignment.user_challenge_response_id.in_(response_ids))
         ).one() or 0
 
         completed_assignments = self.session.exec(
             select(func.count(ChallengeArticleAssignment.id))
             .where(
                 and_(
-                    ChallengeArticleAssignment.challenge_response_id.in_(response_ids),
-                    ChallengeArticleAssignment.is_completed == True
+                    ChallengeArticleAssignment.user_challenge_response_id.in_(response_ids),
+                    ChallengeArticleAssignment.is_clicked == True
                 )
             )
         ).one() or 0
@@ -861,20 +869,20 @@ class ChallengeAnalytics:
     def _assess_engagement_quality(self, responses: List[UserChallengeResponse]) -> Dict[str, Any]:
         """Assess the quality of engagement for a challenge."""
         # Calculate various quality metrics
-        total_justifications = len([r for r in responses if r.justification and len(r.justification.strip()) > 20])
+        total_justifications = len([r for r in responses if r.feedback_text and len(r.feedback_text.strip()) > 20])
 
         response_ids = [str(r.id) for r in responses]
         total_assignments = self.session.exec(
             select(func.count(ChallengeArticleAssignment.id))
-            .where(ChallengeArticleAssignment.challenge_response_id.in_(response_ids))
+            .where(ChallengeArticleAssignment.user_challenge_response_id.in_(response_ids))
         ).one() or 0
 
         completed_assignments = self.session.exec(
             select(func.count(ChallengeArticleAssignment.id))
             .where(
                 and_(
-                    ChallengeArticleAssignment.challenge_response_id.in_(response_ids),
-                    ChallengeArticleAssignment.is_completed == True
+                    ChallengeArticleAssignment.user_challenge_response_id.in_(response_ids),
+                    ChallengeArticleAssignment.is_clicked == True
                 )
             )
         ).one() or 0
