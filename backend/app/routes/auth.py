@@ -12,7 +12,8 @@ from ..utils.auth import (
     verify_password,
     create_access_token,
     create_verification_token,
-    decode_access_token
+    decode_access_token,
+    decode_session_token,
 )
 from ..services.email_service import send_verification_email, send_welcome_email
 from ..utils.rate_limit import enforce_auth_rate_limit
@@ -59,7 +60,7 @@ def get_current_user(
     Usage: current_user: User = Depends(get_current_user)
     """
     token = credentials.credentials
-    payload = decode_access_token(token)
+    payload = decode_session_token(token)
 
     if not payload:
         raise HTTPException(
@@ -105,7 +106,7 @@ def get_optional_user(
 
     try:
         token = credentials.credentials
-        payload = decode_access_token(token)
+        payload = decode_session_token(token)
 
         if not payload:
             return None

@@ -2,11 +2,13 @@
 Password reset routes: request reset, verify token, reset password.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlmodel import Session, select
 from ..database import get_session
 from ..models import User, PasswordResetToken
 from ..utils.auth import hash_password
+from ..utils.rate_limit import enforce_auth_rate_limit
+from ..config import settings
 from pydantic import BaseModel, EmailStr
 from datetime import datetime, timedelta
 import secrets
@@ -106,6 +108,7 @@ def verify_reset_token(token: str, session: Session) -> PasswordResetToken:
 
 @router.post("/request-password-reset", response_model=MessageResponse)
 def request_password_reset(
+    request_obj: Request,
     request: RequestPasswordResetRequest,
     session: Session = Depends(get_session)
 ):
@@ -115,6 +118,7 @@ def request_password_reset(
     For security, always returns success even if email doesn't exist.
     This prevents user enumeration attacks.
     """
+    enforce_auth_rate_limit(request_obj, "auth_password_reset")
     # Find user by email
     user = session.exec(
         select(User).where(User.email == request.email)
@@ -137,8 +141,10 @@ def request_password_reset(
             logger.info(f"Password reset email sent to {user.email}")
         else:
             logger.warning(f"Failed to send password reset email to {user.email}")
-            # Still log the token for development purposes
-            logger.info(f"Reset token (DEV ONLY): {token}")
+            # A reset token in logs lets anyone who can read them take over the
+            # account, so only surface it in local development.
+            if settings.environment == "development":
+                logger.info(f"Reset token (DEV ONLY): {token}")
     else:
         # User doesn't exist or inactive, but don't reveal this
         logger.info(f"Password reset requested for non-existent/inactive email: {request.email}")

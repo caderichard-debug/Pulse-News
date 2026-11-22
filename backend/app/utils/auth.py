@@ -69,7 +69,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 def decode_access_token(token: str) -> Optional[dict]:
     """
-    Decode and verify a JWT token.
+    Decode and verify a JWT token (any purpose).
 
     Returns:
         Dict with token data if valid, None if invalid/expired
@@ -83,6 +83,20 @@ def decode_access_token(token: str) -> Optional[dict]:
         return payload
     except jwt.PyJWTError:
         return None
+
+
+def decode_session_token(token: str) -> Optional[dict]:
+    """
+    Decode a token for authenticating API requests.
+
+    Purpose-scoped tokens (e.g. email verification links) share the signing key,
+    so they must be rejected here; otherwise a verification link would work as a
+    login token.
+    """
+    payload = decode_access_token(token)
+    if not payload or payload.get("purpose"):
+        return None
+    return payload
 
 
 def create_verification_token(email: str) -> str:

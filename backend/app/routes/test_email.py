@@ -14,7 +14,14 @@ from ..services.email_service import send_welcome_email
 import resend
 import logging
 
-router = APIRouter(prefix="/test", tags=["testing"])
+from ..utils.admin_auth import get_admin_user
+
+# Admin-only: these send email to arbitrary addresses from the app's domain.
+router = APIRouter(
+    prefix="/test",
+    tags=["testing"],
+    dependencies=[Depends(get_admin_user)],
+)
 logger = logging.getLogger(__name__)
 
 

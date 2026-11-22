@@ -157,96 +157,6 @@ def get_current_challenge(
         raise HTTPException(status_code=500, detail=f"Error getting current challenge: {str(e)}")
 
 
-@router.get("/{week_date}", response_model=Dict[str, Any])
-def get_challenge_by_date(
-    week_date: str,
-    current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session)
-):
-    """
-    Get challenge for a specific week date.
-
-    Used for accessing challenge forms via newsletter links.
-    Format: YYYY-MM-DD (any day of the challenge week)
-    """
-    try:
-        # Parse the date
-        try:
-            target_date = datetime.strptime(week_date, "%Y-%m-%d")
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
-
-        manager = ChallengeManager(session)
-
-        # Get challenge for the week
-        challenge = manager.get_challenge_by_date(target_date)
-        if not challenge:
-            raise HTTPException(status_code=404, detail="Challenge not found for this week")
-
-        # Check if challenge is published
-        if not challenge.is_published:
-            raise HTTPException(status_code=404, detail="Challenge not yet published")
-
-        # Check if user can respond
-        can_respond, reason = manager.can_user_respond_to_challenge(
-            current_user.id, challenge.id
-        )
-
-        # Get user's existing response
-        user_response = manager.get_user_challenge_response(
-            current_user.id, challenge.week_start_date
-        )
-
-        # Format challenge data
-        challenge_data = {
-            "id": challenge.id,
-            "week_start_date": challenge.week_start_date.strftime('%Y-%m-%d'),
-            "title": challenge.title,
-            "description": challenge.description,
-            "challenge_date": challenge.challenge_date.strftime('%Y-%m-%d'),
-            "week_end_date": challenge.week_end_date.strftime('%Y-%m-%d'),
-            "claims": []
-        }
-
-        # Get claims
-        claims = session.exec(
-            select(ChallengeClaim)
-            .where(ChallengeClaim.weekly_challenge_id == challenge.id)
-            .order_by(ChallengeClaim.display_order)
-        ).all()
-
-        for claim in claims:
-            challenge_data["claims"].append({
-                "id": claim.id,
-                "display_order": claim.display_order,
-                "claim_text": claim.claim_text,
-                "claim_type": claim.claim_type.value,
-                "background_context": claim.background_context
-            })
-
-        # Format user response if exists
-        user_response_data = None
-        if user_response:
-            user_response_data = {
-                "id": user_response.id,
-                "selected_claim_id": user_response.selected_claim_id,
-                "agreement_level": user_response.agreement_level,
-                "status": user_response.status,
-                "responded_at": user_response.responded_at
-            }
-
-        return {
-            "challenge": challenge_data,
-            "user_response": user_response_data,
-            "can_respond": can_respond,
-            "reason": reason,
-            "user_name": current_user.name
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting challenge: {str(e)}")
 
 
 @router.post("/{week_date}/respond")
@@ -855,3 +765,97 @@ def submit_challenge_feedback(
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=500, detail=f"Error submitting feedback: {str(e)}")
+
+
+# Declared last on purpose: "/{week_date}" would otherwise capture fixed paths
+# such as /my-responses, /statistics, /assignments, /responses and /analytics.
+@router.get("/{week_date}", response_model=Dict[str, Any])
+def get_challenge_by_date(
+    week_date: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Get challenge for a specific week date.
+
+    Used for accessing challenge forms via newsletter links.
+    Format: YYYY-MM-DD (any day of the challenge week)
+    """
+    try:
+        # Parse the date
+        try:
+            target_date = datetime.strptime(week_date, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
+        manager = ChallengeManager(session)
+
+        # Get challenge for the week
+        challenge = manager.get_challenge_by_date(target_date)
+        if not challenge:
+            raise HTTPException(status_code=404, detail="Challenge not found for this week")
+
+        # Check if challenge is published
+        if not challenge.is_published:
+            raise HTTPException(status_code=404, detail="Challenge not yet published")
+
+        # Check if user can respond
+        can_respond, reason = manager.can_user_respond_to_challenge(
+            current_user.id, challenge.id
+        )
+
+        # Get user's existing response
+        user_response = manager.get_user_challenge_response(
+            current_user.id, challenge.week_start_date
+        )
+
+        # Format challenge data
+        challenge_data = {
+            "id": challenge.id,
+            "week_start_date": challenge.week_start_date.strftime('%Y-%m-%d'),
+            "title": challenge.title,
+            "description": challenge.description,
+            "challenge_date": challenge.challenge_date.strftime('%Y-%m-%d'),
+            "week_end_date": challenge.week_end_date.strftime('%Y-%m-%d'),
+            "claims": []
+        }
+
+        # Get claims
+        claims = session.exec(
+            select(ChallengeClaim)
+            .where(ChallengeClaim.weekly_challenge_id == challenge.id)
+            .order_by(ChallengeClaim.display_order)
+        ).all()
+
+        for claim in claims:
+            challenge_data["claims"].append({
+                "id": claim.id,
+                "display_order": claim.display_order,
+                "claim_text": claim.claim_text,
+                "claim_type": claim.claim_type.value,
+                "background_context": claim.background_context
+            })
+
+        # Format user response if exists
+        user_response_data = None
+        if user_response:
+            user_response_data = {
+                "id": user_response.id,
+                "selected_claim_id": user_response.selected_claim_id,
+                "agreement_level": user_response.agreement_level,
+                "status": user_response.status,
+                "responded_at": user_response.responded_at
+            }
+
+        return {
+            "challenge": challenge_data,
+            "user_response": user_response_data,
+            "can_respond": can_respond,
+            "reason": reason,
+            "user_name": current_user.name
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting challenge: {str(e)}")
