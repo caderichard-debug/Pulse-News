@@ -1,4 +1,5 @@
 #!/bin/bash
+# Admin endpoints require the server's ADMIN_TOKEN: export ADMIN_TOKEN=... before running.
 # Script to trigger analysis on Render deployment and monitor progress
 
 BACKEND_URL="https://pulse-backend-4h7y.onrender.com"
@@ -10,7 +11,7 @@ echo ""
 
 # 1. Check system stats
 echo "1. Checking system stats..."
-STATS=$(curl -s "$BACKEND_URL/admin/stats")
+STATS=$(curl -s -H "X-Admin-Token: ${ADMIN_TOKEN:?set ADMIN_TOKEN}" "$BACKEND_URL/admin/stats")
 TOTAL=$(echo "$STATS" | python3 -c "import sys, json; print(json.load(sys.stdin)['articles']['total'])" 2>/dev/null || echo "Error")
 COMPLETED=$(echo "$STATS" | python3 -c "import sys, json; print(json.load(sys.stdin)['articles']['completed'])" 2>/dev/null || echo "Error")
 
@@ -20,7 +21,7 @@ echo ""
 
 # 2. Check scheduler status
 echo "2. Checking scheduler status..."
-SCHEDULER=$(curl -s "$BACKEND_URL/admin/scheduler/status")
+SCHEDULER=$(curl -s -H "X-Admin-Token: ${ADMIN_TOKEN:?set ADMIN_TOKEN}" "$BACKEND_URL/admin/scheduler/status")
 STATUS=$(echo "$SCHEDULER" | python3 -c "import sys, json; print(json.load(sys.stdin)['status'])" 2>/dev/null || echo "Error")
 echo "   Scheduler status: $STATUS"
 echo ""
@@ -58,7 +59,7 @@ echo ""
 
 for i in {1..5}; do
     echo "   Triggering batch $i..."
-    RESULT=$(curl -s -X POST "$BACKEND_URL/admin/jobs/analyze")
+    RESULT=$(curl -s -X POST -H "X-Admin-Token: ${ADMIN_TOKEN:?set ADMIN_TOKEN}" "$BACKEND_URL/admin/jobs/analyze")
     MESSAGE=$(echo "$RESULT" | python3 -c "import sys, json; print(json.load(sys.stdin).get('message', 'Failed'))" 2>/dev/null || echo "Error")
     echo "   → $MESSAGE"
 

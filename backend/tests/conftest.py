@@ -43,3 +43,14 @@ def client_fixture(session: Session):
     client = TestClient(app)
     yield client
     app.dependency_overrides.clear()
+
+
+TEST_ADMIN_TOKEN = "test-admin-token"
+
+
+@pytest.fixture
+def admin_token_headers(monkeypatch):
+    """Headers that satisfy require_admin_access via the X-Admin-Token path."""
+    from app.config import settings
+    monkeypatch.setattr(settings, "admin_token", TEST_ADMIN_TOKEN)
+    return {"X-Admin-Token": TEST_ADMIN_TOKEN}

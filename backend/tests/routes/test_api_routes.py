@@ -229,11 +229,39 @@ class TestArticlesRoutes:
 class TestAdminRoutes:
     """Test /admin endpoints"""
 
+    @pytest.mark.parametrize("method,path", [
+        ("get", "/admin/stats"),
+        ("get", "/admin/config/check"),
+        ("post", "/admin/jobs/analyze"),
+        ("post", "/admin/jobs/reverify-all-statistics"),
+    ])
+    def test_admin_routes_reject_anonymous_and_non_admin(self, client: TestClient, session, method, path):
+        """These trigger paid AI jobs / expose internals; they must not be public."""
+        from app.models import User
+        from app.utils.auth import create_access_token
+        session.add(User(email="regular@example.com", hashed_password="x", email_verified=True))
+        session.commit()
+        user_headers = {"Authorization": f"Bearer {create_access_token({'sub': 'regular@example.com'})}"}
+
+        assert getattr(client, method)(path).status_code == 403
+        assert getattr(client, method)(path, headers=user_headers).status_code == 403
+        assert getattr(client, method)(path, headers={"X-Admin-Token": "wrong"}).status_code == 403
+
+    def test_admin_routes_accept_admin_jwt(self, client: TestClient, session):
+        from app.models import User
+        from app.utils.auth import create_access_token
+        session.add(User(email="boss@example.com", hashed_password="x", email_verified=True, is_admin=True))
+        session.commit()
+        headers = {"Authorization": f"Bearer {create_access_token({'sub': 'boss@example.com'})}"}
+
+        assert client.get("/admin/stats", headers=headers).status_code == 200
+
     def test_get_system_stats(
-        self, client: TestClient, analyzed_article: Article, sample_framework: Framework
+        self, client: TestClient, analyzed_article: Article, sample_framework: Framework,
+        admin_token_headers,
     ):
         """Test system stats endpoint"""
-        response = client.get("/admin/stats")
+        response = client.get("/admin/stats", headers=admin_token_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -257,9 +285,9 @@ class TestAdminRoutes:
         assert "seed" in data["frameworks"]
         assert "ai_generated" in data["frameworks"]
 
-    def test_get_system_stats_empty_database(self, client: TestClient):
+    def test_get_system_stats_empty_database(self, client: TestClient, admin_token_headers):
         """Test stats with empty database"""
-        response = client.get("/admin/stats")
+        response = client.get("/admin/stats", headers=admin_token_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -267,18 +295,18 @@ class TestAdminRoutes:
         assert data["sources"]["total"] == 0
         assert data["frameworks"]["total"] == 0
 
-    def test_get_scheduler_status(self, client: TestClient):
+    def test_get_scheduler_status(self, client: TestClient, admin_token_headers):
         """Test scheduler status endpoint"""
-        response = client.get("/admin/scheduler/status")
+        response = client.get("/admin/scheduler/status", headers=admin_token_headers)
 
         assert response.status_code == 200
         # Just verify it returns valid JSON
         data = response.json()
         assert isinstance(data, dict)
 
-    def test_trigger_scrape_job(self, client: TestClient):
+    def test_trigger_scrape_job(self, client: TestClient, admin_token_headers):
         """Test manual scrape job trigger"""
-        response = client.post("/admin/jobs/scrape")
+        response = client.post("/admin/jobs/scrape", headers=admin_token_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -286,27 +314,27 @@ class TestAdminRoutes:
         assert data["job"] == "scrape_rss"
         assert "message" in data
 
-    def test_trigger_extract_job(self, client: TestClient):
+    def test_trigger_extract_job(self, client: TestClient, admin_token_headers):
         """Test manual extract job trigger"""
-        response = client.post("/admin/jobs/extract")
+        response = client.post("/admin/jobs/extract", headers=admin_token_headers)
 
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "triggered"
         assert data["job"] == "extract_articles"
 
-    def test_trigger_analyze_job(self, client: TestClient):
+    def test_trigger_analyze_job(self, client: TestClient, admin_token_headers):
         """Test manual analyze job trigger"""
-        response = client.post("/admin/jobs/analyze")
+        response = client.post("/admin/jobs/analyze", headers=admin_token_headers)
 
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "triggered"
         assert data["job"] == "analyze_articles"
 
-    def test_trigger_framework_job(self, client: TestClient):
+    def test_trigger_framework_job(self, client: TestClient, admin_token_headers):
         """Test manual framework job trigger"""
-        response = client.post("/admin/jobs/frameworks")
+        response = client.post("/admin/jobs/frameworks", headers=admin_token_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -315,7 +343,7 @@ class TestAdminRoutes:
 
     def test_get_recent_articles(
         self, client: TestClient, session: Session, sample_source: Source
-    ):
+    , admin_token_headers):
         """Test getting recent articles"""
         # Create articles with different timestamps
         old_article = Article(
@@ -337,7 +365,7 @@ class TestAdminRoutes:
         session.add_all([old_article, new_article])
         session.commit()
 
-        response = client.get("/admin/articles/recent")
+        response = client.get("/admin/articles/recent", headers=admin_token_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -349,7 +377,7 @@ class TestAdminRoutes:
 
     def test_get_recent_articles_with_limit(
         self, client: TestClient, session: Session, sample_source: Source
-    ):
+    , admin_token_headers):
         """Test recent articles limit parameter"""
         # Create 15 articles
         for i in range(15):
@@ -364,7 +392,7 @@ class TestAdminRoutes:
             session.add(article)
         session.commit()
 
-        response = client.get("/admin/articles/recent?limit=5")
+        response = client.get("/admin/articles/recent?limit=5", headers=admin_token_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -372,7 +400,7 @@ class TestAdminRoutes:
 
     def test_get_sources_status(
         self, client: TestClient, session: Session, sample_source: Source
-    ):
+    , admin_token_headers):
         """Test sources status endpoint"""
         # Create articles for the source
         for i in range(5):
@@ -387,7 +415,7 @@ class TestAdminRoutes:
             session.add(article)
         session.commit()
 
-        response = client.get("/admin/sources/status")
+        response = client.get("/admin/sources/status", headers=admin_token_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -402,9 +430,9 @@ class TestAdminRoutes:
         assert test_source["is_active"] is True
         assert test_source["trust_score"] == 0.8
 
-    def test_get_sources_status_empty(self, client: TestClient):
+    def test_get_sources_status_empty(self, client: TestClient, admin_token_headers):
         """Test sources status with no sources"""
-        response = client.get("/admin/sources/status")
+        response = client.get("/admin/sources/status", headers=admin_token_headers)
 
         assert response.status_code == 200
         data = response.json()

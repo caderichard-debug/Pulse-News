@@ -45,9 +45,9 @@ def test_root_endpoint(client: TestClient):
     assert "Pulse" in data["name"]
 
 
-def test_admin_stats_endpoint(client: TestClient):
+def test_admin_stats_endpoint(client: TestClient, admin_token_headers):
     """Test admin stats endpoint is accessible"""
-    response = client.get("/admin/stats")
+    response = client.get("/admin/stats", headers=admin_token_headers)
     assert response.status_code == 200
     data = response.json()
     assert "articles" in data

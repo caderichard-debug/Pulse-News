@@ -17,9 +17,17 @@ from datetime import datetime, timedelta
 from typing import Dict, Any
 from pydantic import BaseModel, HttpUrl
 
+from ..utils.admin_auth import require_admin_access
+
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+# Every route here triggers paid AI jobs or exposes internals, so all require an
+# admin JWT or the X-Admin-Token header (see require_admin_access).
+router = APIRouter(
+    prefix="/admin",
+    tags=["admin"],
+    dependencies=[Depends(require_admin_access)],
+)
 
 
 # Request models
