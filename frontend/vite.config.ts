@@ -18,6 +18,9 @@ export default defineConfig({
       allowedHosts: ["pulsenews.app", "www.pulsenews.app", "pulse-frontend-pfrt.onrender.com"],
     },
     preview: {
+      // Bind IPv4 explicitly: the SPA prerender step starts a preview server, and the
+      // default "::" bind fails on hosts/CI runners without IPv6.
+      host: "127.0.0.1",
       allowedHosts: ["pulsenews.app", "www.pulsenews.app", "pulse-frontend-pfrt.onrender.com"],
     },
   },
