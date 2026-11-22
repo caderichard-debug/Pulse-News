@@ -427,7 +427,7 @@ def get_challenge_statistics(
 
 @router.get("/assignments", response_model=List[Dict[str, Any]])
 def get_user_assignments(
-    response_id: str = Query(default=None),
+    response_id: Optional[int] = Query(default=None),
     limit: int = Query(default=50, le=100, ge=1),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
@@ -436,14 +436,17 @@ def get_user_assignments(
     Get user's challenge article assignments.
 
     Returns the articles assigned for active challenges with engagement data.
-    Can filter by specific response ID.
+    Can filter by specific response ID (only the caller's own responses).
     """
     try:
         if response_id:
-            # Get assignments for specific response
+            # Get assignments for specific response -- scoped to the caller so one
+            # user can't read another's assignments by guessing response IDs.
             assignments = session.exec(
                 select(ChallengeArticleAssignment)
+                .join(UserChallengeResponse, ChallengeArticleAssignment.challenge_response_id == UserChallengeResponse.id)
                 .where(ChallengeArticleAssignment.challenge_response_id == response_id)
+                .where(UserChallengeResponse.user_id == current_user.id)
                 .order_by(ChallengeArticleAssignment.sequence_day)
                 .limit(limit)
             ).all()
