@@ -36,6 +36,13 @@ def verify_admin_token(x_admin_token: Optional[str] = Header(None)) -> bool:
     return True
 
 
+def _has_admin_privileges(user: User) -> bool:
+    """is_admin users, or legacy admin emails -- the latter only once the email is verified."""
+    if user.is_admin:
+        return True
+    return user.email in LEGACY_ADMIN_EMAILS and bool(user.email_verified)
+
+
 def get_admin_user(
     current_user: User = Depends(get_current_user)
 ) -> User:
@@ -43,7 +50,7 @@ def get_admin_user(
     Get current user and verify they have admin privileges.
     Requires valid JWT token and user must have is_admin=True.
     """
-    if not current_user.is_admin and current_user.email not in LEGACY_ADMIN_EMAILS:
+    if not _has_admin_privileges(current_user):
         logger.warning(f"Non-admin user {current_user.email} attempted admin access")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -61,7 +68,7 @@ def get_admin_user_with_token(
     Get current user and verify they have admin privileges.
     Requires both valid JWT token AND admin token (for extra sensitive operations).
     """
-    if not current_user.is_admin and current_user.email not in LEGACY_ADMIN_EMAILS:
+    if not _has_admin_privileges(current_user):
         logger.warning(f"Non-admin user {current_user.email} attempted admin access")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

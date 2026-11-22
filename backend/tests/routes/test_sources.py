@@ -33,6 +33,14 @@ def session_fixture():
             is_active=True
         )
         session.add(user)
+        session.add(User(
+            id=2,
+            email="admin@example.com",
+            hashed_password=hash_password("adminpass123"),
+            email_verified=True,
+            is_active=True,
+            is_admin=True,
+        ))
 
         # Create test sources with bias
         sources = [
@@ -76,6 +84,13 @@ def client_fixture(session: Session):
 def auth_headers_fixture():
     """Create authentication headers"""
     token = create_access_token(data={"sub": "testuser@example.com"})
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture(name="admin_headers")
+def admin_headers_fixture():
+    """Authentication headers for an admin user"""
+    token = create_access_token(data={"sub": "admin@example.com"})
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -172,10 +187,10 @@ def test_list_sources_sort_by_article_count(client: TestClient, auth_headers: di
     assert article_counts == sorted(article_counts, reverse=True)
 
 
-def test_list_sources_requires_auth(client: TestClient):
-    """Test that listing sources requires authentication."""
+def test_list_sources_is_public(client: TestClient):
+    """Listing sources is public (used by the signed-out sources page)."""
     response = client.get("/sources")
-    assert response.status_code in [401, 403]
+    assert response.status_code == 200
 
 
 def test_list_sources_includes_article_count(client: TestClient, auth_headers: dict):
@@ -214,10 +229,10 @@ def test_get_source_not_found(client: TestClient, auth_headers: dict):
     assert response.status_code == 404
 
 
-def test_get_source_requires_auth(client: TestClient):
-    """Test that getting source requires authentication."""
+def test_get_source_is_public(client: TestClient):
+    """Source details are public."""
     response = client.get("/sources/1")
-    assert response.status_code in [401, 403]
+    assert response.status_code == 200
 
 
 def test_create_source_success(client: TestClient, auth_headers: dict, session: Session):
@@ -315,7 +330,7 @@ def test_create_source_requires_auth(client: TestClient):
     assert response.status_code in [401, 403]
 
 
-def test_update_source_success(client: TestClient, auth_headers: dict, session: Session):
+def test_update_source_success(client: TestClient, admin_headers: dict, session: Session):
     """Test updating source fields."""
     # Create a source to update
     source = Source(
@@ -334,7 +349,7 @@ def test_update_source_success(client: TestClient, auth_headers: dict, session: 
         "trust_score": 0.9
     }
 
-    response = client.put(f"/sources/{source.id}", headers=auth_headers, params=update_data)
+    response = client.put(f"/sources/{source.id}", headers=admin_headers, params=update_data)
     assert response.status_code == 200
 
     data = response.json()
@@ -343,7 +358,7 @@ def test_update_source_success(client: TestClient, auth_headers: dict, session: 
     assert data["source"]["trust_score"] == 0.9
 
 
-def test_update_source_bias(client: TestClient, auth_headers: dict, session: Session):
+def test_update_source_bias(client: TestClient, admin_headers: dict, session: Session):
     """Test updating organizational bias."""
     source = Source(
         name="Bias Update Test",
@@ -359,7 +374,7 @@ def test_update_source_bias(client: TestClient, auth_headers: dict, session: Ses
         "bias_description": "Center-left news source"
     }
 
-    response = client.put(f"/sources/{source.id}", headers=auth_headers, params=update_data)
+    response = client.put(f"/sources/{source.id}", headers=admin_headers, params=update_data)
     assert response.status_code == 200
 
     # Verify update
@@ -368,13 +383,13 @@ def test_update_source_bias(client: TestClient, auth_headers: dict, session: Ses
     assert source.bias_description == "Center-left news source"
 
 
-def test_update_source_not_found(client: TestClient, auth_headers: dict):
+def test_update_source_not_found(client: TestClient, admin_headers: dict):
     """Test 404 for updating non-existent source."""
-    response = client.put("/sources/999999", headers=auth_headers, params={"name": "New Name"})
+    response = client.put("/sources/999999", headers=admin_headers, params={"name": "New Name"})
     assert response.status_code == 404
 
 
-def test_update_source_duplicate_rss_url(client: TestClient, auth_headers: dict, session: Session):
+def test_update_source_duplicate_rss_url(client: TestClient, admin_headers: dict, session: Session):
     """Test that updating to duplicate RSS URL is prevented."""
     # Create two sources
     source1 = Source(
@@ -396,7 +411,7 @@ def test_update_source_duplicate_rss_url(client: TestClient, auth_headers: dict,
     # Try to update source2 to use source1's RSS URL
     response = client.put(
         f"/sources/{source2.id}",
-        headers=auth_headers,
+        headers=admin_headers,
         params={"rss_feed_url": source1.rss_feed_url}
     )
     assert response.status_code == 400
@@ -409,7 +424,7 @@ def test_update_source_requires_auth(client: TestClient):
     assert response.status_code in [401, 403]
 
 
-def test_delete_source_soft(client: TestClient, auth_headers: dict, session: Session):
+def test_delete_source_soft(client: TestClient, admin_headers: dict, session: Session):
     """Test soft delete (set is_active=False)."""
     source = Source(
         name="To Be Deleted",
@@ -421,7 +436,7 @@ def test_delete_source_soft(client: TestClient, auth_headers: dict, session: Ses
     session.commit()
     session.refresh(source)
 
-    response = client.delete(f"/sources/{source.id}", headers=auth_headers)
+    response = client.delete(f"/sources/{source.id}", headers=admin_headers)
     assert response.status_code == 200
     assert "deactivated" in response.json()["message"]
 
@@ -430,7 +445,7 @@ def test_delete_source_soft(client: TestClient, auth_headers: dict, session: Ses
     assert source.is_active == False
 
 
-def test_delete_source_hard_with_articles(client: TestClient, auth_headers: dict, session: Session):
+def test_delete_source_hard_with_articles(client: TestClient, admin_headers: dict, session: Session):
     """Test that hard delete is prevented when articles exist."""
     # Create source with an article
     source = Source(
@@ -453,14 +468,14 @@ def test_delete_source_hard_with_articles(client: TestClient, auth_headers: dict
     session.commit()
 
     # Try hard delete
-    response = client.delete(f"/sources/{source.id}?hard_delete=true", headers=auth_headers)
+    response = client.delete(f"/sources/{source.id}?hard_delete=true", headers=admin_headers)
     assert response.status_code == 400
     assert "Cannot hard delete" in response.json()["detail"]
 
 
-def test_delete_source_not_found(client: TestClient, auth_headers: dict):
+def test_delete_source_not_found(client: TestClient, admin_headers: dict):
     """Test 404 for deleting non-existent source."""
-    response = client.delete("/sources/999999", headers=auth_headers)
+    response = client.delete("/sources/999999", headers=admin_headers)
     assert response.status_code == 404
 
 
@@ -468,3 +483,15 @@ def test_delete_source_requires_auth(client: TestClient):
     """Test that deleting source requires authentication."""
     response = client.delete("/sources/1")
     assert response.status_code in [401, 403]
+
+
+def test_non_admin_cannot_modify_shared_sources(client: TestClient, auth_headers: dict, session: Session):
+    """Sources are shared by every user, so only admins may edit or remove them."""
+    assert client.put("/sources/1", headers=auth_headers, params={"name": "Hijacked"}).status_code == 403
+    assert client.delete("/sources/1", headers=auth_headers).status_code == 403
+    assert client.post("/sources/1/fetch-bias", headers=auth_headers).status_code == 403
+
+    source = session.get(Source, 1)
+    session.refresh(source)
+    assert source.name == "Test Center Source"
+    assert source.is_active is True

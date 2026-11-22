@@ -13,6 +13,7 @@ from ..utils.pipeline_metrics import incr, TimedStage
 from ..config import settings
 from datetime import datetime
 from typing import List, Optional
+import json
 import logging
 
 logger = logging.getLogger(__name__)
@@ -115,6 +116,20 @@ def analyze_articles_batch(
         logger.error("Failed to get analyses from OpenAI")
         return 0
 
+    # A single-article batch may come back as one bare object instead of a list.
+    if isinstance(analyses, dict):
+        analyses = [analyses]
+    if not isinstance(analyses, list) or len(analyses) != len(articles_to_analyze):
+        # Results are matched to articles by position; a count mismatch means we
+        # cannot tell which analysis belongs to which article. Leave them for retry.
+        logger.error(
+            "OpenAI returned %s analyses for %s articles; skipping batch to avoid mismatches",
+            len(analyses) if isinstance(analyses, list) else type(analyses).__name__,
+            len(articles_to_analyze),
+        )
+        incr("pipeline.analysis.anomaly.count_mismatch")
+        return 0
+
     # Get all topics from database for mapping
     all_topics = session.exec(select(Topic)).all()
     topic_map = {topic.name.lower(): topic for topic in all_topics}
@@ -183,7 +198,7 @@ def analyze_articles_batch(
                 sentiment_score=normalized["sentiment_score"],
                 political_lean=political_lean,
                 bias_indicators=normalized.get("bias_indicators"),
-                key_stats=str(normalized.get("key_stats")) if normalized.get("key_stats") else None,
+                key_stats=json.dumps(normalized["key_stats"]) if normalized.get("key_stats") else None,
                 stats_verified=False,
                 processing_cost=0.002,  # Approximate cost per article
                 tokens_used=None,  # We don't track individual tokens in batch

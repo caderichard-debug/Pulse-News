@@ -222,7 +222,7 @@ class TestCompleteUserJourney:
             sentiment_score=0,
             political_lean=PoliticalLean("center"),
             bias_indicators="Neutral reporting",
-            key_stats=["50% of AI companies affected", "2025 implementation"]
+            key_stats='["50% of AI companies affected", "2025 implementation"]'
         )
         e2e_session.add(analysis)
 
@@ -294,9 +294,8 @@ class TestCompleteUserJourney:
                 title=f"Tech Article {i+1}",
                 url=f"https://example.com/article-{i+1}",
                 source_id=source.id,
-                description=f"Article {i+1} description",
                 published_at=datetime(2025, 1, 1, 10, 0, 0),
-                status=ProcessingStatus.COMPLETED
+                processing_status=ProcessingStatus.COMPLETED
             )
             e2e_session.add(article)
             e2e_session.commit()
@@ -309,7 +308,7 @@ class TestCompleteUserJourney:
                 sentiment_score=i - 1,  # -1, 0, 1
                 political_lean=PoliticalLean("center"),
                 bias_indicators="Neutral",
-                key_stats=[]
+                key_stats="[]"
             )
             e2e_session.add(analysis)
 
@@ -320,6 +319,12 @@ class TestCompleteUserJourney:
 
         e2e_session.commit()
 
+        # Newsletters only draw from sources the user explicitly subscribed to
+        subscribe_response = e2e_client.put(
+            "/preferences/sources", headers=headers, json={"source_ids": [source.id]}
+        )
+        assert subscribe_response.status_code == 200
+
         # Step 3: Generate newsletter
         user = e2e_session.exec(select(User).where(User.id == user_id)).first()
         newsletter = _generate_newsletter_for_user(user, e2e_session)
@@ -329,7 +334,8 @@ class TestCompleteUserJourney:
         preview_response = e2e_client.get("/preferences/newsletter-preview", headers=headers)
         assert preview_response.status_code == 200
         preview_data = preview_response.json()
-        assert len(preview_data["articles"]) > 0
+        assert preview_data["article_count"] > 0
+        assert preview_data["html_preview"]
 
 
 class TestAuthenticationWorkflow:

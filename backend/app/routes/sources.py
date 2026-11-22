@@ -11,8 +11,9 @@ from typing import List, Optional
 from datetime import datetime
 
 from app.database import get_session
-from app.models import Source, Article, OrganizationalBias
+from app.models import Source, Article, OrganizationalBias, User
 from app.routes.auth import get_current_user, get_optional_user
+from app.utils.admin_auth import get_admin_user
 from app.services.bias_data_fetcher import get_bias_for_source
 
 router = APIRouter(prefix="/sources", tags=["sources"])
@@ -219,13 +220,13 @@ def update_source(
     bias_description: Optional[str] = None,
     is_active: Optional[bool] = None,
     session: Session = Depends(get_session),
-    current_user: dict = Depends(get_current_user)
+    current_user: User = Depends(get_admin_user)
 ):
     """
     Update an existing source.
 
     Only provided fields will be updated.
-    Requires authentication.
+    Requires admin privileges (sources are shared by all users).
     """
     source = session.get(Source, source_id)
     if not source:
@@ -284,7 +285,7 @@ def delete_source(
     source_id: int,
     hard_delete: bool = Query(False, description="Permanently delete (vs soft delete)"),
     session: Session = Depends(get_session),
-    current_user: dict = Depends(get_current_user)
+    current_user: User = Depends(get_admin_user)
 ):
     """
     Delete a source.
@@ -292,7 +293,7 @@ def delete_source(
     By default, performs soft delete (sets is_active=False).
     Use hard_delete=True to permanently remove (not recommended if articles exist).
 
-    Requires authentication.
+    Requires admin privileges (sources are shared by all users).
     """
     source = session.get(Source, source_id)
     if not source:
@@ -324,7 +325,7 @@ def delete_source(
 async def fetch_bias_for_source(
     source_id: int,
     session: Session = Depends(get_session),
-    current_user: dict = Depends(get_current_user)
+    current_user: User = Depends(get_admin_user)
 ):
     """
     Manually trigger bias data fetch for a source.
