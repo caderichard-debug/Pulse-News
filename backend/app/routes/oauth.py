@@ -42,7 +42,7 @@ def _get_oauth_backend_base_url() -> str:
 
 
 @router.get("/google")
-async def google_oauth_login(
+def google_oauth_login(
     origin: Optional[str] = "login"
 ):
     """
@@ -85,7 +85,7 @@ async def google_oauth_login(
 
 
 @router.get("/google/callback")
-async def google_oauth_callback(
+def google_oauth_callback(
     request: Request,
     code: Optional[str] = None,
     error: Optional[str] = None,
@@ -266,7 +266,7 @@ class AuthResponse(BaseModel):
 
 
 @router.post("/signin", response_model=AuthResponse, status_code=status.HTTP_200_OK)
-async def oauth_signin(
+def oauth_signin(
     request: OAuthSignInRequest,
     session: Session = Depends(get_session)
 ):
@@ -341,7 +341,7 @@ async def oauth_signin(
 
 
 @router.post("/link", response_model=OAuthAccountResponse)
-async def link_oauth_account(
+def link_oauth_account(
     request: OAuthLinkRequest,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
@@ -399,7 +399,7 @@ async def link_oauth_account(
 
 
 @router.delete("/unlink/{provider}")
-async def unlink_oauth_account(
+def unlink_oauth_account(
     provider: str,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
@@ -457,7 +457,7 @@ async def unlink_oauth_account(
 
 
 @router.get("/accounts", response_model=list[OAuthAccountResponse])
-async def get_linked_oauth_accounts(
+def get_linked_oauth_accounts(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
@@ -488,7 +488,7 @@ async def get_linked_oauth_accounts(
 
 
 @router.put("/tokens/{provider}")
-async def update_oauth_tokens(
+def update_oauth_tokens(
     provider: str,
     request: OAuthTokenUpdateRequest,
     current_user: User = Depends(get_current_user),
@@ -536,7 +536,7 @@ async def update_oauth_tokens(
 
 
 @router.get("/providers")
-async def get_supported_oauth_providers():
+def get_supported_oauth_providers():
     """
     Get list of supported OAuth providers and their configuration requirements.
     """
@@ -561,7 +561,7 @@ async def get_supported_oauth_providers():
 
 
 @router.post("/verify/{provider}")
-async def verify_oauth_account(
+def verify_oauth_account(
     provider: str,
     provider_data: Dict[str, Any],
     session: Session = Depends(get_session)

@@ -136,6 +136,7 @@ class TestArticleCluster:
 
         # Create cluster
         cluster = ArticleCluster(
+            event_signature="test-event-signature",
             cluster_hash="abc123def456",
             primary_topic="Student Loan Forgiveness"
         )

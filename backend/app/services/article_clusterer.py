@@ -224,6 +224,20 @@ def detect_similar_articles(
     return similar_articles
 
 
+def _refresh_cluster_counts(cluster: ArticleCluster, session: Session) -> None:
+    """Recompute denormalized article/source counts for a cluster."""
+    session.flush()
+    rows = session.exec(
+        select(Article.source_id)
+        .join(ArticleClusterMember, ArticleClusterMember.article_id == Article.id)
+        .where(ArticleClusterMember.cluster_id == cluster.id)
+    ).all()
+    cluster.article_count = len(rows)
+    cluster.sources_count = len(set(rows))
+    cluster.last_updated = datetime.utcnow()
+    session.add(cluster)
+
+
 def cluster_article(
     article: Article,
     session: Session,
@@ -288,6 +302,7 @@ def cluster_article(
                     similarity_score=similarity_score
                 )
                 session.add(new_member)
+                _refresh_cluster_counts(cluster, session)
                 logger.info(f"Added article {article.id} to existing event cluster {cluster.id}")
                 return cluster
 
@@ -310,6 +325,7 @@ def cluster_article(
         similarity_score=1.0
     )
     session.add(source_member)
+    _refresh_cluster_counts(cluster, session)
 
     logger.info(f"Created new event cluster '{event_signature}' with {len(similar) + 1} articles")
     return cluster
@@ -544,7 +560,12 @@ def get_enhanced_coverage_comparison(
                 "id": primary_article.id,
                 "title": primary_article.title,
                 "url": primary_article.url,
-                "published_at": primary_article.published_at.isoformat()
+                "published_at": primary_article.published_at.isoformat() if primary_article.published_at else None
+            },
+            "filters_applied": {
+                "bias_filter": bias_filter,
+                "sentiment_range": sentiment_range,
+                "max_results": max_results
             }
         }
 
@@ -562,33 +583,38 @@ def get_enhanced_coverage_comparison(
     coverage_articles = []
 
     for member, article, analysis, source in query:
-        # Apply filters
-        if bias_filter and analysis.political_lean.value != bias_filter:
+        article_lean = analysis.political_lean.value if analysis.political_lean else None
+
+        # Apply filters (bias_filter matches the article-level political lean)
+        if bias_filter and article_lean != bias_filter:
             continue
 
         if sentiment_range:
-            sentiment_score = analysis.sentiment_score / 10.0  # Convert to -1 to 1 scale
-            if not (sentiment_range[0] <= sentiment_score <= sentiment_range[1]):
+            # sentiment_range is given on a -1..1 scale; stored scores are -10..10
+            normalized = analysis.sentiment_score / 10.0
+            if not (sentiment_range[0] <= normalized <= sentiment_range[1]):
                 continue
 
         # Calculate publication time difference
-        time_diff = article.published_at - primary_article.published_at
-        hours_diff = abs(time_diff.total_seconds() / 3600)
+        time_diff = None
+        if article.published_at and primary_article.published_at:
+            time_diff = article.published_at - primary_article.published_at
 
         coverage_articles.append({
             "id": article.id,
             "title": article.title,
             "url": article.url,
             "source_name": source.name,
-            "source_bias": analysis.political_lean.value,
+            "source_bias": source.organizational_bias.value if source.organizational_bias else None,
             "source_trust_score": float(source.trust_score) if source.trust_score else None,
-            "published_at": article.published_at.isoformat(),
-            "sentiment_score": analysis.sentiment_score / 10.0,  # Convert to -1 to 1 scale
-            "political_lean": analysis.political_lean.value,
+            "published_at": article.published_at.isoformat() if article.published_at else None,
+            # Same -10..10 scale as every other endpoint (primary article included)
+            "sentiment_score": analysis.sentiment_score,
+            "political_lean": article_lean,
             "similarity_score": float(member.similarity_score),
             "summary": analysis.summary,
-            "time_diff_hours": round(hours_diff, 1),
-            "published_later": time_diff.total_seconds() > 0
+            "time_diff_hours": round(abs(time_diff.total_seconds()) / 3600, 1) if time_diff else None,
+            "published_later": time_diff.total_seconds() > 0 if time_diff else None,
         })
 
     # Apply max_results limit
@@ -605,7 +631,7 @@ def get_enhanced_coverage_comparison(
         avg_similarity = sum(article["similarity_score"] for article in coverage_articles) / len(coverage_articles)
         bias_distribution = {}
         for article in coverage_articles:
-            bias = article["source_bias"]
+            bias = article["source_bias"] or "unknown"
             bias_distribution[bias] = bias_distribution.get(bias, 0) + 1
     else:
         sources_count = 0

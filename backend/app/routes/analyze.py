@@ -2,6 +2,7 @@
 API endpoints for analyzing user-submitted article URLs.
 """
 
+import asyncio
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
@@ -32,7 +33,7 @@ class AnalyzeURLResponse(BaseModel):
 
 
 @router.post("/url", response_model=AnalyzeURLResponse)
-async def analyze_url(
+def analyze_url(
     request: AnalyzeURLRequest,
     session: Session = Depends(get_session),
     current_user: Optional[User] = Depends(get_optional_user)
@@ -58,11 +59,13 @@ async def analyze_url(
         # Initialize analyzer
         analyzer = URLAnalyzer(session)
 
-        # Perform analysis
-        result = await analyzer.analyze_url(
+        # URLAnalyzer does blocking extraction and OpenAI calls. This handler is a
+        # plain `def`, so FastAPI runs it in a worker thread; drive the coroutine on a
+        # private event loop there instead of blocking the server's main loop.
+        result = asyncio.run(analyzer.analyze_url(
             url=str(request.url),
             user_id=current_user.id if current_user else None
-        )
+        ))
 
         return AnalyzeURLResponse(
             success=True,

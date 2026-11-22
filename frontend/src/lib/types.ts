@@ -71,7 +71,7 @@ export type Article = {
   topics?: Topic[];
   sentiment?: "positive" | "neutral" | "negative" | string;
   sentiment_score?: number;
-  political_lean?: number; // -1..1
+  political_lean?: number | string; // -1..1 score, or "left" | "center" | "right"
   political_lean_label?: string;
   is_favorited?: boolean;
   is_analyzed?: boolean;

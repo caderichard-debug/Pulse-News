@@ -35,6 +35,13 @@ def session_fixture():
         yield session
 
 
+@pytest.fixture(autouse=True)
+def _resend_key(monkeypatch):
+    """Email helpers short-circuit without a Resend key; give them a fake one."""
+    from app.config import settings
+    monkeypatch.setattr(settings, "resend_api_key", "re_test_key")
+
+
 @pytest.fixture(name="client")
 def client_fixture(session: Session):
     """Create test client with overridden database dependency"""

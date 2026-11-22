@@ -24,8 +24,33 @@ export function timeAgo(input?: string | number | Date): string {
   });
 }
 
-export function leanLabel(score?: number): string {
-  if (score === undefined || score === null || Number.isNaN(score)) return "Unknown";
+/** Political lean as returned by the API: a -1..1 score or a label such as "left". */
+export type LeanValue = number | string | null | undefined;
+
+const LEAN_LABEL_SCORES: Record<string, number> = {
+  left: -1,
+  "center-left": -0.4,
+  center: 0,
+  "center-right": 0.4,
+  right: 1,
+};
+
+/** Normalize an API lean value onto the -1 (left) .. 1 (right) scale. */
+export function toLeanScore(value: LeanValue): number | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
+  const key = value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, "-");
+  if (key in LEAN_LABEL_SCORES) return LEAN_LABEL_SCORES[key];
+  const n = Number(value);
+  return Number.isFinite(n) && value.trim() !== "" ? n : undefined;
+}
+
+export function leanLabel(value?: LeanValue): string {
+  const score = toLeanScore(value);
+  if (score === undefined) return "Unknown";
   if (score < -0.5) return "Left";
   if (score < -0.15) return "Center-Left";
   if (score <= 0.15) return "Center";
@@ -33,8 +58,9 @@ export function leanLabel(score?: number): string {
   return "Right";
 }
 
-export function leanColorVar(score?: number): string {
-  if (score === undefined || score === null) return "var(--lean-c)";
+export function leanColorVar(value?: LeanValue): string {
+  const score = toLeanScore(value);
+  if (score === undefined) return "var(--lean-c)";
   if (score < -0.15) return "var(--lean-l)";
   if (score > 0.15) return "var(--lean-r)";
   return "var(--lean-c)";

@@ -38,7 +38,7 @@ class FavoritesListResponse(BaseModel):
 
 
 @router.post("/articles/{article_id}")
-async def add_favorite(
+def add_favorite(
     article_id: int,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
@@ -83,7 +83,7 @@ async def add_favorite(
 
 
 @router.delete("/articles/{article_id}")
-async def remove_favorite(
+def remove_favorite(
     article_id: int,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
@@ -111,7 +111,7 @@ async def remove_favorite(
 
 
 @router.get("", response_model=FavoritesListResponse)
-async def get_favorites(
+def get_favorites(
     limit: int = 50,
     offset: int = 0,
     session: Session = Depends(get_session),
@@ -166,7 +166,7 @@ async def get_favorites(
 
 
 @router.get("/check/{article_id}")
-async def check_favorite(
+def check_favorite(
     article_id: int,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)

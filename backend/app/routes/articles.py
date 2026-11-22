@@ -13,7 +13,6 @@ from ..models import (
     ArticleCluster, ArticleContext, ArticleFavorite, ViewpointRelationship
 )
 from ..routes.auth import get_current_user
-from ..services.viewpoint_analyzer import ViewpointAnalyzer
 from ..jobs.tasks import analyze_single_article_viewpoints_job
 from ..services.article_clusterer import get_enhanced_coverage_comparison, trigger_realtime_clustering
 from pydantic import BaseModel
@@ -53,7 +52,7 @@ class RelatedArticle(BaseModel):
     id: int
     title: str
     source_name: str
-    published_at: datetime
+    published_at: Optional[datetime]
     sentiment_score: Optional[float]
     political_lean: Optional[str]
     url: str
@@ -192,7 +191,7 @@ def get_analyzed_articles(
 
 
 @router.get("/{article_id}", response_model=ArticleDetailResponse)
-async def get_article_detail(
+def get_article_detail(
     article_id: int,
     coverage_bias_filter: Optional[str] = None,
     coverage_sentiment_range: Optional[str] = None,
@@ -292,7 +291,7 @@ async def get_article_detail(
                 id=coverage["id"],
                 title=coverage["title"],
                 source_name=coverage["source_name"],
-                published_at=datetime.fromisoformat(coverage["published_at"]),
+                published_at=datetime.fromisoformat(coverage["published_at"]) if coverage["published_at"] else None,
                 sentiment_score=coverage["sentiment_score"],
                 political_lean=coverage["political_lean"],
                 url=coverage["url"]
@@ -352,7 +351,7 @@ async def get_article_detail(
 
 
 @router.post("/{article_id}/analyze-coverage")
-async def trigger_coverage_analysis(
+def trigger_coverage_analysis(
     article_id: int,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
@@ -392,7 +391,7 @@ async def trigger_coverage_analysis(
 
 
 @router.get("/{article_id}/coverage")
-async def get_enhanced_coverage(
+def get_enhanced_coverage(
     article_id: int,
     bias_filter: Optional[str] = None,
     sentiment_range: Optional[str] = None,
@@ -439,7 +438,7 @@ async def get_enhanced_coverage(
 
 
 @router.get("/{article_id}/opposing-viewpoints", response_model=OpposingViewpointsResponse)
-async def get_opposing_viewpoints(
+def get_opposing_viewpoints(
     article_id: int,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
@@ -589,7 +588,6 @@ async def get_opposing_viewpoints(
             # Check if this is from the enhanced analyzer (has article_id key)
             if "article_id" in opposition:
                 # Enhanced analyzer data structure
-                print(f"  Using enhanced analyzer path")
                 viewpoint = OpposingViewpoint(
                     article_id=opposition["article_id"],
                     title=f"Article {opposition['article_id']}",  # Will be populated below if available

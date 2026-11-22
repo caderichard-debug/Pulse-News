@@ -319,6 +319,7 @@ class TestArticleClustering:
 
         # Create cluster and add article
         cluster = ArticleCluster(
+            event_signature="test-event-signature",
             cluster_hash="test123",
             primary_topic="Test"
         )
@@ -360,6 +361,7 @@ class TestClusterComparison:
 
         # Create cluster
         cluster = ArticleCluster(
+            event_signature="test-event-signature",
             cluster_hash="abc123",
             primary_topic="Student Loan Forgiveness"
         )
@@ -450,6 +452,7 @@ class TestClusterComparison:
         session.commit()
 
         cluster = ArticleCluster(
+            event_signature="test-event-signature",
             cluster_hash="xyz789",
             primary_topic="Topic"
         )

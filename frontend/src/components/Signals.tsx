@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { leanColorVar, leanLabel } from "@/lib/utils";
+import { leanColorVar, leanLabel, toLeanScore, type LeanValue } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import type { FrameworkPlacement } from "@/lib/types";
 import { Minus, TrendingDown, TrendingUp } from "lucide-react";
@@ -9,11 +9,12 @@ export function LeanMeter({
   className,
   showLabel = false,
 }: {
-  score?: number;
+  score?: LeanValue;
   className?: string;
   showLabel?: boolean;
 }) {
-  const s = typeof score === "number" ? Math.max(-1, Math.min(1, score)) : 0;
+  const normalized = toLeanScore(score);
+  const s = normalized === undefined ? 0 : Math.max(-1, Math.min(1, normalized));
   const left = ((s + 1) / 2) * 100;
   const color = leanColorVar(score);
   return (
@@ -76,7 +77,7 @@ export function FrameworkChip({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function LeanPill({ score }: { score?: number }) {
+export function LeanPill({ score }: { score?: LeanValue }) {
   const color = leanColorVar(score);
   const label = leanLabel(score);
   return (

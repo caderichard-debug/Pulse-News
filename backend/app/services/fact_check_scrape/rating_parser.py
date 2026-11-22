@@ -32,3 +32,48 @@ def parse_textual_rating_to_status(rating_text: str) -> str:
         return "unverifiable"
 
     return "unverifiable"
+
+
+_RATING_CLASS_HINTS = ("meter", "rating", "verdict", "ruling")
+
+
+def guess_rating_near(anchor, tokens, max_levels: int = 3) -> str:
+    """
+    Find a rating label (e.g. "Mostly True") near a search-result link.
+
+    Looks first at elements whose class suggests a rating, then at surrounding
+    text, walking up a few ancestor levels. The link's own text (the headline) is
+    ignored, since headlines often contain words like "false" or "true".
+    Tokens are matched most-specific first with word boundaries, so "Mostly True"
+    is never reported as "True".
+    """
+    import re
+
+    ordered = sorted(tokens, key=len, reverse=True)
+    patterns = [(t, re.compile(rf"\b{re.escape(t)}\b", re.IGNORECASE)) for t in ordered]
+    headline = anchor.get_text(" ", strip=True) if anchor is not None else ""
+
+    def match(text: str) -> str:
+        for token, pattern in patterns:
+            if pattern.search(text):
+                return token
+        return ""
+
+    node = anchor
+    for _ in range(max_levels):
+        node = getattr(node, "parent", None)
+        if node is None:
+            break
+        for el in node.find_all(class_=True):
+            classes = " ".join(el.get("class") or []).lower()
+            if any(h in classes for h in _RATING_CLASS_HINTS):
+                found = match(el.get_text(" ", strip=True))
+                if found:
+                    return found
+        text = node.get_text(" ", strip=True)
+        if headline:
+            text = text.replace(headline, " ")
+        found = match(text)
+        if found:
+            return found
+    return ""

@@ -13,7 +13,7 @@ from urllib.parse import quote_plus
 import requests
 from bs4 import BeautifulSoup
 
-from .rating_parser import parse_textual_rating_to_status
+from .rating_parser import guess_rating_near, parse_textual_rating_to_status
 
 logger = logging.getLogger(__name__)
 
@@ -82,24 +82,7 @@ def parse_snopes_search_html(html: str) -> Optional[dict]:
         return None
 
     url, title, first_a = candidates[0]
-    rating_guess = ""
-    parent = first_a.parent if first_a else None
-    if parent:
-        block = parent.get_text(" ", strip=True)
-        for token in (
-            "True",
-            "False",
-            "Mostly True",
-            "Mostly False",
-            "Mixture",
-            "Unproven",
-            "Miscaptioned",
-            "Correct Attribution",
-        ):
-            if token.lower() in block.lower():
-                rating_guess = token
-                break
-
+    rating_guess = guess_rating_near(first_a, ("True", "False", "Mostly True", "Mostly False", "Mixture", "Unproven", "Miscaptioned", "Correct Attribution")) if first_a else ""
     status = parse_textual_rating_to_status(rating_guess) if rating_guess else "unverifiable"
     confidence = 0.7 if rating_guess else 0.5
 
