@@ -13,17 +13,18 @@ Tests all aspects of the /articles/{id}/opposing-viewpoints endpoint:
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, create_engine, select
+from sqlalchemy.orm import sessionmaker
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
 import json
 
-from backend.main import app
-from backend.models import (
+from app.main import app
+from app.models import (
     User, Article, ArticleAnalysis, Source, ViewpointRelationship,
     Framework, ArticleFrameworkLink, PoliticalLean
 )
-from backend.database import get_session
-from backend.routes.auth import create_access_token
+from app.database import get_session
+from app.routes.auth import create_access_token
 
 
 @pytest.fixture
@@ -36,7 +37,7 @@ def client():
 def session():
     """Create test database session"""
     engine = create_engine("sqlite:///:memory:")
-    from backend.models import SQLModel
+    from app.models import SQLModel
     SQLModel.metadata.create_all(engine)
     SessionLocal = sessionmaker(bind=engine)
     session = SessionLocal()
@@ -152,7 +153,7 @@ class TestOpposingViewpointsAPIHappyPath:
     ):
         """Test successful response with valid article"""
         # Mock OpposingViewpoints service
-        with patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
+        with patch('app.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
             mock_find.return_value = [
                 {
                     'article_id': 2,
@@ -201,7 +202,7 @@ class TestOpposingViewpointsAPIHappyPath:
         self, client, session, mock_article, auth_headers
     ):
         """Test response with multiple opposing viewpoints"""
-        with patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
+        with patch('app.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
             mock_find.return_value = [
                 {
                     'article_id': 2,
@@ -245,7 +246,7 @@ class TestOpposingViewpointsAPIHappyPath:
         self, client, session, mock_article, auth_headers
     ):
         """Test detailed framework opposition data"""
-        with patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
+        with patch('app.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
             mock_find.return_value = [
                 {
                     'article_id': 2,
@@ -283,7 +284,7 @@ class TestOpposingViewpointsAPIHappyPath:
         self, client, session, mock_article, auth_headers
     ):
         """Test response when no opposing viewpoints found"""
-        with patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
+        with patch('app.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
             mock_find.return_value = []
 
             response = client.get(
@@ -303,7 +304,7 @@ class TestOpposingViewpointsAPIHappyPath:
         self, client, session, mock_article, auth_headers
     ):
         """Test filtering by specific relationship type"""
-        with patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
+        with patch('app.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
             mock_find.return_value = [
                 {
                     'article_id': 2,
@@ -328,7 +329,7 @@ class TestOpposingViewpointsAPIHappyPath:
         self, client, session, mock_article, auth_headers
     ):
         """Test max_results parameter functionality"""
-        with patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
+        with patch('app.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
             mock_find.return_value = [
                 {'article_id': i, 'title': f'Article {i}'}
                 for i in range(2, 7)  # 5 results
@@ -348,7 +349,7 @@ class TestOpposingViewpointsAPIHappyPath:
         self, client, session, mock_article, auth_headers
     ):
         """Test response time meets <20 second requirement"""
-        with patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
+        with patch('app.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
             # Simulate processing time (much faster than 20s)
             mock_find.return_value = [
                 {
@@ -407,7 +408,7 @@ class TestOpposingViewpointsAPIAuthentication:
     def test_get_opposing_viewpoints_valid_token(self, client, auth_headers):
         """Test with valid JWT token"""
         # Mock ViewpointAnalyzer to avoid database dependencies
-        with patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
+        with patch('app.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
             mock_find.return_value = []
 
             response = client.get(
@@ -426,7 +427,7 @@ class TestOpposingViewpointsAPIInputValidation:
         self, client, auth_headers
     ):
         """Test with non-existent article ID"""
-        with patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
+        with patch('app.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
             mock_find.return_value = []  # Service handles non-existent gracefully
 
             response = client.get(
@@ -443,7 +444,7 @@ class TestOpposingViewpointsAPIInputValidation:
         self, client, auth_headers
     ):
         """Test with negative article ID"""
-        with patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
+        with patch('app.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
             mock_find.return_value = []
 
             response = client.get(
@@ -459,7 +460,7 @@ class TestOpposingViewpointsAPIInputValidation:
         self, client, auth_headers
     ):
         """Test with zero article ID"""
-        with patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
+        with patch('app.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
             mock_find.return_value = []
 
             response = client.get(
@@ -483,7 +484,7 @@ class TestOpposingViewpointsAPIInputValidation:
         ]
 
         for max_results, description in test_cases:
-            with patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
+            with patch('app.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
                 mock_find.return_value = []
 
                 response = client.get(
@@ -507,7 +508,7 @@ class TestOpposingViewpointsAPIInputValidation:
         ]
 
         for rel_types in invalid_types:
-            with patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
+            with patch('app.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
                 mock_find.return_value = []
 
                 response = client.get(
@@ -524,7 +525,7 @@ class TestOpposingViewpointsAPIResponseFormat:
 
     def test_response_format_with_viewpoints(self, client, auth_headers):
         """Test response format when viewpoints are present"""
-        with patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
+        with patch('app.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
             mock_find.return_value = [
                 {
                     'article_id': 2,
@@ -572,7 +573,7 @@ class TestOpposingViewpointsAPIResponseFormat:
 
     def test_response_format_empty_results(self, client, auth_headers):
         """Test response format when no viewpoints found"""
-        with patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
+        with patch('app.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
             mock_find.return_value = []
 
             response = client.get(
@@ -591,7 +592,7 @@ class TestOpposingViewpointsAPIResponseFormat:
 
     def test_response_format_framework_details(self, client, auth_headers):
         """Test framework-specific fields in response"""
-        with patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
+        with patch('app.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
             mock_find.return_value = [
                 {
                     'article_id': 2,
@@ -640,7 +641,7 @@ class TestOpposingViewpointsAPIResponseFormat:
 class TestOpposingViewpointsAPIErrorHandling:
     """Test error handling and edge cases"""
 
-    @patch('backend.services.viewpoint_analyzer.openai_client')
+    @patch('app.services.viewpoint_analyzer.openai_client')
     def test_api_openai_unavailable_error(self, mock_openai_client, client, auth_headers):
         """Test handling when OpenAI API is unavailable"""
         mock_openai_client.is_available.return_value = False
@@ -655,7 +656,7 @@ class TestOpposingViewpointsAPIErrorHandling:
         data = response.json()
         assert "OpenAI API is unavailable" in data['detail']
 
-    @patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer')
+    @patch('app.services.viewpoint_analyzer.ViewpointAnalyzer')
     def test_api_rate_limit_error(self, mock_analyzer, client, auth_headers):
         """Test handling when OpenAI rate limit is hit"""
         # Simulate rate limit error
@@ -671,7 +672,7 @@ class TestOpposingViewpointsAPIErrorHandling:
         data = response.json()
         assert "rate limited" in data['detail']
 
-    @patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer')
+    @patch('app.services.viewpoint_analyzer.ViewpointAnalyzer')
     def test_api_database_error(self, mock_analyzer, client, auth_headers):
         """Test handling database errors"""
         # Simulate database error
@@ -687,7 +688,7 @@ class TestOpposingViewpointsAPIErrorHandling:
         data = response.json()
         assert "Internal server error" in data['detail']
 
-    @patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer')
+    @patch('app.services.viewpoint_analyzer.ViewpointAnalyzer')
     def test_api_internal_server_error(self, mock_analyzer, client, auth_headers):
         """Test handling unexpected internal errors"""
         # Simulate unexpected error
@@ -706,7 +707,7 @@ class TestOpposingViewpointsAPIErrorHandling:
     def test_article_not_found_error(self, client, auth_headers):
         """Test when article doesn't exist in database"""
         # Mock session to return None for article
-        with patch('backend.database.get_session') as mock_get_session:
+        with patch('app.database.get_session') as mock_get_session:
             mock_session = MagicMock()
             mock_session.exec.return_value.first.return_value = None
             mock_get_session.return_value = mock_session
@@ -729,7 +730,7 @@ class TestOpposingViewpointsAPIPerformance:
         self, client, session, mock_article, auth_headers
     ):
         """Test response time meets <20 second requirement"""
-        with patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
+        with patch('app.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
             # Simulate a longer processing time (but still under 20s)
             def slow_processing(*args, **kwargs):
                 import time
@@ -760,7 +761,7 @@ class TestOpposingViewpointsAPIPerformance:
         import time
         import concurrent.futures
 
-        with patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
+        with patch('app.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
             mock_find.return_value = [
                 {'article_id': 2, 'title': f'Article {i}'}
                 for i in range(5)
@@ -795,7 +796,7 @@ class TestOpposingViewpointsAPIPerformance:
         self, client, session, mock_article, auth_headers
     ):
         """Test handling of large result sets"""
-        with patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
+        with patch('app.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
             # Simulate large result set (50 viewpoints)
             large_result_set = [
                 {
@@ -838,7 +839,7 @@ class TestOpposingViewpointsAPIPerformance:
         process = psutil.Process(os.getpid())
         initial_memory = process.memory_info().rss
 
-        with patch('backend.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
+        with patch('app.services.viewpoint_analyzer.ViewpointAnalyzer.find_opposing_viewpoints') as mock_find:
             # Simulate large but efficient response
             mock_find.return_value = [
                 {

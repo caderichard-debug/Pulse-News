@@ -1023,7 +1023,7 @@ def regenerate_viewpoints_job(session: Session = None):
         logger.info("=" * 60)
 
         from ..services.viewpoint_analyzer import ViewpointAnalyzer
-        from sqlmodel import select
+        from sqlmodel import select, or_
         from ..models import Article, ArticleAnalysis, ViewpointRelationship
 
         stats = {
@@ -1189,6 +1189,7 @@ def analyze_single_article_viewpoints_job(article_id: int, session: Session = No
         logger.info(f"Starting single article viewpoint analysis for article {article_id}")
 
         from ..services.viewpoint_analyzer_enhanced import ViewpointAnalyzer
+        from sqlmodel import select
         from ..database import get_session
         from ..models import Article
 

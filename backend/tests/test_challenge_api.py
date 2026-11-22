@@ -16,14 +16,14 @@ from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta, date
 import json
 
-from ..main import app
-from ..models import (
+from app.main import app
+from app.models import (
     User, WeeklyChallenge, ChallengeClaim, UserChallengeResponse,
     ChallengeArticleAssignment, ChallengeClaimType, AgreementLevel,
     ChallengeResponseStatus, Article, Source
 )
-from ..database import get_session
-from ..routes.auth import create_access_token
+from app.database import get_session
+from app.routes.auth import create_access_token
 
 
 @pytest.fixture
@@ -36,7 +36,7 @@ def client():
 def session():
     """Create test database session."""
     engine = create_engine("sqlite:///:memory:")
-    from ..models import SQLModel
+    from app.models import SQLModel
     SQLModel.metadata.create_all(engine)
     from sqlalchemy.orm import sessionmaker
     SessionLocal = sessionmaker(bind=engine)
@@ -49,6 +49,7 @@ def session():
 def test_user(session: Session):
     """Create a test user with challenge participation enabled."""
     user = User(
+        hashed_password="not-used",
         email="challenge_api_test@example.com",
         name="Challenge API Test User",
         email_verified=True,
@@ -180,6 +181,7 @@ class TestChallengeCurrentEndpoint:
         """Test current challenge retrieval for user not participating."""
         # Create user with challenge participation disabled
         user = User(
+            hashed_password="not-used",
             email="no_participation@example.com",
             challenge_participation_enabled=False
         )
@@ -768,7 +770,7 @@ class TestChallengeFeedbackEndpoint:
         assert response.status_code == 401
 
 
-class TestChallengeResponseEndpoint:
+class TestChallengeResponsesListEndpoint:
     """Test GET /challenge/responses endpoint."""
 
     def test_get_user_challenge_responses_success(
@@ -839,7 +841,7 @@ class TestChallengeStatisticsEndpoint:
     ):
         """Test statistics retrieval for user with no challenge data."""
         # Create user with no challenge responses
-        user = User(email="empty_stats@example.com", challenge_participation_enabled=True)
+        user = User(hashed_password="not-used", email="empty_stats@example.com", challenge_participation_enabled=True)
         session.add(user)
         session.commit()
 

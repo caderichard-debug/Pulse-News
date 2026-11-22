@@ -6,7 +6,7 @@ Tests for the new event-based clustering and enhanced coverage functionality.
 
 import pytest
 from datetime import datetime, timedelta
-from sqlmodel import Session
+from sqlmodel import Session, select
 from fastapi.testclient import TestClient
 
 from app.models import (

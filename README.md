@@ -3,7 +3,7 @@
 > 🧠 **AI-powered news aggregation** that transforms scattered headlines into coherent understanding through ethical framework mapping and intelligent analysis.
 
 **Version:** ✅ **v1.0** - Production ready with complete feature set
-**Tests:** 234/234 passing (100% - 127 backend + 107 frontend)
+**Tests:** backend suite runs in CI (`cd backend && pytest`); several older test modules are out of date with the current models and still fail — see CI output for the current count.
 
 ---
 

@@ -14,7 +14,8 @@ from pydantic import BaseModel, Field
 from ..database import get_session
 from ..models import (
     User, WeeklyChallenge, ChallengeClaim, UserChallengeResponse,
-    AgreementLevel, ChallengeResponseStatus
+    AgreementLevel, ChallengeResponseStatus, ChallengeArticleAssignment,
+    Article, Source,
 )
 from ..routes.auth import get_current_user
 from ..services.challenge_manager import ChallengeManager
@@ -528,10 +529,6 @@ def get_user_assignments(
     Can filter by specific response ID.
     """
     try:
-        from ..services.challenge_article_matcher import ChallengeArticleMatcher
-
-        matcher = ChallengeArticleMatcher(session)
-
         if response_id:
             # Get assignments for specific response
             assignments = session.exec(

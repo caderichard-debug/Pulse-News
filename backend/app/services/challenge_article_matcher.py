@@ -14,7 +14,6 @@ from ..models import (
     Article, ArticleAnalysis, ChallengeClaim, UserChallengeResponse,
     ChallengeArticleAssignment, ViewpointRelationship, PoliticalLean
 )
-from ..services.viewpoint_analyzer import ViewpointAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +32,6 @@ class ChallengeArticleMatcher:
 
     def __init__(self, session: Session):
         self.session = session
-        self.viewpoint_analyzer = ViewpointAnalyzer(session)
 
     def process_daily_assignments(self) -> int:
         """

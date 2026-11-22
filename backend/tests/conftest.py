@@ -7,6 +7,15 @@ from sqlmodel import Session, create_engine, SQLModel
 from sqlmodel.pool import StaticPool
 from app.database import get_session
 from app.main import app
+from app.utils.rate_limit import reset_rate_limits
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limits():
+    """Rate-limit buckets are module-global; isolate them between tests."""
+    reset_rate_limits()
+    yield
+    reset_rate_limits()
 
 
 @pytest.fixture(name="session")

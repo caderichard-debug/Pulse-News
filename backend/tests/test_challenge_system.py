@@ -13,23 +13,22 @@ Tests all major components:
 import pytest
 from datetime import datetime, timedelta, date
 from unittest.mock import patch, MagicMock
-from sqlalchemy import create_engine
 from sqlmodel import Session, SQLModel, create_engine, select, and_, or_
 from typing import List, Dict, Any, Optional
 import json
 
-from ..models import (
+from app.models import (
     User, WeeklyChallenge, ChallengeClaim, UserChallengeResponse,
     ChallengeArticleAssignment, ChallengeEngagement, ChallengeClaimType,
     ChallengeResponseStatus, AgreementLevel, Article, Source,
     ArticleAnalysis
 )
-from ..routes.auth import create_access_token
-from ..services.challenge_manager import ChallengeManager
-from ..services.challenge_claim_generator import ChallengeClaimGenerator
-from ..services.challenge_analytics import ChallengeAnalytics
-from ..services.challenge_article_matcher import ChallengeArticleMatcher
-from ..database import get_session
+from app.routes.auth import create_access_token
+from app.services.challenge_manager import ChallengeManager
+from app.services.challenge_claim_generator import ChallengeClaimGenerator
+from app.services.challenge_analytics import ChallengeAnalytics
+from app.services.challenge_article_matcher import ChallengeArticleMatcher
+from app.database import get_session
 
 
 class TestChallengeModels:
@@ -61,6 +60,7 @@ class TestChallengeModels:
         """Test UserChallengeResponse model creation and validation."""
         # First create a user and challenge
         user = User(
+            hashed_password="not-used",
             email="test@example.com",
             name="Test User",
             email_verified=True,
@@ -104,6 +104,7 @@ class TestChallengeModels:
         """Test ChallengeArticleAssignment model creation and validation."""
         # Create prerequisite objects
         user = User(
+            hashed_password="not-used",
             email="test@example.com",
             name="Test User",
             email_verified=True
@@ -309,8 +310,8 @@ class TestChallengeClaimGenerator:
 
         generator = ChallengeClaimGenerator(test_session)
         articles = [
-            {"title": "Test Article", "summary": "Test summary about economic policy"},
-            "political_lean": "center", "sentiment_score": 0.0}
+            {"title": "Test Article", "summary": "Test summary about economic policy",
+             "political_lean": "center", "sentiment_score": 0.0}
         ]
 
         claims = generator.generate_ai_claims(articles, target_count=2)
@@ -330,6 +331,7 @@ class TestChallengeManager:
 
         # Create a user for the challenge
         user = User(
+            hashed_password="not-used",
             email="test@example.com",
             name="Test User",
             email_verified=True,
@@ -355,7 +357,7 @@ class TestChallengeManager:
         manager = ChallengeManager(test_session)
 
         # Create test user and challenge
-        user = User(email="test@example.com", challenge_participation_enabled=True)
+        user = User(hashed_password="not-used", email="test@example.com", challenge_participation_enabled=True)
         test_session.add(user)
         test_session.commit()
 
@@ -376,7 +378,7 @@ class TestChallengeManager:
         manager = ChallengeManager(test_session)
 
         # Create test data
-        user = User(email="test@example.com", challenge_participation_enabled=True)
+        user = User(hashed_password="not-used", email="test@example.com", challenge_participation_enabled=True)
         test_session.add(user)
         test_session.commit()
 
@@ -419,7 +421,7 @@ class TestChallengeManager:
         manager = ChallengeManager(test_session)
 
         # Create test data
-        user = User(email="test@example.com", challenge_participation_enabled=True)
+        user = User(hashed_password="not-used", email="test@example.com", challenge_participation_enabled=True)
         test_session.add(user)
         test_session.commit()
 
@@ -458,7 +460,7 @@ class TestChallengeManager:
         manager = ChallengeManager(test_session)
 
         # Create test user and challenge
-        user = User(email="test@example.com", challenge_participation_enabled=True)
+        user = User(hashed_password="not-used", email="test@example.com", challenge_participation_enabled=True)
         test_session.add(user)
         test_session.commit()
 
@@ -496,7 +498,7 @@ class TestChallengeManager:
         manager = ChallengeManager(test_session)
 
         # Create test user with multiple responses
-        user = User(email="test@example.com", challenge_participation_enabled=True)
+        user = User(hashed_password="not-used", email="test@example.com", challenge_participation_enabled=True)
         test_session.add(user)
         test_session.commit()
 
@@ -736,7 +738,7 @@ class TestChallengeArticleMatcher:
         matcher = ChallengeArticleMatcher(test_session)
 
         # Create test user and response
-        user = User(email="test@example.com", challenge_participation_enabled=True)
+        user = User(hashed_password="not-used", email="test@example.com", challenge_participation_enabled=True)
         test_session.add(user)
         test_session.commit()
 
@@ -794,7 +796,7 @@ class TestChallengeAnalytics:
         analytics = ChallengeAnalytics(test_session)
 
         # Create test user with participation data
-        user = User(email="test@example.com", challenge_participation_enabled=True)
+        user = User(hashed_password="not-used", email="test@example.com", challenge_participation_enabled=True)
         test_session.add(user)
         test_session.commit()
 
@@ -865,7 +867,7 @@ class TestChallengeAnalytics:
         analytics = ChallengeAnalytics(test_session)
 
         # Create user with no challenge data
-        user = User(email="new@example.com", challenge_participation_enabled=True)
+        user = User(hashed_password="not-used", email="new@example.com", challenge_participation_enabled=True)
         test_session.add(user)
         test_session.commit()
 
@@ -886,6 +888,7 @@ class TestChallengeAnalytics:
         users = []
         for i in range(5):
             user = User(
+                hashed_password="not-used",
                 email=f"test{i}@example.com",
                 name=f"Test User {i+1}",
                 challenge_participation_enabled=i % 2 == 0  # Half have it enabled
@@ -961,7 +964,7 @@ class TestChallengeAnalytics:
 
             # Create responses for 2 claims
             if i < 2:
-                user = User(email=f"user{i}@example.com", challenge_participation_enabled=True)
+                user = User(hashed_password="not-used", email=f"user{i}@example.com", challenge_participation_enabled=True)
                 test_session.add(user)
 
                 response = UserChallengeResponse(
@@ -997,7 +1000,7 @@ class TestChallengeAnalytics:
         analytics = ChallengeAnalytics(test_session)
 
         # Create user with specific participation pattern
-        user = User(email="streak@test.com", challenge_participation_enabled=True)
+        user = User(hashed_password="not-used", email="streak@test.com", challenge_participation_enabled=True)
         test_session.add(user)
 
         # Create responses with known dates (simulate 3-week streak)
@@ -1078,6 +1081,7 @@ def test_session():
 def test_user(test_session: Session):
     """Create a test user."""
     user = User(
+        hashed_password="not-used",
         email="challenge_test@example.com",
         name="Challenge Test User",
         email_verified=True,

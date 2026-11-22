@@ -443,7 +443,6 @@ def test_delete_source_hard_with_articles(client: TestClient, auth_headers: dict
     session.refresh(source)
 
     # Add an article
-    from datetime import datetime
     article = Article(
         source_id=source.id,
         title="Test Article",
