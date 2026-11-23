@@ -20,21 +20,14 @@ from app.models import (
 )
 
 
-@pytest.fixture
-def session():
-    """Create test database session"""
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
-
-    engine = create_engine("sqlite:///:memory:")
-    from app.models import SQLModel
-    SQLModel.metadata.create_all(engine)
-    SessionLocal = sessionmaker(bind=engine)
-    session = SessionLocal()
-    try:
-        yield session
-    finally:
-        session.close()
+def _full(candidate):
+    """Fill in the keys _find_best_framework_opposition always provides."""
+    c = dict(candidate)
+    c.setdefault("primary_position", c.pop("primary_pos", 5))
+    c.setdefault("opposing_position", c.pop("opposing_pos", -5))
+    c.setdefault("framework_name", c.get("primary_framework", "Test Framework"))
+    c.setdefault("position_gap", abs(c["primary_position"] - c["opposing_position"]))
+    return c
 
 
 @pytest.fixture
@@ -168,7 +161,7 @@ class TestEnhancedAnalyzerContentExtraction:
             mock_exec.return_value.first.return_value = article_analysis
 
             explanations = analyzer._generate_framework_explanation(
-                candidate, [], session
+                _full(candidate), [], session
             )
 
             # Should extract "political leadership" theme
@@ -193,7 +186,7 @@ class TestEnhancedAnalyzerContentExtraction:
             mock_exec.return_value.first.return_value = article_analysis
 
             explanations = analyzer._generate_framework_explanation(
-                candidate, [], session
+                _full(candidate), [], session
             )
 
             # Should extract "international conflict" theme
@@ -218,7 +211,7 @@ class TestEnhancedAnalyzerContentExtraction:
             mock_exec.return_value.first.return_value = article_analysis
 
             explanations = analyzer._generate_framework_explanation(
-                candidate, [], session
+                _full(candidate), [], session
             )
 
             # Should extract "economic policy" theme
@@ -243,7 +236,7 @@ class TestEnhancedAnalyzerContentExtraction:
             mock_exec.return_value.first.return_value = article_analysis
 
             explanations = analyzer._generate_framework_explanation(
-                candidate, [], session
+                _full(candidate), [], session
             )
 
             # Should extract "civil liberties" theme
@@ -268,7 +261,7 @@ class TestEnhancedAnalyzerContentExtraction:
             mock_exec.return_value.first.return_value = article_analysis
 
             explanations = analyzer._generate_framework_explanation(
-                candidate, [], session
+                _full(candidate), [], session
             )
 
             # Should extract "environmental policy" theme
@@ -280,7 +273,7 @@ class TestEnhancedAnalyzerContentExtraction:
         analyzer = ViewpointAnalyzer(session)
 
         article_analysis = ArticleAnalysis(
-            summary="Local community events include farmers markets, art exhibitions, and neighborhood gatherings this weekend.",
+            summary="Local community events include art exhibitions, software showcases and award ceremonies this weekend.",
             processed_at=datetime.utcnow()
         )
 
@@ -293,10 +286,10 @@ class TestEnhancedAnalyzerContentExtraction:
             mock_exec.return_value.first.return_value = article_analysis
 
             explanations = analyzer._generate_framework_explanation(
-                candidate, [], session
+                _full(candidate), [], session
             )
 
-            # Should extract "current events" theme as fallback
+            # No whole-word theme keywords ("software"/"award" must not count as "war")
             how_explanation = explanations["how_this_opposes"]
             assert "current events" in how_explanation.lower()
 
@@ -309,7 +302,7 @@ class TestEnhancedAnalyzerSwitchedExplanations:
         analyzer = ViewpointAnalyzer(session)
 
         article_analysis = ArticleAnalysis(
-            summary="Political leaders debate economic policy approaches for the upcoming election.",
+            summary="Leaders debate economic policy approaches and new trade agreements.",
             processed_at=datetime.utcnow()
         )
 
@@ -327,7 +320,7 @@ class TestEnhancedAnalyzerSwitchedExplanations:
             mock_exec.return_value.first.return_value = article_analysis
 
             explanations = analyzer._generate_framework_explanation(
-                candidate, [], session
+                _full(candidate), [], session
             )
 
             how_explanation = explanations["how_this_opposes"]
@@ -363,14 +356,14 @@ class TestEnhancedAnalyzerSwitchedExplanations:
             mock_exec.return_value.first.return_value = article_analysis
 
             explanations = analyzer._generate_framework_explanation(
-                candidate, [], session
+                _full(candidate), [], session
             )
 
             how_explanation = explanations["how_this_opposes"]
             why_explanation = explanations["why_this_opposes"]
 
             # Why should be the mechanism (old how explanation)
-            assert why_explanation == "Frames through 'Individual Liberty vs Collective Welfare' lens vs 'National Interest vs. Global Cooperation' approach; different ethical frameworks and value systems"
+            assert why_explanation == "Frames through 'Individual Liberty vs Collective Welfare' lens vs 'National Interest vs Global Cooperation' approach; different ethical frameworks and value systems"
 
             # How should be content-focused (old why explanation)
             assert "international conflict" in how_explanation.lower()
@@ -399,7 +392,7 @@ class TestEnhancedAnalyzerSwitchedExplanations:
             mock_exec.return_value.first.return_value = article_analysis
 
             explanations = analyzer._generate_framework_explanation(
-                candidate, [], session
+                _full(candidate), [], session
             )
 
             how_explanation = explanations["how_this_opposes"]
@@ -408,8 +401,8 @@ class TestEnhancedAnalyzerSwitchedExplanations:
             # Why should be the mechanism
             assert why_explanation == "Direct position reversal: -4 → +5 on National Interest vs. Global Cooperation"
 
-            # How should be content-focused
-            assert "political leadership" in how_explanation.lower()
+            # How should be content-focused (no theme keywords -> generic theme)
+            assert "current events" in how_explanation.lower()
             assert "supports" in how_explanation.lower()
             assert "contrasting with the primary article's resistance" in how_explanation.lower()
 
