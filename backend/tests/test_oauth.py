@@ -1,404 +1,245 @@
 """
-OAuth backend integration tests.
+OAuth tests: OAuthService behaviour and the Google authorization-code flow.
 
-Tests for Google OAuth authentication, account linking, and token management.
+All tests use the in-memory SQLite session from conftest (never the app database).
 """
 
-import pytest
-from fastapi.testclient import TestClient
-from sqlmodel import Session, select
 from datetime import datetime, timedelta
+from unittest.mock import Mock, patch
+from urllib.parse import parse_qs, urlparse
 
-from app.main import app
-from app.models import User, OAuthAccount
+import pytest
+from sqlmodel import Session
+
+from app.models import OAuthAccount, User
 from app.services.oauth_service import OAuthService
-from app.database import get_session
-
-client = TestClient(app)
+from app.utils.auth import create_access_token, decode_access_token, hash_password
 
 
 @pytest.fixture
-def db_session():
-    """Test database session fixture."""
-    from app.database import engine
-    with Session(engine) as session:
-        yield session
+def oauth_service(session: Session) -> OAuthService:
+    return OAuthService(session)
 
 
 @pytest.fixture
-def oauth_service(db_session):
-    """OAuth service fixture."""
-    return OAuthService(db_session)
-
-
-@pytest.fixture
-def test_user_data():
-    """Test user data for OAuth."""
+def google_user() -> dict:
     return {
         "provider_user_id": "google_123456789",
         "email": "test@example.com",
         "name": "Test User",
         "avatar_url": "https://lh3.googleusercontent.com/photo.jpg",
-        "access_token": "ya29.test_token",
-        "refresh_token": "refresh_test_token",
-        "provider_data": {
-            "given_name": "Test",
-            "family_name": "User",
-            "locale": "en",
-            "verified_email": True
-        }
+        "provider_data": {"verified_email": True, "locale": "en"},
     }
 
 
-class TestOAuthService:
-    """Test OAuth service functionality."""
+def _password_user(session: Session, email: str, verified: bool) -> User:
+    user = User(
+        email=email,
+        name="Existing User",
+        hashed_password=hash_password("password123"),
+        email_verified=verified,
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
 
-    def test_find_or_create_oauth_user_new_user(self, oauth_service, test_user_data):
-        """Test creating new OAuth user."""
-        user, created = oauth_service.find_or_create_oauth_user(
-            provider="google",
-            **test_user_data
-        )
+
+class TestOAuthService:
+    def test_creates_new_user(self, oauth_service, google_user):
+        user, created = oauth_service.find_or_create_oauth_user(provider="google", **google_user)
 
         assert created is True
-        assert user.email == test_user_data["email"]
-        assert user.name == test_user_data["name"]
+        assert user.email == google_user["email"]
         assert user.oauth_provider == "google"
-        assert user.oauth_provider_id == test_user_data["provider_user_id"]
-        assert user.oauth_avatar_url == test_user_data["avatar_url"]
+        assert user.oauth_provider_id == google_user["provider_user_id"]
         assert user.email_verified is True
         assert user.passwordless_login_enabled is True
+        accounts = oauth_service.get_user_oauth_accounts(user.id)
+        assert [a.provider for a in accounts] == ["google"]
 
-        # Check OAuth account was created
-        oauth_accounts = oauth_service.get_user_oauth_accounts(user.id)
-        assert len(oauth_accounts) == 1
-        assert oauth_accounts[0].provider == "google"
-        assert oauth_accounts[0].provider_user_id == test_user_data["provider_user_id"]
+    def test_finds_existing_oauth_user(self, oauth_service, google_user):
+        user1, _ = oauth_service.find_or_create_oauth_user(provider="google", **google_user)
+        user2, created = oauth_service.find_or_create_oauth_user(provider="google", **google_user)
 
-    def test_find_or_create_oauth_user_existing_user(self, oauth_service, test_user_data):
-        """Test finding existing OAuth user."""
-        # Create user first
-        user1, created1 = oauth_service.find_or_create_oauth_user(
-            provider="google",
-            **test_user_data
-        )
-
-        # Try to create same user again
-        user2, created2 = oauth_service.find_or_create_oauth_user(
-            provider="google",
-            **test_user_data
-        )
-
-        assert created2 is False
+        assert created is False
         assert user1.id == user2.id
-        assert user1.email == user2.email
 
-    def test_link_oauth_account_to_existing_user(self, oauth_service, test_user_data, db_session):
-        """Test linking OAuth account to existing email user."""
-        # Create existing email user
-        from app.utils.auth import hash_password
-        existing_user = User(
-            email=test_user_data["email"],
-            name="Existing User",
-            hashed_password=hash_password("password123"),
-            email_verified=False
-        )
-        db_session.add(existing_user)
-        db_session.commit()
+    def test_links_into_verified_password_account_and_keeps_password(
+        self, oauth_service, google_user, session
+    ):
+        existing = _password_user(session, google_user["email"], verified=True)
+        original_hash = existing.hashed_password
 
-        # Link OAuth account
-        oauth_account = oauth_service.link_oauth_account(
-            user_id=existing_user.id,
-            provider="google",
-            provider_user_id=test_user_data["provider_user_id"],
-            provider_data=test_user_data["provider_data"],
-            access_token=test_user_data["access_token"],
-            refresh_token=test_user_data["refresh_token"]
-        )
+        user, _ = oauth_service.find_or_create_oauth_user(provider="google", **google_user)
 
-        assert oauth_account.user_id == existing_user.id
-        assert oauth_account.provider == "google"
-        assert oauth_account.provider_user_id == test_user_data["provider_user_id"]
-        assert oauth_account.access_token == test_user_data["access_token"]
+        assert user.id == existing.id
+        assert user.oauth_provider == "google"
+        assert user.hashed_password == original_hash
 
-        # Check user was updated
-        db_session.refresh(existing_user)
-        assert existing_user.oauth_provider == "google"
-        assert existing_user.oauth_provider_id == test_user_data["provider_user_id"]
-        assert existing_user.email_verified is True  # Should be updated from OAuth
+    def test_linking_unverified_password_account_clears_password(
+        self, oauth_service, google_user, session
+    ):
+        """
+        Account pre-hijacking: someone registers the victim's email with a password
+        but never verifies it. When the real owner signs in with Google, the account
+        must not stay reachable with the squatter's password.
+        """
+        squatted = _password_user(session, google_user["email"], verified=False)
 
-    def test_link_oauth_account_already_linked(self, oauth_service, test_user_data):
-        """Test error when trying to link already linked OAuth account."""
-        # Create OAuth user
-        user1, _ = oauth_service.find_or_create_oauth_user(
-            provider="google",
-            **test_user_data
-        )
+        user, _ = oauth_service.find_or_create_oauth_user(provider="google", **google_user)
 
-        # Try to create another user with same OAuth account
+        assert user.id == squatted.id
+        assert user.email_verified is True
+        assert user.hashed_password == ""
+
+    def test_link_rejects_account_owned_by_other_user(self, oauth_service, google_user):
+        oauth_service.find_or_create_oauth_user(provider="google", **google_user)
+
         with pytest.raises(ValueError, match="already linked to another user"):
             oauth_service.link_oauth_account(
-                user_id=999,  # Different user ID
-                provider="google",
-                provider_user_id=test_user_data["provider_user_id"]
+                user_id=999, provider="google", provider_user_id=google_user["provider_user_id"]
             )
 
-    def test_unlink_oauth_account(self, oauth_service, test_user_data):
-        """Test unlinking OAuth account."""
-        # Create OAuth user
-        user, _ = oauth_service.find_or_create_oauth_user(
-            provider="google",
-            **test_user_data
-        )
+    def test_unlink_when_user_has_password(self, oauth_service, google_user, session):
+        _password_user(session, google_user["email"], verified=True)
+        user, _ = oauth_service.find_or_create_oauth_user(provider="google", **google_user)
 
-        # Unlink OAuth account
-        success = oauth_service.unlink_oauth_account(user.id, "google")
-
-        assert success is True
-
-        # Check OAuth account was deleted
-        oauth_accounts = oauth_service.get_user_oauth_accounts(user.id)
-        assert len(oauth_accounts) == 0
-
-        # Check user OAuth fields were cleared
-        oauth_service.session.refresh(user)
+        assert oauth_service.unlink_oauth_account(user.id, "google") is True
+        assert oauth_service.get_user_oauth_accounts(user.id) == []
+        session.refresh(user)
         assert user.oauth_provider is None
         assert user.oauth_provider_id is None
 
-    def test_unlink_oauth_account_no_auth_methods(self, oauth_service, test_user_data, db_session):
-        """Test error when unlinking only auth method."""
-        # Create OAuth-only user (no password)
-        user, _ = oauth_service.find_or_create_oauth_user(
-            provider="google",
-            **test_user_data
-        )
+    def test_cannot_unlink_only_auth_method(self, oauth_service, google_user):
+        user, _ = oauth_service.find_or_create_oauth_user(provider="google", **google_user)
 
-        # Try to unlink the only auth method
         with pytest.raises(ValueError, match="Cannot unlink the only authentication method"):
             oauth_service.unlink_oauth_account(user.id, "google")
 
-    def test_update_oauth_tokens(self, oauth_service, test_user_data):
-        """Test updating OAuth tokens."""
-        # Create OAuth user
-        user, _ = oauth_service.find_or_create_oauth_user(
-            provider="google",
-            **test_user_data
-        )
+    def test_update_tokens(self, oauth_service, google_user):
+        user, _ = oauth_service.find_or_create_oauth_user(provider="google", **google_user)
 
-        # Update tokens
-        new_token_data = {
-            "access_token": "ya29.new_token",
-            "refresh_token": "new_refresh_token",
-            "token_expires_at": datetime.utcnow() + timedelta(hours=1)
-        }
-
-        success = oauth_service.update_oauth_tokens(
+        assert oauth_service.update_oauth_tokens(
             user_id=user.id,
             provider="google",
-            **new_token_data
+            access_token="ya29.new_token",
+            refresh_token="new_refresh_token",
+            token_expires_at=datetime.utcnow() + timedelta(hours=1),
         )
+        account = oauth_service.get_user_oauth_accounts(user.id)[0]
+        assert account.access_token == "ya29.new_token"
+        assert account.refresh_token == "new_refresh_token"
 
-        assert success is True
+    def test_find_user_by_oauth(self, oauth_service, google_user):
+        user, _ = oauth_service.find_or_create_oauth_user(provider="google", **google_user)
 
-        # Verify tokens were updated
-        oauth_accounts = oauth_service.get_user_oauth_accounts(user.id)
-        assert len(oauth_accounts) == 1
-        assert oauth_accounts[0].access_token == new_token_data["access_token"]
-        assert oauth_accounts[0].refresh_token == new_token_data["refresh_token"]
+        assert oauth_service.find_user_by_oauth("google", google_user["provider_user_id"]).id == user.id
+        assert oauth_service.find_user_by_oauth("google", "non_existent_id") is None
 
-    def test_get_user_oauth_accounts(self, oauth_service, test_user_data):
-        """Test retrieving user OAuth accounts."""
-        # Create OAuth user
-        user, _ = oauth_service.find_or_create_oauth_user(
-            provider="google",
-            **test_user_data
+
+def _google_responses(user_info: dict):
+    token_response = Mock(ok=True)
+    token_response.json.return_value = {
+        "access_token": "ya29.token",
+        "refresh_token": "refresh",
+        "expires_in": 3600,
+    }
+    userinfo_response = Mock(ok=True)
+    userinfo_response.json.return_value = user_info
+    return token_response, userinfo_response
+
+
+class TestGoogleCallback:
+    def _callback(self, client, user_info):
+        token_response, userinfo_response = _google_responses(user_info)
+        with patch("app.routes.oauth.requests.post", return_value=token_response), \
+             patch("app.routes.oauth.requests.get", return_value=userinfo_response):
+            return client.get(
+                "/auth/oauth/google/callback?code=abc&state=login", follow_redirects=False
+            )
+
+    def test_successful_sign_in_redirects_with_token(self, client, session):
+        response = self._callback(client, {
+            "id": "g-1", "email": "new@example.com", "name": "New", "verified_email": True,
+        })
+
+        assert response.status_code in (302, 307)
+        query = parse_qs(urlparse(response.headers["location"]).query)
+        payload = decode_access_token(query["token"][0])
+        assert payload["sub"] == "new@example.com"
+        assert query["new_user"] == ["True"]
+        account = session.query(OAuthAccount).one()
+        assert account.access_token == "ya29.token"
+
+    def test_unverified_google_email_is_rejected(self, client, session):
+        victim = _password_user(session, "victim@example.com", verified=True)
+
+        response = self._callback(client, {
+            "id": "attacker", "email": "victim@example.com", "verified_email": False,
+        })
+
+        assert "error=email_not_verified" in response.headers["location"]
+        assert "token=" not in response.headers["location"]
+        session.refresh(victim)
+        assert victim.oauth_provider is None
+
+    def test_user_cancelled(self, client):
+        response = client.get(
+            "/auth/oauth/google/callback?error=access_denied&state=signup", follow_redirects=False
         )
-
-        # Get OAuth accounts
-        oauth_accounts = oauth_service.get_user_oauth_accounts(user.id)
-
-        assert len(oauth_accounts) == 1
-        assert oauth_accounts[0].provider == "google"
-        assert oauth_accounts[0].provider_user_id == test_user_data["provider_user_id"]
-
-    def test_find_user_by_oauth(self, oauth_service, test_user_data):
-        """Test finding user by OAuth provider and ID."""
-        # Create OAuth user
-        user1, _ = oauth_service.find_or_create_oauth_user(
-            provider="google",
-            **test_user_data
-        )
-
-        # Find user by OAuth
-        user2 = oauth_service.find_user_by_oauth(
-            provider="google",
-            provider_user_id=test_user_data["provider_user_id"]
-        )
-
-        assert user1.id == user2.id
-        assert user1.email == user2.email
-
-        # Test non-existent OAuth user
-        user3 = oauth_service.find_user_by_oauth(
-            provider="google",
-            provider_user_id="non_existent_id"
-        )
-        assert user3 is None
+        assert response.headers["location"].endswith("/signup?error=access_denied")
 
 
 class TestOAuthRoutes:
-    """Test OAuth API routes."""
+    @pytest.mark.parametrize("method,path", [
+        ("post", "/auth/oauth/signin"),
+        ("post", "/auth/oauth/link"),
+        ("post", "/auth/oauth/verify/google"),
+    ])
+    def test_unverified_identity_endpoints_are_gone(self, client, session, method, path):
+        """These accepted client-supplied identity and allowed account takeover."""
+        victim = _password_user(session, "victim@example.com", verified=True)
+        body = {"provider_user_id": "x", "email": "victim@example.com"}
 
-    def test_oauth_signin_new_user(self, test_user_data):
-        """Test OAuth sign-in endpoint for new user."""
-        response = client.post("/auth/oauth/signin", json=test_user_data)
+        response = getattr(client, method)(path, json=body)
 
-        assert response.status_code == 200
-        data = response.json()
-        assert "access_token" in data
-        assert data["token_type"] == "bearer"
-        assert data["user"]["email"] == test_user_data["email"]
-        assert data["user"]["name"] == test_user_data["name"]
-        assert data["user"]["new_user"] is True
+        assert response.status_code in (404, 405)
+        assert "access_token" not in response.text
+        session.refresh(victim)
+        assert victim.oauth_provider is None
 
-    def test_oauth_signin_existing_user(self, test_user_data):
-        """Test OAuth sign-in endpoint for existing user."""
-        # First sign-in
-        response1 = client.post("/auth/oauth/signin", json=test_user_data)
-        assert response1.status_code == 200
-        assert response1.json()["user"]["new_user"] is True
-
-        # Second sign-in
-        response2 = client.post("/auth/oauth/signin", json=test_user_data)
-        assert response2.status_code == 200
-        assert response2.json()["user"]["new_user"] is False
-
-    def test_oauth_signin_invalid_data(self):
-        """Test OAuth sign-in with invalid data."""
-        invalid_data = {
-            "provider_user_id": "",  # Empty ID
-            "email": "invalid-email",  # Invalid email
-        }
-
-        response = client.post("/auth/oauth/signin", json=invalid_data)
-        assert response.status_code == 422  # Validation error
-
-    def test_oauth_signin_conflict(self, test_user_data):
-        """Test OAuth sign-in with conflicting email."""
-        # Create OAuth user with different provider_user_id
-        conflict_data = test_user_data.copy()
-        conflict_data["provider_user_id"] = "different_google_id"
-
-        response = client.post("/auth/oauth/signin", json=conflict_data)
-        assert response.status_code == 400
-        assert "already linked to google account" in response.json()["detail"]
-
-    def test_get_oauth_providers(self):
-        """Test getting supported OAuth providers."""
+    def test_get_providers(self, client):
         response = client.get("/auth/oauth/providers")
         assert response.status_code == 200
+        names = [p["name"] for p in response.json()["providers"]]
+        assert "google" in names
 
-        data = response.json()
-        assert "providers" in data
-        assert len(data["providers"]) == 1  # Only Google
+    @pytest.mark.parametrize("method,path", [
+        ("delete", "/auth/oauth/unlink/google"),
+        ("get", "/auth/oauth/accounts"),
+    ])
+    def test_account_endpoints_require_auth(self, client, method, path):
+        assert getattr(client, method)(path).status_code == 403
 
-        google_provider = data["providers"][0]
-        assert google_provider["name"] == "google"
-        assert google_provider["display_name"] == "Google"
-        assert "google.com" in google_provider["description"].lower()
+    def test_accounts_lists_linked_google(self, client, session, oauth_service, google_user):
+        user, _ = oauth_service.find_or_create_oauth_user(provider="google", **google_user)
+        headers = {"Authorization": f"Bearer {create_access_token({'sub': user.email})}"}
 
-    def test_verify_oauth_account(self, test_user_data):
-        """Test verifying OAuth account without creating user."""
-        # First verify non-existent account
+        response = client.get("/auth/oauth/accounts", headers=headers)
+
+        assert response.status_code == 200
+        assert [a["provider"] for a in response.json()] == ["google"]
+
+
+class TestPasswordLoginForOAuthUsers:
+    def test_password_login_for_oauth_only_user_is_401_not_500(
+        self, client, oauth_service, google_user
+    ):
+        oauth_service.find_or_create_oauth_user(provider="google", **google_user)
+
         response = client.post(
-            "/auth/oauth/verify/google",
-            json={"provider_user_id": test_user_data["provider_user_id"]}
+            "/auth/login", json={"email": google_user["email"], "password": "anything"}
         )
-        assert response.status_code == 200
-        assert response.json()["already_linked"] is False
 
-        # Create OAuth user
-        client.post("/auth/oauth/signin", json=test_user_data)
-
-        # Verify existing account
-        response = client.post(
-            "/auth/oauth/verify/google",
-            json={"provider_user_id": test_user_data["provider_user_id"]}
-        )
-        assert response.status_code == 200
-        assert response.json()["already_linked"] is True
-        assert response.json()["user_info"]["email"] == test_user_data["email"]
-
-    def test_link_oauth_account_authenticated(self, test_user_data):
-        """Test linking OAuth account when authenticated."""
-        # First, create a regular user and get token
-        from app.utils.auth import hash_password, create_access_token
-
-        # Create regular user (this would normally be done through registration)
-        # For testing, we'll create a user directly in the test setup
-
-        # This test would require setting up proper authentication
-        # For now, we'll test the unauthenticated case
-        response = client.post("/auth/oauth/link", json=test_user_data)
-        assert response.status_code == 401  # Unauthorized
-
-    def test_unlink_oauth_account_authenticated(self):
-        """Test unlinking OAuth account when authenticated."""
-        response = client.delete("/auth/oauth/unlink/google")
-        assert response.status_code == 401  # Unauthorized
-
-    def test_get_oauth_accounts_authenticated(self):
-        """Test getting OAuth accounts when authenticated."""
-        response = client.get("/auth/oauth/accounts")
-        assert response.status_code == 401  # Unauthorized
-
-
-class TestOAuthIntegration:
-    """End-to-end OAuth integration tests."""
-
-    def test_complete_oauth_flow(self, test_user_data):
-        """Test complete OAuth flow from sign-in to token management."""
-        # Step 1: OAuth sign-in
-        signin_response = client.post("/auth/oauth/signin", json=test_user_data)
-        assert signin_response.status_code == 200
-
-        access_token = signin_response.json()["access_token"]
-        user_info = signin_response.json()["user"]
-
-        # Step 2: Use token for authenticated requests
-        headers = {"Authorization": f"Bearer {access_token}"}
-
-        # Test protected endpoint
-        me_response = client.get("/auth/me", headers=headers)
-        assert me_response.status_code == 200
-        assert me_response.json()["email"] == test_user_data["email"]
-
-        # Step 3: Get OAuth accounts
-        accounts_response = client.get("/auth/oauth/accounts", headers=headers)
-        assert accounts_response.status_code == 200
-        accounts = accounts_response.json()
-        assert len(accounts) == 1
-        assert accounts[0]["provider"] == "google"
-
-    def test_oauth_user_with_default_preferences(self, test_user_data):
-        """Test that OAuth users get default topic preferences."""
-        # Sign in OAuth user
-        response = client.post("/auth/oauth/signin", json=test_user_data)
-        assert response.status_code == 200
-
-        user_info = response.json()["user"]
-        access_token = response.json()["access_token"]
-
-        # Get user preferences
-        headers = {"Authorization": f"Bearer {access_token}"}
-        prefs_response = client.get("/preferences", headers=headers)
-
-        if prefs_response.status_code == 200:
-            # Check that user has default topic preferences
-            topics = prefs_response.json().get("topics", [])
-            # OAuth users should have some default topics
-            assert len(topics) > 0
-
-
-if __name__ == "__main__":
-    pytest.main([__file__])
+        assert response.status_code == 401

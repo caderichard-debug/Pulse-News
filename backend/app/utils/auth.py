@@ -28,8 +28,14 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     if len(password_bytes) > 72:
         password_bytes = password_bytes[:72]
 
-    hashed_bytes = hashed_password.encode('utf-8')
-    return bcrypt.checkpw(password_bytes, hashed_bytes)
+    # OAuth-only accounts have no password hash; never match (and never raise).
+    if not hashed_password:
+        return False
+    try:
+        return bcrypt.checkpw(password_bytes, hashed_password.encode('utf-8'))
+    except ValueError:
+        # Malformed hash ("Invalid salt") - treat as a failed login, not a server error
+        return False
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -63,7 +69,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 def decode_access_token(token: str) -> Optional[dict]:
     """
-    Decode and verify a JWT token.
+    Decode and verify a JWT token (any purpose).
 
     Returns:
         Dict with token data if valid, None if invalid/expired
@@ -77,6 +83,20 @@ def decode_access_token(token: str) -> Optional[dict]:
         return payload
     except jwt.PyJWTError:
         return None
+
+
+def decode_session_token(token: str) -> Optional[dict]:
+    """
+    Decode a token for authenticating API requests.
+
+    Purpose-scoped tokens (e.g. email verification links) share the signing key,
+    so they must be rejected here; otherwise a verification link would work as a
+    login token.
+    """
+    payload = decode_access_token(token)
+    if not payload or payload.get("purpose"):
+        return None
+    return payload
 
 
 def create_verification_token(email: str) -> str:

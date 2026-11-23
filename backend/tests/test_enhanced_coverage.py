@@ -6,7 +6,7 @@ Tests for the new event-based clustering and enhanced coverage functionality.
 
 import pytest
 from datetime import datetime, timedelta
-from sqlmodel import Session
+from sqlmodel import Session, select
 from fastapi.testclient import TestClient
 
 from app.models import (
@@ -196,7 +196,7 @@ class TestEnhancedCoverageComparison:
         if result["coverage_articles"]:
             # All returned articles should match the bias filter
             for article in result["coverage_articles"]:
-                assert article["source_bias"] == "center"
+                assert article["political_lean"] == "center"
 
     def test_get_coverage_with_sentiment_range(self, session: Session, sample_articles_with_analysis):
         """Test getting coverage with sentiment range filter."""
@@ -215,9 +215,9 @@ class TestEnhancedCoverageComparison:
 
         assert result["success"] is True
         if result["coverage_articles"]:
-            # All returned articles should have positive sentiment
+            # All returned articles should have non-negative sentiment (-10..10 scale)
             for article in result["coverage_articles"]:
-                assert article["sentiment_score"] >= 0.0
+                assert article["sentiment_score"] >= 0
 
     def test_get_coverage_with_max_results(self, session: Session, sample_articles_with_analysis):
         """Test getting coverage with max results limit."""
@@ -302,30 +302,15 @@ class TestRealtimeClustering:
 class TestArticleAPIEndpoints:
     """Test the enhanced article API endpoints."""
 
-    def setup_method(self):
-        """Set up test client."""
-        self.client = TestClient(app)
+    @pytest.fixture(autouse=True)
+    def _client(self, client):
+        """Use the shared client, whose DB session is overridden with the test session."""
+        self.client = client
 
     def get_auth_headers(self, session: Session, test_user: User):
         """Get authentication headers for test user."""
-        # Login to get token
-        response = self.client.post(
-            "/auth/login",
-            data={"username": test_user.email, "password": "testpassword"}
-        )
-
-        if response.status_code != 200:
-            # Create a simple token for testing
-            import jwt
-            from app.config import SECRET_KEY, ALGORITHM
-            token = jwt.encode(
-                {"sub": test_user.email, "exp": datetime.utcnow() + timedelta(hours=24)},
-                SECRET_KEY,
-                algorithm=ALGORITHM
-            )
-        else:
-            token = response.json()["access_token"]
-
+        from app.utils.auth import create_access_token
+        token = create_access_token(data={"sub": test_user.email})
         return {"Authorization": f"Bearer {token}"}
 
     def test_get_article_detail_with_coverage_filters(self, session: Session, test_user: User, sample_articles_with_analysis):
@@ -405,10 +390,10 @@ class TestArticleAPIEndpoints:
 
         # Test without auth headers
         response = self.client.post(f"/articles/{article.id}/analyze-coverage")
-        assert response.status_code == 401
+        assert response.status_code == 403
 
         response = self.client.get(f"/articles/{article.id}/coverage")
-        assert response.status_code == 401
+        assert response.status_code == 403
 
 
 class TestEventBasedClustering:
@@ -434,7 +419,7 @@ class TestEventBasedClustering:
         assert articles[0][0].id in article_ids
 
         # Check cluster metadata
-        cluster.refresh()
+        session.refresh(cluster)
         assert cluster.article_count >= 1
         assert cluster.sources_count >= 1
 

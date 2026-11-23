@@ -241,10 +241,20 @@ def _generate_newsletter_for_user(user: User, session: Session) -> Optional[Dict
 
     # Build article query based on preferences - ONLY use subscribed sources
     from sqlalchemy import func
+    cutoff = datetime.utcnow() - timedelta(days=settings.newsletter_lookback_days)
+    # Articles already sent to this user in an earlier newsletter
+    already_sent = (
+        select(NewsletterArticle.article_id)
+        .join(Newsletter, Newsletter.id == NewsletterArticle.newsletter_id)
+        .where(Newsletter.user_id == user.id)
+        .where(Newsletter.sent_at.is_not(None))
+    )
     articles_query = (
         select(Article, ArticleAnalysis)
         .join(ArticleAnalysis)
         .where(Article.source_id.in_(subscribed_source_ids))
+        .where(Article.scraped_at >= cutoff)
+        .where(Article.id.not_in(already_sent))
     )
 
     # Order by user preference (good_first, good_last, or mixed)

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
@@ -16,6 +16,19 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // The backend's Google OAuth callback redirects here with ?error=... on failure.
+  useEffect(() => {
+    const error = new URLSearchParams(window.location.search).get("error");
+    if (!error) return;
+    const messages: Record<string, string> = {
+      access_denied: "Google sign-in was cancelled.",
+      email_not_verified:
+        "Your Google account's email isn't verified, so we can't sign you in with it.",
+      oauth_failed: "Google sign-in failed. Please try again.",
+    };
+    toast.error(messages[error] ?? "Sign in failed. Please try again.");
+  }, []);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();

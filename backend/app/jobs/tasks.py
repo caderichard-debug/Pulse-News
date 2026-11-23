@@ -21,6 +21,7 @@ from functools import wraps
 from typing import Callable, Dict, Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+import zlib
 
 logger = logging.getLogger(__name__)
 
@@ -65,9 +66,10 @@ def track_job_execution(job_id: str, job_name: str):
         def wrapper(session: Session = None, *args, **kwargs) -> Dict[str, Any]:
             triggered_by = kwargs.pop("triggered_by", "scheduler")
             triggered_by_user_id = kwargs.pop("triggered_by_user_id", None)
-            # Use PostgreSQL advisory lock to prevent concurrent executions
-            # Convert job_id string to integer hash for advisory lock
-            lock_id = hash(job_id) % (2**31)  # Keep within PostgreSQL bigint range
+            # Use PostgreSQL advisory lock to prevent concurrent executions.
+            # Must be stable across processes: built-in hash() of str is randomized
+            # per interpreter (PYTHONHASHSEED), so use CRC32 instead.
+            lock_id = zlib.crc32(job_id.encode("utf-8")) % (2**31)
 
             with Session(engine) as lock_session:
                 from sqlmodel import select, text
@@ -1003,167 +1005,83 @@ def process_unprocessed_articles_job(session: Session = None):
 
 
 @track_job_execution(job_id="regenerate_viewpoints", job_name="Regenerate Opposing Viewpoints")
-def regenerate_viewpoints_job(session: Session = None):
+def regenerate_viewpoints_job(session: Session = None, limit: int = 100, delay_seconds: float = 0.5):
     """
     Job 9: Batch regenerate opposing viewpoints for articles.
     Scheduled to run daily to refresh viewpoint relationships.
 
-    This job:
-    - Finds articles with expired or missing viewpoint relationships
-    - Regenerates framework oppositions using the ViewpointAnalyzer
-    - Updates cached relationships with fresh AI analysis
-    - Manages API costs by processing in batches with delays
+    Finds analyzed articles with missing or expired viewpoint relationships, runs the
+    enhanced ViewpointAnalyzer on them, and persists the results as
+    ViewpointRelationship rows (so they are not re-analyzed on every run).
 
     Args:
         session: Optional session (for testing). If None, creates new session.
+        limit: Maximum number of articles to process in one run.
+        delay_seconds: Pause between articles to manage API cost/rate limits.
     """
+    from sqlmodel import select, or_
+    from ..services.viewpoint_analyzer_enhanced import ViewpointAnalyzer
+    from ..models import Article, ArticleAnalysis, ViewpointRelationship
+
+    def _run(db: Session) -> Dict[str, Any]:
+        stats = {"articles_processed": 0, "relationships_created": 0, "errors": 0}
+        start_time = datetime.utcnow()
+        now = datetime.utcnow()
+
+        articles_to_process = db.exec(
+            select(Article)
+            .join(ArticleAnalysis)
+            .where(
+                or_(
+                    # Articles with no active viewpoint relationships
+                    ~Article.id.in_(
+                        select(ViewpointRelationship.primary_article_id)
+                        .where(ViewpointRelationship.is_active == True)  # noqa: E712
+                    ),
+                    # Articles with expired relationships
+                    Article.id.in_(
+                        select(ViewpointRelationship.primary_article_id)
+                        .where(ViewpointRelationship.expires_at < now)
+                        .where(ViewpointRelationship.is_active == True)  # noqa: E712
+                    ),
+                )
+            )
+            .order_by(func.random())  # Random order for variety
+            .limit(limit)
+        ).all()
+
+        logger.info(f"Found {len(articles_to_process)} articles needing viewpoint regeneration")
+        analyzer = ViewpointAnalyzer(db)
+
+        for article in articles_to_process:
+            try:
+                saved = analyzer.save_opposing_viewpoints(article=article, session=db, max_results=5)
+                stats["relationships_created"] += len(saved)
+                stats["articles_processed"] += 1
+            except Exception as e:
+                logger.error(f"Error processing article {article.id}: {e}")
+                stats["errors"] += 1
+            if delay_seconds:
+                time.sleep(delay_seconds)
+
+        stats["processing_time_ms"] = (datetime.utcnow() - start_time).total_seconds() * 1000
+        return stats
+
     try:
-        logger.info("=" * 60)
         logger.info("Starting opposing viewpoints regeneration job")
-        logger.info("=" * 60)
-
-        from ..services.viewpoint_analyzer import ViewpointAnalyzer
-        from sqlmodel import select
-        from ..models import Article, ArticleAnalysis, ViewpointRelationship
-
-        stats = {
-            "articles_processed": 0,
-            "relationships_created": 0,
-            "relationships_updated": 0,
-            "errors": 0,
-            "processing_time_ms": 0
-        }
-
         if session is None:
             with Session(engine) as job_session:
-                start_time = datetime.utcnow()
-
-                # Find articles that need viewpoint regeneration
-                articles_to_process = job_session.exec(
-                    select(Article)
-                    .join(ArticleAnalysis)
-                    .where(
-                        or_(
-                            # Articles with no viewpoint relationships
-                            ~Article.id.in_(
-                                select(ViewpointRelationship.primary_article_id)
-                                .where(ViewpointRelationship.is_active == True)
-                            ),
-                            # Articles with expired relationships
-                            Article.id.in_(
-                                select(ViewpointRelationship.primary_article_id)
-                                .where(ViewpointRelationship.expires_at < datetime.utcnow())
-                                .where(ViewpointRelationship.is_active == True)
-                            )
-                        )
-                    )
-                    .order_by(func.random())  # Random order for variety
-                    .limit(100)  # Process up to 100 articles per day
-                ).all()
-
-                stats["total_articles_found"] = len(articles_to_process)
-                logger.info(f"Found {len(articles_to_process)} articles needing viewpoint regeneration")
-
-                for article in articles_to_process:
-                    try:
-                        article_start = datetime.utcnow()
-
-                        # Regenerate viewpoints for this article
-                        viewpoints = ViewpointAnalyzer.find_opposing_viewpoints(
-                            article_id=article.id,
-                            session=job_session,
-                            max_results=5,
-                            relationship_types=["framework_opposition"]
-                        )
-
-                        article_time = (datetime.utcnow() - article_start).total_seconds() * 1000
-                        stats["processing_time_ms"] += article_time
-
-                        if viewpoints:
-                            stats["relationships_created"] += len(viewpoints)
-                            logger.debug(f"Generated {len(viewpoints)} viewpoints for article {article.id}")
-                        else:
-                            logger.debug(f"No viewpoints found for article {article.id}")
-
-                        stats["articles_processed"] += 1
-
-                        # Rate limiting: brief delay between articles to manage API costs
-                        time.sleep(0.5)
-
-                    except Exception as e:
-                        logger.error(f"Error processing article {article.id}: {e}")
-                        stats["errors"] += 1
-                        continue
-
-                total_time = (datetime.utcnow() - start_time).total_seconds() * 1000
-                stats["total_processing_time_ms"] = total_time
-
+                stats = _run(job_session)
         else:
-            # For testing with provided session
-            start_time = datetime.utcnow()
+            stats = _run(session)
 
-            articles_to_process = session.exec(
-                select(Article)
-                .join(ArticleAnalysis)
-                .where(
-                    or_(
-                        ~Article.id.in_(
-                            select(ViewpointRelationship.primary_article_id)
-                            .where(ViewpointRelationship.is_active == True)
-                        ),
-                        Article.id.in_(
-                            select(ViewpointRelationship.primary_article_id)
-                            .where(ViewpointRelationship.expires_at < datetime.utcnow())
-                            .where(ViewpointRelationship.is_active == True)
-                        )
-                    )
-                )
-                .limit(10)  # Smaller limit for testing
-            ).all()
-
-            for article in articles_to_process:
-                try:
-                    viewpoints = ViewpointAnalyzer.find_opposing_viewpoints(
-                        article_id=article.id,
-                        session=session,
-                        max_results=5,
-                        relationship_types=["framework_opposition"]
-                    )
-
-                    if viewpoints:
-                        stats["relationships_created"] += len(viewpoints)
-
-                    stats["articles_processed"] += 1
-                    time.sleep(0.5)  # Rate limiting
-
-                except Exception as e:
-                    logger.error(f"Error processing article {article.id}: {e}")
-                    stats["errors"] += 1
-                    continue
-
-            total_time = (datetime.utcnow() - start_time).total_seconds() * 1000
-            stats["total_processing_time_ms"] = total_time
-
-        logger.info("=" * 60)
         logger.info(
             f"Viewpoint regeneration job completed: "
             f"{stats['articles_processed']} articles processed, "
-            f"{stats['relationships_created']} relationships created, "
-            f"{stats['errors']} errors"
+            f"{stats['relationships_created']} relationships saved, "
+            f"{stats['errors']} errors in {stats['processing_time_ms']:.0f}ms"
         )
-        logger.info(
-            f"Processing time: {stats.get('total_processing_time_ms', 0):.0f}ms total, "
-            f"{stats.get('processing_time_ms', 0) / max(stats['articles_processed'], 1):.0f}ms avg per article"
-        )
-        logger.info("=" * 60)
-
-        return {
-            "success": True,
-            "articles_processed": stats["articles_processed"],
-            "relationships_created": stats["relationships_created"],
-            "errors": stats["errors"],
-            "processing_time_ms": stats.get("total_processing_time_ms", 0)
-        }
+        return {"success": True, **stats}
 
     except Exception as e:
         logger.error(f"Viewpoint regeneration job failed: {e}", exc_info=True)
@@ -1189,6 +1107,7 @@ def analyze_single_article_viewpoints_job(article_id: int, session: Session = No
         logger.info(f"Starting single article viewpoint analysis for article {article_id}")
 
         from ..services.viewpoint_analyzer_enhanced import ViewpointAnalyzer
+        from sqlmodel import select
         from ..database import get_session
         from ..models import Article
 

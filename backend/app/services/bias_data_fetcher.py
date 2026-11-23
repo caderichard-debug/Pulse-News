@@ -132,11 +132,6 @@ MANUAL_BIAS_LOOKUP = {
         "description": "Conservative magazine and website with right-leaning editorial stance.",
         "confidence": 0.95
     },
-    "wsj.com": {
-        "bias": OrganizationalBias.CENTER_RIGHT,
-        "description": "Business newspaper with conservative editorial page.",
-        "confidence": 0.90
-    },
     "nypost.com": {
         "bias": OrganizationalBias.RIGHT,
         "description": "Tabloid newspaper with conservative editorial perspective.",

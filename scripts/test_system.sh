@@ -1,4 +1,5 @@
 #!/bin/bash
+# Admin endpoints require the server's ADMIN_TOKEN: export ADMIN_TOKEN=... before running.
 
 # Pulse News Aggregator - System Test Script
 # Tests all major components and shows visible output
@@ -40,7 +41,7 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo -e "${YELLOW}Test 2: System Statistics${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-STATS=$(curl -s "${API_URL}/admin/stats")
+STATS=$(curl -s -H "X-Admin-Token: ${ADMIN_TOKEN:?set ADMIN_TOKEN}" "${API_URL}/admin/stats")
 echo "$STATS" | python3 -m json.tool
 
 # Extract key metrics
@@ -70,7 +71,7 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo -e "${YELLOW}Test 4: Recent Articles (Last 5)${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-curl -s "${API_URL}/admin/articles/recent" | python3 -c "
+curl -s -H "X-Admin-Token: ${ADMIN_TOKEN:?set ADMIN_TOKEN}" "${API_URL}/admin/articles/recent" | python3 -c "
 import sys, json
 articles = json.load(sys.stdin)
 for i, article in enumerate(articles[:5], 1):
@@ -86,7 +87,7 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo -e "${YELLOW}Test 5: Article Count by Source${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-curl -s "${API_URL}/admin/sources/status" | python3 -c "
+curl -s -H "X-Admin-Token: ${ADMIN_TOKEN:?set ADMIN_TOKEN}" "${API_URL}/admin/sources/status" | python3 -c "
 import sys, json
 sources = json.load(sys.stdin)
 for source in sources:
@@ -98,7 +99,7 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo -e "${YELLOW}Test 6: Background Jobs Status${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-curl -s "${API_URL}/admin/scheduler/status" | python3 -c "
+curl -s -H "X-Admin-Token: ${ADMIN_TOKEN:?set ADMIN_TOKEN}" "${API_URL}/admin/scheduler/status" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
 if data['status'] == 'running':
@@ -162,7 +163,7 @@ read -t 5 -r TRIGGER_JOBS || TRIGGER_JOBS="n"
 if [[ "$TRIGGER_JOBS" =~ ^[Yy]$ ]]; then
     echo ""
     echo "Triggering scrape job..."
-    curl -s -X POST "${API_URL}/admin/jobs/scrape" | python3 -m json.tool
+    curl -s -X POST -H "X-Admin-Token: ${ADMIN_TOKEN:?set ADMIN_TOKEN}" "${API_URL}/admin/jobs/scrape" | python3 -m json.tool
 
     echo ""
     echo "Waiting 3 seconds..."
@@ -170,7 +171,7 @@ if [[ "$TRIGGER_JOBS" =~ ^[Yy]$ ]]; then
 
     echo ""
     echo "Triggering extract job..."
-    curl -s -X POST "${API_URL}/admin/jobs/extract" | python3 -m json.tool
+    curl -s -X POST -H "X-Admin-Token: ${ADMIN_TOKEN:?set ADMIN_TOKEN}" "${API_URL}/admin/jobs/extract" | python3 -m json.tool
 else
     echo "Skipping manual job triggers"
 fi
@@ -190,7 +191,7 @@ echo "  • Authentication: ✅ Working"
 echo ""
 echo "Next steps:"
 echo "  1. Set up API keys in backend/.env"
-echo "  2. Test AI analysis: curl -X POST ${API_URL}/admin/jobs/analyze"
+echo "  2. Test AI analysis: curl -X POST -H \"X-Admin-Token: \$ADMIN_TOKEN\" ${API_URL}/admin/jobs/analyze"
 echo "  3. Start frontend: cd frontend && npm run dev"
 echo "  4. Open http://localhost:3000"
 echo ""

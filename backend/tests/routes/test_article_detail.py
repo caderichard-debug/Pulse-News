@@ -141,6 +141,7 @@ def test_article(session: Session):
 
     # Create related article in same cluster
     cluster = ArticleCluster(
+        event_signature="test-event-signature",
         cluster_hash="test-cluster-hash-123",
         primary_topic="Politics"
     )

@@ -1,400 +1,171 @@
 """
-Integration tests for the complete article processing pipeline.
-Tests multiple services working together.
+Integration tests for the article processing pipeline:
+RSS scrape -> content extraction -> AI analysis.
+
+Status flow: PENDING (scraped) -> COMPLETED (content extracted) -> ArticleAnalysis row.
 """
 
-import pytest
-from sqlmodel import Session
-from app.models import Source, Article, ArticleAnalysis, Topic, ProcessingStatus, PoliticalLean
-from app.services.rss_scraper import scrape_source
-from app.services.article_extractor import extract_article_content
-from unittest.mock import patch, Mock
+import json
+from datetime import datetime
+from unittest.mock import Mock, patch
+
 import feedparser
+import pytest
+from sqlmodel import Session, select
+
+from app.models import Article, ArticleAnalysis, PoliticalLean, ProcessingStatus, Source
+from app.services.ai_analyzer import analyze_articles_batch
+from app.services.article_extractor import extract_article_content, process_pending_articles
+from app.services.rss_scraper import scrape_source
+
+LONG_CONTENT = "This is the full article content about AI development. " * 10
 
 
-class TestArticlePipelineIntegration:
-    """Test the complete article processing pipeline"""
+@pytest.fixture
+def source(session: Session) -> Source:
+    src = Source(
+        name="TechNews",
+        rss_feed_url="https://technews.example.com/feed",
+        url="https://technews.example.com",
+        is_active=True,
+        trust_score=0.8,
+    )
+    session.add(src)
+    session.commit()
+    session.refresh(src)
+    return src
 
-    def test_scrape_to_extraction_pipeline(self, session: Session):
-        """
-        Integration test: RSS scrape → article extraction
-        Tests that scraped articles can be extracted
-        """
-        # Create source and topic
-        topic = Topic(name="Technology", description="Tech news")
-        source = Source(
-            name="TechNews",
-            rss_feed_url="https://technews.example.com/feed",
-            url="https://technews.example.com",
-            is_active=True,
-            trust_score=8.0
-        )
-        session.add(topic)
-        session.add(source)
-        session.commit()
-        session.refresh(source)
 
-        # Mock RSS feed data
-        mock_feed = {
-            'entries': [
-                {
-                    'title': 'New AI Development',
-                    'link': 'https://technews.example.com/ai-development',
-                    'description': 'Major AI breakthrough announced',
-                    'published': 'Wed, 01 Jan 2025 10:00:00 GMT'
-                }
-            ]
-        }
+def _feed(*entries):
+    return feedparser.FeedParserDict(
+        bozo=0,
+        entries=[feedparser.FeedParserDict(e) for e in entries],
+    )
 
-        # Mock article content extraction
-        mock_html = "<html><body><p>This is the full article content about AI development.</p></body></html>"
 
-        with patch('app.services.rss_scraper.feedparser.parse', return_value=mock_feed):
-            with patch('app.services.article_extractor.requests.get') as mock_get:
-                mock_response = Mock()
-                mock_response.text = mock_html
-                mock_response.status_code = 200
-                mock_get.return_value = mock_response
+def _completed_article(session, source, n, content="Some article content"):
+    article = Article(
+        title=f"Article {n}",
+        url=f"https://technews.example.com/article-{n}",
+        source_id=source.id,
+        published_at=datetime(2025, 1, 1, 10, 0, 0),
+        content_text=content,
+        processing_status=ProcessingStatus.COMPLETED,
+    )
+    session.add(article)
+    session.commit()
+    session.refresh(article)
+    return article
 
-                with patch('app.services.article_extractor.trafilatura.extract', return_value="This is the full article content about AI development."):
-                    # Step 1: Scrape articles
-                    scraped_articles = scrape_source(source, session)
-                    assert len(scraped_articles) == 1
 
-                    # Verify article was created
-                    from sqlmodel import select
-                    article = session.exec(select(Article).where(Article.source_id == source.id)).first()
-                    assert article is not None
-                    assert article.title == 'New AI Development'
-                    assert article.processing_status == ProcessingStatus.PENDING
+def _analysis(summary, sentiment=0, lean="center"):
+    return {
+        "summary": summary,
+        "sentiment_score": sentiment,
+        "political_lean": lean,
+        "bias_indicators": "neutral",
+        "key_stats": ["2% inflation reduction target"],
+        "topic_category": "economics",
+    }
 
-                    # Step 2: Extract content (current API extracts by URL, not by ID)
-                    extraction_result = extract_article_content(article.url)
-                    assert extraction_result['success'] is True
 
-                    # Update article with extracted content
-                    article.content_text = extraction_result['content']
-                    article.word_count = extraction_result['word_count']
-                    article.processing_status = ProcessingStatus.EXTRACTED
-                    session.add(article)
-                    session.commit()
+class TestScrapeAndExtract:
+    def test_scrape_then_extract(self, session: Session, source: Source):
+        feed = _feed({"title": "New AI Development", "link": "https://technews.example.com/ai"})
+        response = Mock(status_code=200, text="<html><body>ignored</body></html>")
+        response.raise_for_status = Mock()
 
-                    # Verify article was updated
-                    session.refresh(article)
-                    assert article.content_text is not None
-                    assert article.processing_status == ProcessingStatus.EXTRACTED
-                    assert "full article content" in article.content_text
+        with patch("app.services.rss_scraper.feedparser.parse", return_value=feed), \
+             patch("app.services.article_extractor.requests.get", return_value=response), \
+             patch("app.services.article_extractor.trafilatura.extract", return_value=LONG_CONTENT):
+            scraped = scrape_source(source, session)
+            assert len(scraped) == 1
 
-    def test_extraction_to_analysis_pipeline(self, session: Session):
-        """
-        Integration test: Article extraction → AI analysis
-        Tests that extracted articles can be analyzed
-        """
-        from app.services.ai_analyzer import analyze_articles_batch
+            article = session.exec(select(Article).where(Article.source_id == source.id)).one()
+            assert article.title == "New AI Development"
+            assert article.processing_status == ProcessingStatus.PENDING
 
-        # Create source and article
-        source = Source(
-            name="NewsSource",
-            rss_feed_url="https://news.example.com/feed",
-            url="https://news.example.com",
-            is_active=True,
-            trust_score=9.0
-        )
-        session.add(source)
-        session.commit()
-        session.refresh(source)
+            processed = process_pending_articles(session, batch_size=5, delay=0)
+            assert processed == 1
 
-        from datetime import datetime
-        article = Article(
-            title="Economic Policy Update",
-            url="https://news.example.com/economy",
-            source_id=source.id,
-            published_at=datetime(2025, 1, 1, 10, 0, 0),
-            content_text="The government announced a new economic policy aimed at reducing inflation by 2%.",
-            processing_status=ProcessingStatus.EXTRACTED
-        )
-        session.add(article)
-        session.commit()
         session.refresh(article)
+        assert article.processing_status == ProcessingStatus.COMPLETED
+        assert "full article content" in article.content_text
 
-        # Mock OpenAI response
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = '''
-        {
-            "summary": "Government announces new economic policy to reduce inflation",
-            "sentiment_score": 0,
-            "political_lean": "CENTER",
-            "bias_indicators": "neutral",
-            "key_stats": ["2% inflation reduction target"]
-        }
-        '''
-        mock_response.usage.prompt_tokens = 100
-        mock_response.usage.completion_tokens = 50
+    def test_rescrape_does_not_duplicate(self, session: Session, source: Source):
+        feed = _feed({"title": "Same story", "link": "https://technews.example.com/same"})
+        with patch("app.services.rss_scraper.feedparser.parse", return_value=feed):
+            assert len(scrape_source(source, session)) == 1
+            assert len(scrape_source(source, session)) == 0
 
-        with patch('app.services.ai_analyzer.openai_client') as mock_client:
-            mock_client.is_available.return_value = True
-            mock_client.client.chat.completions.create.return_value = mock_response
+    def test_bad_feed_and_network_errors_are_handled(self, session: Session, source: Source):
+        bad_feed = feedparser.FeedParserDict(bozo=1, bozo_exception=Exception("Feed error"), entries=[])
+        with patch("app.services.rss_scraper.feedparser.parse", return_value=bad_feed):
+            assert scrape_source(source, session) == []
 
-            # Analyze article (batch function)
-            count = analyze_articles_batch(session, batch_size=1)
-            assert count == 1
+        import requests
+        with patch("app.services.article_extractor.requests.get",
+                   side_effect=requests.ConnectionError("Network error")), \
+             patch("app.services.article_extractor.settings.http_backoff_base_seconds", 0):
+            assert extract_article_content("https://technews.example.com/x")["success"] is False
 
-            # Verify analysis was created
-            session.refresh(article)
-            assert article.processing_status == ProcessingStatus.ANALYZED
 
-            from sqlmodel import select
-            analysis = session.exec(select(ArticleAnalysis).where(
-                ArticleAnalysis.article_id == article.id
-            )).first()
+class TestAnalysis:
+    def _client(self, analyses):
+        client = Mock()
+        client.is_available.return_value = True
+        client.analyze_articles_batch.return_value = analyses
+        return client
 
-            assert analysis is not None
-            assert "Government announces" in analysis.summary
-            assert analysis.sentiment_score == 0
-            assert analysis.political_lean == PoliticalLean.CENTER
+    def test_analyzes_completed_articles(self, session: Session, source: Source):
+        article = _completed_article(session, source, 1)
+        client = self._client([_analysis("Government announces new economic policy")])
 
-    def test_full_pipeline_with_error_handling(self, session: Session):
-        """
-        Integration test: Full pipeline with error handling
-        Tests graceful handling of failures at each stage
-        """
-        # Create source
-        source = Source(
-            name="ErrorSource",
-            rss_feed_url="https://error.example.com/feed",
-            url="https://error.example.com",
-            is_active=True,
-            trust_score=7.0
-        )
-        session.add(source)
-        session.commit()
-        session.refresh(source)
+        with patch("app.services.ai_analyzer.openai_client", client):
+            assert analyze_articles_batch(session, batch_size=5) == 1
 
-        # Test 1: Scraping with invalid feed
-        mock_feed = Mock()
-        mock_feed.bozo = True
-        mock_feed.bozo_exception = Exception("Feed error")
-        mock_feed.entries = []
-        with patch('app.services.rss_scraper.feedparser.parse', return_value=mock_feed):
-            articles = scrape_source(source, session)
-            assert len(articles) == 0  # Should handle error gracefully
+        analysis = session.exec(
+            select(ArticleAnalysis).where(ArticleAnalysis.article_id == article.id)
+        ).one()
+        assert "economic policy" in analysis.summary
+        assert analysis.political_lean == PoliticalLean.CENTER
+        # Stored as real JSON, not a Python repr
+        assert json.loads(analysis.key_stats) == ["2% inflation reduction target"]
 
-        # Test 2: Extraction with network error
-        from datetime import datetime
-        article = Article(
-            title="Test Article",
-            url="https://error.example.com/article",
-            source_id=source.id,
-            published_at=datetime(2025, 1, 1, 10, 0, 0),
-            processing_status=ProcessingStatus.PENDING
-        )
-        session.add(article)
-        session.commit()
+    def test_single_object_response_is_accepted(self, session: Session, source: Source):
+        _completed_article(session, source, 1)
+        client = self._client(_analysis("Only one"))
 
-        with patch('app.services.article_extractor.requests.get', side_effect=Exception("Network error")):
-            result = extract_article_content(article.url)
-            # Should handle error gracefully
-            assert result['success'] is False
+        with patch("app.services.ai_analyzer.openai_client", client):
+            assert analyze_articles_batch(session, batch_size=5) == 1
 
-    def test_batch_processing_integration(self, session: Session):
-        """
-        Integration test: Batch processing
-        Tests that multiple articles can be processed in batch
-        """
-        from app.services.ai_analyzer import analyze_articles_batch
+    def test_batch_of_three(self, session: Session, source: Source):
+        articles = [_completed_article(session, source, i) for i in range(3)]
+        client = self._client([_analysis(f"Summary {i}", sentiment=i) for i in range(3)])
 
-        # Create source
-        source = Source(
-            name="BatchSource",
-            rss_feed_url="https://batch.example.com/feed",
-            url="https://batch.example.com",
-            is_active=True,
-            trust_score=8.5
-        )
-        session.add(source)
-        session.commit()
-        session.refresh(source)
+        with patch("app.services.ai_analyzer.openai_client", client):
+            assert analyze_articles_batch(session, batch_size=3) == 3
 
-        # Create multiple extracted articles
-        from datetime import datetime
+        for i, article in enumerate(articles):
+            analysis = session.exec(
+                select(ArticleAnalysis).where(ArticleAnalysis.article_id == article.id)
+            ).one()
+            assert analysis.summary == f"Summary {i}"
+
+    def test_count_mismatch_skips_batch(self, session: Session, source: Source):
+        """If the model drops a result we can't tell which is which, so nothing is saved."""
         for i in range(3):
-            article = Article(
-                title=f"Article {i+1}",
-                url=f"https://batch.example.com/article-{i+1}",
-                source_id=source.id,
-                published_at=datetime(2025, 1, 1, 10, 0, 0),
-                content_text=f"Content for article {i+1}",
-                processing_status=ProcessingStatus.EXTRACTED
-            )
-            session.add(article)
+            _completed_article(session, source, i)
+        client = self._client([_analysis("A"), _analysis("B")])
 
-        session.commit()
+        with patch("app.services.ai_analyzer.openai_client", client):
+            assert analyze_articles_batch(session, batch_size=3) == 0
 
-        # Mock batch analysis
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = '''
-        {
-            "articles": [
-                {"article_id": 0, "summary": "Summary 1", "sentiment_score": 0, "political_lean": "CENTER", "bias_indicators": "neutral", "key_stats": []},
-                {"article_id": 1, "summary": "Summary 2", "sentiment_score": 1, "political_lean": "CENTER", "bias_indicators": "neutral", "key_stats": []},
-                {"article_id": 2, "summary": "Summary 3", "sentiment_score": 2, "political_lean": "CENTER", "bias_indicators": "neutral", "key_stats": []}
-            ]
-        }
-        '''
-        mock_response.usage.prompt_tokens = 100
-        mock_response.usage.completion_tokens = 50
+        assert session.exec(select(ArticleAnalysis)).all() == []
 
-        with patch('app.services.ai_analyzer.openai_client') as mock_client:
-            mock_client.is_available.return_value = True
-            mock_client.client.chat.completions.create.return_value = mock_response
-
-            # Process batch
-            count = analyze_articles_batch(session, batch_size=3)
-            assert count == 3
-
-            # Verify all articles were analyzed
-            from sqlmodel import select
-            analyzed = session.exec(select(Article).where(
-                Article.processing_status == ProcessingStatus.ANALYZED
-            )).all()
-            assert len(analyzed) == 3
-
-
-class TestNewsletterPipelineIntegration:
-    """Test newsletter generation with multiple components"""
-
-    def test_newsletter_respects_user_preferences(self, session: Session):
-        """
-        Integration test: Newsletter generation with preferences
-        Tests that newsletters respect user topic and source preferences
-        """
-        from app.models import User, UserTopicPreference, UserSourceSubscription
-        from app.services.newsletter_service import generate_newsletter
-        from app.utils.auth import hash_password
-
-        # Create user
-        user = User(
-            email="newsletter@example.com",
-            name="Newsletter User",
-            hashed_password=hash_password("password123"),
-            source_discovery_mode="curated",
-            article_order_preference="good_first",
-            articles_per_topic_default=2
-        )
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-
-        # Create topics
-        tech_topic = Topic(name="Technology", description="Tech news")
-        politics_topic = Topic(name="Politics", description="Political news")
-        session.add_all([tech_topic, politics_topic])
-        session.commit()
-        session.refresh(tech_topic)
-        session.refresh(politics_topic)
-
-        # User subscribes only to Technology
-        pref = UserTopicPreference(
-            user_id=user.id,
-            topic_id=tech_topic.id,
-            is_subscribed=True,
-            priority=5,
-            articles_per_topic=2
-        )
-        session.add(pref)
-        session.commit()
-
-        # Create source
-        source = Source(
-            name="TechSource",
-            rss_feed_url="https://tech.example.com/feed",
-            url="https://tech.example.com",
-            is_active=True,
-            trust_score=8.0
-        )
-        session.add(source)
-        session.commit()
-        session.refresh(source)
-
-        # User subscribes to source
-        source_sub = UserSourceSubscription(
-            user_id=user.id,
-            source_id=source.id,
-            is_subscribed=True
-        )
-        session.add(source_sub)
-        session.commit()
-
-        # Create articles in both topics
-        from app.models import ArticleTopic
-
-        tech_article = Article(
-            title="Tech Article",
-            url="https://tech.example.com/article1",
-            source_id=source.id,
-            description="Tech news",
-            published_at="2025-01-01T10:00:00Z",
-            status=ProcessingStatus.ANALYZED
-        )
-        session.add(tech_article)
-        session.commit()
-        session.refresh(tech_article)
-
-        # Link tech article to tech topic
-        session.add(ArticleTopic(article_id=tech_article.id, topic_id=tech_topic.id))
-
-        # Add analysis
-        session.add(ArticleAnalysis(
-            article_id=tech_article.id,
-            summary="Tech summary",
-            sentiment_score=5,
-            political_lean=PoliticalLean.CENTER,
-            bias_indicators="neutral",
-            key_stats=[]
-        ))
-
-        politics_article = Article(
-            title="Politics Article",
-            url="https://tech.example.com/article2",
-            source_id=source.id,
-            description="Political news",
-            published_at="2025-01-01T11:00:00Z",
-            status=ProcessingStatus.ANALYZED
-        )
-        session.add(politics_article)
-        session.commit()
-        session.refresh(politics_article)
-
-        # Link politics article to politics topic
-        session.add(ArticleTopic(article_id=politics_article.id, topic_id=politics_topic.id))
-
-        # Add analysis
-        session.add(ArticleAnalysis(
-            article_id=politics_article.id,
-            summary="Politics summary",
-            sentiment_score=-2,
-            political_lean=PoliticalLean.LEFT,
-            bias_indicators="slight left bias",
-            key_stats=[]
-        ))
-
-        session.commit()
-
-        # Generate newsletter
-        newsletter = generate_newsletter(session, user.id)
-
-        assert newsletter is not None
-        assert newsletter.user_id == user.id
-
-        # Newsletter should only include tech article (user's subscribed topic)
-        from app.models import NewsletterArticle
-        newsletter_articles = session.query(NewsletterArticle).filter(
-            NewsletterArticle.newsletter_id == newsletter.id
-        ).all()
-
-        # Should have tech article, not politics article
-        article_ids = [na.article_id for na in newsletter_articles]
-        assert tech_article.id in article_ids
-        assert politics_article.id not in article_ids
+    def test_skips_when_openai_unavailable(self, session: Session, source: Source):
+        _completed_article(session, source, 1)
+        client = Mock()
+        client.is_available.return_value = False
+        with patch("app.services.ai_analyzer.openai_client", client):
+            assert analyze_articles_batch(session) == 0

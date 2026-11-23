@@ -2,7 +2,9 @@
 Admin authentication utilities.
 Validates admin token and user permissions.
 """
+import hmac
 from fastapi import HTTPException, status, Depends, Header, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from typing import Optional
 from ..config import settings
 from ..routes.auth import get_current_user
@@ -13,6 +15,36 @@ import logging
 
 logger = logging.getLogger(__name__)
 LEGACY_ADMIN_EMAILS = {"cade.richard@gmail.com"}
+
+
+def _admin_token_matches(candidate: Optional[str]) -> bool:
+    """Constant-time comparison against the configured admin token."""
+    if not settings.admin_token or not candidate:
+        return False
+    return hmac.compare_digest(candidate.encode("utf-8"), settings.admin_token.encode("utf-8"))
+
+
+def require_admin_access(
+    x_admin_token: Optional[str] = Header(None),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
+    session: Session = Depends(get_session),
+) -> None:
+    """
+    Allow either an admin user's JWT or a valid X-Admin-Token header.
+
+    The token form is for operator scripts/cron (e.g. scripts/*.sh) that have no
+    user session; set ADMIN_TOKEN on the server and send it as X-Admin-Token.
+    """
+    if _admin_token_matches(x_admin_token):
+        return
+    if credentials is not None:
+        user = get_current_user(credentials=credentials, session=session)
+        if _has_admin_privileges(user):
+            return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Admin privileges required",
+    )
 
 
 def verify_admin_token(x_admin_token: Optional[str] = Header(None)) -> bool:
@@ -26,7 +58,7 @@ def verify_admin_token(x_admin_token: Optional[str] = Header(None)) -> bool:
             detail="Admin token not configured on server"
         )
 
-    if not x_admin_token or x_admin_token != settings.admin_token:
+    if not _admin_token_matches(x_admin_token):
         logger.warning("Invalid admin token attempt")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -36,6 +68,13 @@ def verify_admin_token(x_admin_token: Optional[str] = Header(None)) -> bool:
     return True
 
 
+def _has_admin_privileges(user: User) -> bool:
+    """is_admin users, or legacy admin emails -- the latter only once the email is verified."""
+    if user.is_admin:
+        return True
+    return user.email in LEGACY_ADMIN_EMAILS and bool(user.email_verified)
+
+
 def get_admin_user(
     current_user: User = Depends(get_current_user)
 ) -> User:
@@ -43,7 +82,7 @@ def get_admin_user(
     Get current user and verify they have admin privileges.
     Requires valid JWT token and user must have is_admin=True.
     """
-    if not current_user.is_admin and current_user.email not in LEGACY_ADMIN_EMAILS:
+    if not _has_admin_privileges(current_user):
         logger.warning(f"Non-admin user {current_user.email} attempted admin access")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -61,7 +100,7 @@ def get_admin_user_with_token(
     Get current user and verify they have admin privileges.
     Requires both valid JWT token AND admin token (for extra sensitive operations).
     """
-    if not current_user.is_admin and current_user.email not in LEGACY_ADMIN_EMAILS:
+    if not _has_admin_privileges(current_user):
         logger.warning(f"Non-admin user {current_user.email} attempted admin access")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

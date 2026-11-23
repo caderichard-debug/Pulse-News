@@ -46,6 +46,8 @@ def retry_call(
 ) -> Tuple[Any, RetryStats]:
     """Execute callable with retry/backoff, returning result + retry stats."""
     stats = RetryStats()
+    # Always make at least one attempt, even if retries are configured to 0.
+    max_retries = max(1, int(max_retries))
     for attempt in range(1, max_retries + 1):
         stats.attempts = attempt
         try:

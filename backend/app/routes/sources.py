@@ -4,14 +4,16 @@ Sources API Routes
 Endpoints for managing news sources and viewing source information.
 """
 
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select, func, col
 from typing import List, Optional
 from datetime import datetime
 
 from app.database import get_session
-from app.models import Source, Article, OrganizationalBias
+from app.models import Source, Article, OrganizationalBias, User
 from app.routes.auth import get_current_user, get_optional_user
+from app.utils.admin_auth import get_admin_user
 from app.services.bias_data_fetcher import get_bias_for_source
 
 router = APIRouter(prefix="/sources", tags=["sources"])
@@ -41,7 +43,7 @@ class CreateSourceRequest:
 
 
 @router.get("")
-async def list_sources(
+def list_sources(
     search: Optional[str] = Query(None, description="Search sources by name, URL, or description"),
     bias: Optional[str] = Query(None, description="Filter by organizational bias"),
     recommended_only: bool = Query(False, description="Show only recommended sources"),
@@ -115,7 +117,7 @@ async def list_sources(
 
 
 @router.get("/{source_id}")
-async def get_source(
+def get_source(
     source_id: int,
     session: Session = Depends(get_session),
     current_user: dict = Depends(get_optional_user)
@@ -179,7 +181,7 @@ async def create_source(
             bias_description = bias_desc
         except Exception as e:
             # Log error but don't fail - bias can be added manually later
-            print(f"Failed to fetch bias data: {e}")
+            logging.getLogger(__name__).warning(f"Failed to fetch bias data: {e}")
             bias_description = "Bias rating pending research."
 
     # Create source
@@ -207,7 +209,7 @@ async def create_source(
 
 
 @router.put("/{source_id}")
-async def update_source(
+def update_source(
     source_id: int,
     name: Optional[str] = None,
     url: Optional[str] = None,
@@ -218,13 +220,13 @@ async def update_source(
     bias_description: Optional[str] = None,
     is_active: Optional[bool] = None,
     session: Session = Depends(get_session),
-    current_user: dict = Depends(get_current_user)
+    current_user: User = Depends(get_admin_user)
 ):
     """
     Update an existing source.
 
     Only provided fields will be updated.
-    Requires authentication.
+    Requires admin privileges (sources are shared by all users).
     """
     source = session.get(Source, source_id)
     if not source:
@@ -279,11 +281,11 @@ async def update_source(
 
 
 @router.delete("/{source_id}")
-async def delete_source(
+def delete_source(
     source_id: int,
     hard_delete: bool = Query(False, description="Permanently delete (vs soft delete)"),
     session: Session = Depends(get_session),
-    current_user: dict = Depends(get_current_user)
+    current_user: User = Depends(get_admin_user)
 ):
     """
     Delete a source.
@@ -291,7 +293,7 @@ async def delete_source(
     By default, performs soft delete (sets is_active=False).
     Use hard_delete=True to permanently remove (not recommended if articles exist).
 
-    Requires authentication.
+    Requires admin privileges (sources are shared by all users).
     """
     source = session.get(Source, source_id)
     if not source:
@@ -323,7 +325,7 @@ async def delete_source(
 async def fetch_bias_for_source(
     source_id: int,
     session: Session = Depends(get_session),
-    current_user: dict = Depends(get_current_user)
+    current_user: User = Depends(get_admin_user)
 ):
     """
     Manually trigger bias data fetch for a source.
@@ -358,7 +360,7 @@ async def fetch_bias_for_source(
 
 
 @router.post("/from-url")
-async def create_source_from_article_url(
+def create_source_from_article_url(
     article_url: str,
     session: Session = Depends(get_session),
     current_user: dict = Depends(get_current_user)

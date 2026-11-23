@@ -14,7 +14,14 @@ from ..services.email_service import send_welcome_email
 import resend
 import logging
 
-router = APIRouter(prefix="/test", tags=["testing"])
+from ..utils.admin_auth import get_admin_user
+
+# Admin-only: these send email to arbitrary addresses from the app's domain.
+router = APIRouter(
+    prefix="/test",
+    tags=["testing"],
+    dependencies=[Depends(get_admin_user)],
+)
 logger = logging.getLogger(__name__)
 
 
@@ -181,6 +188,8 @@ def send_test_welcome_email(
                 detail="Failed to send welcome email. Check server logs for details."
             )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to send test welcome email: {e}", exc_info=True)
         raise HTTPException(

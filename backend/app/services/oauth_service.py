@@ -120,6 +120,16 @@ class OAuthService:
             if avatar_url and not user.oauth_avatar_url:
                 user.oauth_avatar_url = avatar_url
             if not user.email_verified:
+                # The provider has just proven ownership of this email, but this
+                # password account was never verified -- whoever created it may not
+                # own the address (account pre-hijacking). Drop the unverified
+                # password so only the verified owner keeps access; they can set a
+                # new one via password reset.
+                if user.hashed_password:
+                    logger.warning(
+                        f"Clearing unverified password on user {user.id} while linking {provider}"
+                    )
+                    user.hashed_password = ""
                 user.email_verified = True  # Trust OAuth provider verification
 
             logger.info(f"Updated existing user with OAuth: {email} via {provider}")

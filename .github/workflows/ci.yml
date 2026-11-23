@@ -43,18 +43,24 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-cov pytest-asyncio httpx
 
-      - name: Lint with ruff
+      - name: Lint with ruff (blocking - syntax errors, undefined names, redefinitions)
         run: |
           pip install ruff
-          ruff check backend/ --select E,F,W || true
+          ruff check backend/ --select E9,F63,F7,F82,F601,F811
+
+      - name: Lint with ruff (style, non-blocking)
+        run: ruff check backend/ --select E,F,W --statistics || true
 
       - name: Run tests
+        # Previously this step ended in `|| echo ...`, which hid that test collection was
+        # failing and zero tests ran. Test failures now fail the build.
+        working-directory: backend
         env:
           DATABASE_URL: postgresql://postgres:testpassword@localhost:5432/test_db
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_API_KEY: sk-test-not-a-real-key
           SECRET_KEY: test-secret-key-for-ci-only
         run: |
-          pytest backend/tests/ -v --cov=backend/app --cov-report=xml || echo "No tests found yet - skipping"
+          pytest tests/ -q -p no:warnings --cov=app --cov-report=xml:../coverage.xml
 
       - name: Upload coverage
         uses: codecov/codecov-action@v3
@@ -63,17 +69,36 @@ jobs:
           file: ./coverage.xml
           fail_ci_if_error: false
 
-  # Legacy required status: branch protection may still expect this exact name from the
-  # old Next.js pipeline. It is a no-op; remove "Frontend Tests (Next.js)" from required
-  # checks in GitHub → Settings → Branches when you can.
+  # Job name kept for branch protection, which may still require
+  # "Frontend Tests (Next.js)" from the old pipeline. The frontend is now Vite/TanStack.
   frontend-tests:
     name: Frontend Tests (Next.js)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     steps:
-      - name: Skip (frontend is Vite; no Jest job)
-        run: |
-          echo "No-op job so merge checks do not wait forever."
-          echo "Delete this job after removing the required check from branch protection."
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Type check
+        run: npx tsc --noEmit -p .
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
 
   # Security Scan
   security-scan:

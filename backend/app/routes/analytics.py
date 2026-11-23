@@ -101,7 +101,7 @@ class ReadingInsight(BaseModel):
 
 
 @router.get("/sentiment-over-time")
-async def get_sentiment_over_time(
+def get_sentiment_over_time(
     current_user: User = Depends(get_current_user),
     days: int = Query(default=30, ge=1, le=90),
     topic_ids: Optional[str] = Query(default=None, description="Comma-separated topic IDs (currently unused)"),
@@ -183,7 +183,7 @@ async def get_sentiment_over_time(
 
 
 @router.get("/bias-distribution")
-async def get_bias_distribution(
+def get_bias_distribution(
     current_user: User = Depends(get_current_user),
     weeks: int = Query(default=4, ge=1, le=12),
     scope: str = Query(
@@ -262,7 +262,7 @@ async def get_bias_distribution(
 
 
 @router.get("/framework-heatmap")
-async def get_framework_heatmap(
+def get_framework_heatmap(
     framework1_id: int = Query(..., description="Primary framework ID (X-axis)"),
     framework2_id: int = Query(..., description="Secondary framework ID (Y-axis)"),
     days: int = Query(default=30, ge=1, le=90),
@@ -360,7 +360,7 @@ async def get_framework_heatmap(
 
 
 @router.get("/frameworks/available")
-async def get_available_frameworks(
+def get_available_frameworks(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
@@ -385,7 +385,7 @@ async def get_available_frameworks(
 
 
 @router.get("/frameworks/glossary", response_model=List[FrameworkGlossaryItem])
-async def get_framework_glossary(
+def get_framework_glossary(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -412,7 +412,7 @@ async def get_framework_glossary(
 
 
 @router.get("/user-stats")
-async def get_user_stats(
+def get_user_stats(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
@@ -458,7 +458,7 @@ async def get_user_stats(
 
 
 @router.get("/reading-insights", response_model=ReadingInsight)
-async def get_reading_insights(
+def get_reading_insights(
     current_user: User = Depends(get_current_user),
     days: int = Query(default=30, ge=7, le=120),
     session: Session = Depends(get_session),

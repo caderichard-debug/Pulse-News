@@ -7,6 +7,15 @@ from sqlmodel import Session, create_engine, SQLModel
 from sqlmodel.pool import StaticPool
 from app.database import get_session
 from app.main import app
+from app.utils.rate_limit import reset_rate_limits
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limits():
+    """Rate-limit buckets are module-global; isolate them between tests."""
+    reset_rate_limits()
+    yield
+    reset_rate_limits()
 
 
 @pytest.fixture(name="session")
@@ -34,3 +43,14 @@ def client_fixture(session: Session):
     client = TestClient(app)
     yield client
     app.dependency_overrides.clear()
+
+
+TEST_ADMIN_TOKEN = "test-admin-token"
+
+
+@pytest.fixture
+def admin_token_headers(monkeypatch):
+    """Headers that satisfy require_admin_access via the X-Admin-Token path."""
+    from app.config import settings
+    monkeypatch.setattr(settings, "admin_token", TEST_ADMIN_TOKEN)
+    return {"X-Admin-Token": TEST_ADMIN_TOKEN}

@@ -4,6 +4,7 @@ Feed routes for home page article browsing.
 
 from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session, select, func, or_, and_
+from sqlalchemy import false
 from ..database import get_session
 from ..models import (
     User, Article, ArticleAnalysis, ArticleFrameworkLink,
@@ -62,7 +63,7 @@ class FeedResponse(BaseModel):
 
 
 @router.get("/articles", response_model=FeedResponse)
-async def get_feed_articles(
+def get_feed_articles(
     current_user: Optional[User] = Depends(get_optional_user),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
@@ -78,6 +79,9 @@ async def get_feed_articles(
     only_verified_stats: bool = Query(default=False, description="Show only articles with verified statistics"),
     favorites_only: bool = Query(default=False, description="Show only favorited articles (requires authentication)"),
     has_opposing_viewpoints: bool = Query(default=False, description="Show only articles with opposing viewpoint analysis"),
+    topic: Optional[str] = Query(default=None, description="Single-topic alias for `topics`"),
+    source_id: Optional[int] = Query(default=None, description="Single-source alias for `source_ids`"),
+    political_lean: Optional[str] = Query(default=None, description="Single-lean alias for `political_leans`"),
     session: Session = Depends(get_session)
 ):
     """
@@ -105,6 +109,14 @@ async def get_feed_articles(
         elif date_range == "year":
             date_from = now - timedelta(days=365)
 
+    # Backward-compatible single-value aliases for the multi-select parameters
+    if topic:
+        topics = [*(topics or []), topic]
+    if source_id is not None:
+        source_ids = [*(source_ids or []), source_id]
+    if political_lean:
+        political_leans = [*(political_leans or []), political_lean]
+
     # Apply filters
     if search:
         search_pattern = f"%{search}%"
@@ -131,8 +143,11 @@ async def get_feed_articles(
                 continue  # Skip invalid political lean values
 
         if lean_enums:
-            lean_conditions = [ArticleAnalysis.political_lean == lean_enum for lean_enum in lean_enums]
-            query = query.where(or_(*lean_conditions))
+            query = query.where(ArticleAnalysis.political_lean.in_(lean_enums))
+        else:
+            # Only unrecognized values were requested: match nothing rather than
+            # silently dropping the filter and returning every article.
+            query = query.where(false())
 
     if date_from:
         query = query.where(Article.published_at >= date_from)
@@ -292,7 +307,7 @@ async def get_feed_articles(
 
 
 @router.get("/topics")
-async def get_available_topics(
+def get_available_topics(
     current_user: Optional[User] = Depends(get_optional_user),
     session: Session = Depends(get_session)
 ):
@@ -314,7 +329,7 @@ async def get_available_topics(
 
 
 @router.get("/sources")
-async def get_available_sources(
+def get_available_sources(
     current_user: Optional[User] = Depends(get_optional_user),
     session: Session = Depends(get_session)
 ):

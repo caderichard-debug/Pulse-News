@@ -78,3 +78,7 @@ claude.md
 # React Component Preview
 previewConfig.json
 frontend/smoke-test-landing.png
+
+# Build archives (e.g. packaged browser extension)
+*.zip
+__MACOSX/

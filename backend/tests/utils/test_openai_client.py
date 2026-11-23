@@ -4,14 +4,30 @@ Unit tests for OpenAI client wrapper.
 
 import pytest
 from unittest.mock import Mock, patch, MagicMock
+from app.config import settings as real_settings
 from app.utils.openai_client import OpenAIClient
 import json
+
+
+def _settings_mock():
+    """MagicMock settings pre-populated with real numeric config values."""
+    mock = MagicMock()
+    for name in (
+        "ai_max_retries",
+        "ai_request_timeout_seconds",
+        "http_backoff_base_seconds",
+        "pipeline_daily_budget_usd",
+        "pipeline_warn_budget_percent",
+    ):
+        setattr(mock, name, getattr(real_settings, name))
+    mock.http_backoff_base_seconds = 0
+    return mock
 
 
 class TestOpenAIClientInitialization:
     """Test OpenAI client initialization"""
 
-    @patch('app.utils.openai_client.settings')
+    @patch('app.utils.openai_client.settings', new_callable=_settings_mock)
     def test_client_initializes_with_api_key(self, mock_settings):
         """Test that client initializes when API key is present"""
         mock_settings.openai_api_key = "sk-test123"
@@ -22,7 +38,7 @@ class TestOpenAIClientInitialization:
             assert client.is_available() is True
             mock_openai.assert_called_once_with(api_key="sk-test123")
 
-    @patch('app.utils.openai_client.settings')
+    @patch('app.utils.openai_client.settings', new_callable=_settings_mock)
     def test_client_handles_missing_api_key(self, mock_settings):
         """Test that client handles missing API key gracefully"""
         mock_settings.openai_api_key = None
@@ -35,7 +51,7 @@ class TestOpenAIClientInitialization:
 class TestBatchAnalysis:
     """Test batch article analysis"""
 
-    @patch('app.utils.openai_client.settings')
+    @patch('app.utils.openai_client.settings', new_callable=_settings_mock)
     def test_analyze_articles_batch_success(self, mock_settings):
         """Test successful batch analysis"""
         mock_settings.openai_api_key = "sk-test123"
@@ -72,7 +88,7 @@ class TestBatchAnalysis:
             assert result[0]["summary"] == "Test summary"
             assert result[0]["sentiment_score"] == 5
 
-    @patch('app.utils.openai_client.settings')
+    @patch('app.utils.openai_client.settings', new_callable=_settings_mock)
     def test_analyze_articles_batch_empty_list(self, mock_settings):
         """Test batch analysis with empty article list"""
         mock_settings.openai_api_key = "sk-test123"
@@ -83,7 +99,7 @@ class TestBatchAnalysis:
             result = client.analyze_articles_batch([])
             assert result == []
 
-    @patch('app.utils.openai_client.settings')
+    @patch('app.utils.openai_client.settings', new_callable=_settings_mock)
     def test_analyze_articles_batch_no_api_key(self, mock_settings):
         """Test batch analysis without API key"""
         mock_settings.openai_api_key = None
@@ -94,7 +110,7 @@ class TestBatchAnalysis:
 
         assert result is None
 
-    @patch('app.utils.openai_client.settings')
+    @patch('app.utils.openai_client.settings', new_callable=_settings_mock)
     def test_analyze_articles_batch_json_decode_error(self, mock_settings):
         """Test handling of invalid JSON response"""
         mock_settings.openai_api_key = "sk-test123"
@@ -117,7 +133,7 @@ class TestBatchAnalysis:
 
             assert result is None
 
-    @patch('app.utils.openai_client.settings')
+    @patch('app.utils.openai_client.settings', new_callable=_settings_mock)
     def test_analyze_articles_batch_api_error(self, mock_settings):
         """Test handling of API errors"""
         mock_settings.openai_api_key = "sk-test123"
@@ -138,7 +154,7 @@ class TestBatchAnalysis:
 class TestFrameworkGeneration:
     """Test framework generation"""
 
-    @patch('app.utils.openai_client.settings')
+    @patch('app.utils.openai_client.settings', new_callable=_settings_mock)
     def test_generate_frameworks_success(self, mock_settings):
         """Test successful framework generation"""
         mock_settings.openai_api_key = "sk-test123"
@@ -173,7 +189,7 @@ class TestFrameworkGeneration:
             assert len(result) == 1
             assert result[0]["name"] == "Privacy vs Security"
 
-    @patch('app.utils.openai_client.settings')
+    @patch('app.utils.openai_client.settings', new_callable=_settings_mock)
     def test_generate_frameworks_no_api_key(self, mock_settings):
         """Test framework generation without API key"""
         mock_settings.openai_api_key = None
@@ -190,7 +206,7 @@ class TestFrameworkGeneration:
 class TestArticleToFrameworkMapping:
     """Test mapping articles to frameworks"""
 
-    @patch('app.utils.openai_client.settings')
+    @patch('app.utils.openai_client.settings', new_callable=_settings_mock)
     def test_map_article_to_frameworks_success(self, mock_settings):
         """Test successful article to framework mapping"""
         mock_settings.openai_api_key = "sk-test123"
@@ -235,7 +251,7 @@ class TestArticleToFrameworkMapping:
             assert result[0]["framework_id"] == 1
             assert result[0]["relevance_score"] == 0.8
 
-    @patch('app.utils.openai_client.settings')
+    @patch('app.utils.openai_client.settings', new_callable=_settings_mock)
     def test_map_article_to_frameworks_no_api_key(self, mock_settings):
         """Test mapping without API key"""
         mock_settings.openai_api_key = None
@@ -253,7 +269,7 @@ class TestArticleToFrameworkMapping:
 class TestCostCalculation:
     """Test cost calculation"""
 
-    @patch('app.utils.openai_client.settings')
+    @patch('app.utils.openai_client.settings', new_callable=_settings_mock)
     def test_calculate_cost_accuracy(self, mock_settings):
         """Test that cost calculation is accurate"""
         mock_settings.openai_api_key = "sk-test123"
@@ -272,7 +288,7 @@ class TestCostCalculation:
             cost = client._calculate_cost(100000, 50000)
             assert abs(cost - 0.045) < 0.000001
 
-    @patch('app.utils.openai_client.settings')
+    @patch('app.utils.openai_client.settings', new_callable=_settings_mock)
     def test_calculate_cost_zero_tokens(self, mock_settings):
         """Test cost calculation with zero tokens"""
         mock_settings.openai_api_key = "sk-test123"
@@ -283,7 +299,7 @@ class TestCostCalculation:
             assert cost == 0.0
 
     @patch('app.utils.openai_client.snapshot')
-    @patch('app.utils.openai_client.settings')
+    @patch('app.utils.openai_client.settings', new_callable=_settings_mock)
     def test_resolve_model_uses_fallback_when_budget_threshold_exceeded(
         self,
         mock_settings,
@@ -305,7 +321,7 @@ class TestCostCalculation:
 class TestPromptBuilding:
     """Test prompt building functions"""
 
-    @patch('app.utils.openai_client.settings')
+    @patch('app.utils.openai_client.settings', new_callable=_settings_mock)
     def test_build_batch_analysis_prompt(self, mock_settings):
         """Test batch analysis prompt building"""
         mock_settings.openai_api_key = "sk-test123"
@@ -327,7 +343,7 @@ class TestPromptBuilding:
             assert "Sentiment" in prompt
             assert "Political Lean" in prompt
 
-    @patch('app.utils.openai_client.settings')
+    @patch('app.utils.openai_client.settings', new_callable=_settings_mock)
     def test_build_framework_mapping_prompt(self, mock_settings):
         """Test framework mapping prompt building"""
         mock_settings.openai_api_key = "sk-test123"
@@ -355,7 +371,7 @@ class TestPromptBuilding:
             assert "Test description" in prompt
             assert "relevance score" in prompt
 
-    @patch('app.utils.openai_client.settings')
+    @patch('app.utils.openai_client.settings', new_callable=_settings_mock)
     def test_build_framework_discovery_prompt(self, mock_settings):
         """Test framework discovery prompt building"""
         mock_settings.openai_api_key = "sk-test123"

@@ -324,3 +324,23 @@ class TestFeedEndpoints:
             assert article["summary"] is not None
             assert article["sentiment_score"] is not None
             assert article["political_lean"] is not None
+
+
+def test_feed_unrecognized_lean_matches_nothing(client, auth_token, test_data):
+    """An unknown lean value must not silently drop the filter."""
+    response = client.get(
+        "/feed/articles?political_leans=center-left",
+        headers={"Authorization": f"Bearer {auth_token}"}
+    )
+    assert response.status_code == 200
+    assert response.json()["total_count"] == 0
+
+
+def test_feed_plural_and_single_params_combine(client, auth_token, test_data):
+    response = client.get(
+        "/feed/articles?political_leans=left&political_lean=right",
+        headers={"Authorization": f"Bearer {auth_token}"}
+    )
+    assert response.status_code == 200
+    leans = {a["political_lean"] for a in response.json()["articles"]}
+    assert leans <= {"left", "right"}

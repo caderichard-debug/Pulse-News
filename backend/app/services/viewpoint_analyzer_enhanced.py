@@ -40,6 +40,27 @@ def extract_event_keywords(title: str) -> str:
     # Return most significant terms
     return ' '.join(key_terms[:3]) if key_terms else title.split()[0].lower()
 
+_THEME_KEYWORDS = [
+    ("political leadership", ("trump", "election", "political", "campaign")),
+    ("international conflict", ("war", "conflict", "military", "defense")),
+    ("economic policy", ("economy", "market", "financial", "trade")),
+    ("civil liberties", ("rights", "freedom", "justice", "law")),
+    ("environmental policy", ("climate", "environment", "energy")),
+]
+_THEME_PATTERNS = [
+    (theme, re.compile(r"\b(?:" + "|".join(words) + r")s?\b", re.IGNORECASE))
+    for theme, words in _THEME_KEYWORDS
+]
+
+
+def _content_theme(summary: str) -> str:
+    """Pick a theme from whole-word keyword matches ("war" must not match "software")."""
+    for theme, pattern in _THEME_PATTERNS:
+        if pattern.search(summary or ""):
+            return theme
+    return "current events"
+
+
 class ViewpointAnalyzer:
     """Enhanced analyzer for finding opposing viewpoints across frameworks."""
 
@@ -335,22 +356,10 @@ class ViewpointAnalyzer:
         opp_analysis = session.exec(select(ArticleAnalysis).where(ArticleAnalysis.article_id == candidate["article_id"])).first()
 
         # Extract key content themes for more specific explanations
-        content_theme = ""
+        content_theme = "current events"
         if opp_analysis and opp_analysis.summary:
             # Extract key themes from summary (simplified approach)
-            summary_text = opp_analysis.summary.lower()
-            if any(word in summary_text for word in ['trump', 'election', 'political', 'campaign']):
-                content_theme = "political leadership"
-            elif any(word in summary_text for word in ['war', 'conflict', 'military', 'defense']):
-                content_theme = "international conflict"
-            elif any(word in summary_text for word in ['economy', 'market', 'financial', 'trade']):
-                content_theme = "economic policy"
-            elif any(word in summary_text for word in ['rights', 'freedom', 'justice', 'law']):
-                content_theme = "civil liberties"
-            elif any(word in summary_text for word in ['climate', 'environment', 'energy']):
-                content_theme = "environmental policy"
-            else:
-                content_theme = "current events"
+            content_theme = _content_theme(opp_analysis.summary)
 
         # Generate "why this opposes" - focused on mechanism (old how_explanation)
         if primary_framework != opposing_framework:

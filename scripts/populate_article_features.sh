@@ -1,4 +1,5 @@
 #!/bin/bash
+# Admin endpoints require the server's ADMIN_TOKEN: export ADMIN_TOKEN=... before running.
 # Populate article features (analysis, frameworks, context, clustering)
 # Run this script to process articles and make them visible in the feed
 
@@ -8,7 +9,7 @@ echo ""
 # Trigger analysis jobs (processes 10 articles per run)
 echo "📊 Step 1/4: Running AI analysis (3 batches)..."
 for i in {1..3}; do
-  curl -s -X POST http://localhost:8000/admin/jobs/analyze > /dev/null
+  curl -s -X POST -H "X-Admin-Token: ${ADMIN_TOKEN:?set ADMIN_TOKEN}" http://localhost:8000/admin/jobs/analyze > /dev/null
   echo "  ✓ Analysis batch $i triggered"
   sleep 3
 done
@@ -16,7 +17,7 @@ done
 echo ""
 echo "⚖️ Step 2/4: Generating ethical frameworks (3 batches)..."
 for i in {1..3}; do
-  curl -s -X POST http://localhost:8000/admin/jobs/frameworks > /dev/null
+  curl -s -X POST -H "X-Admin-Token: ${ADMIN_TOKEN:?set ADMIN_TOKEN}" http://localhost:8000/admin/jobs/frameworks > /dev/null
   echo "  ✓ Frameworks batch $i triggered"
   sleep 2
 done
@@ -24,14 +25,14 @@ done
 echo ""
 echo "📚 Step 3/4: Generating article context (3 batches)..."
 for i in {1..3}; do
-  curl -s -X POST http://localhost:8000/admin/jobs/generate-context > /dev/null
+  curl -s -X POST -H "X-Admin-Token: ${ADMIN_TOKEN:?set ADMIN_TOKEN}" http://localhost:8000/admin/jobs/generate-context > /dev/null
   echo "  ✓ Context batch $i triggered"
   sleep 2
 done
 
 echo ""
 echo "🔗 Step 4/4: Clustering similar articles..."
-curl -s -X POST http://localhost:8000/admin/jobs/cluster-articles > /dev/null
+curl -s -X POST -H "X-Admin-Token: ${ADMIN_TOKEN:?set ADMIN_TOKEN}" http://localhost:8000/admin/jobs/cluster-articles > /dev/null
 echo "  ✓ Clustering triggered"
 
 echo ""

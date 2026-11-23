@@ -158,11 +158,10 @@ function FeedPage() {
 
   const leanOptions = useMemo(
     () => [
+      // Article-level lean from the API is only ever "left", "center" or "right".
       { v: "", label: "All spectrum" },
       { v: "left", label: "Left" },
-      { v: "center-left", label: "Center-Left" },
       { v: "center", label: "Center" },
-      { v: "center-right", label: "Center-Right" },
       { v: "right", label: "Right" },
     ],
     [],

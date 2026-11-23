@@ -3,7 +3,7 @@
 > 🧠 **AI-powered news aggregation** that transforms scattered headlines into coherent understanding through ethical framework mapping and intelligent analysis.
 
 **Version:** ✅ **v1.0** - Production ready with complete feature set
-**Tests:** 234/234 passing (100% - 127 backend + 107 frontend)
+**Tests:** backend suite runs in CI (`cd backend && pytest`); several older test modules are out of date with the current models and still fail — see CI output for the current count.
 
 ---
 
@@ -51,13 +51,19 @@ docker-compose up --build
 
 This starts:
 - **Backend** (FastAPI) - http://localhost:8000
-- **Frontend** (Next.js) - http://localhost:3000
 - **Database** (PostgreSQL) - localhost:5432
+
+The frontend runs separately:
+```bash
+cd frontend
+npm ci
+VITE_API_URL=http://localhost:8000 npm run dev   # http://localhost:8080
+```
 
 ### Next Steps
 1. **Initialize Database:** `docker-compose exec backend alembic upgrade head`
 2. **Seed Data:** `docker-compose exec backend python -m app.seed_data`
-3. **Test Setup:** Visit http://localhost:8000/health (should return `{"status": "ok"}`)
+3. **Test Setup:** Visit http://localhost:8000/health (should return `{"status": "healthy"}`)
 
 For detailed setup instructions, see [Development Setup Guide](docs/development/SETUP.md).
 
@@ -87,7 +93,8 @@ DOCUMENTATION_URL=https://docs.pulsenews.app
 - **APScheduler** - Background jobs
 - **OpenAI GPT-4o-mini** - AI analysis
 
-### Frontend (Next.js)
+### Frontend (Vite + TanStack Start)
+- **TanStack Router / Query** - Routing and data fetching
 - **TypeScript** - Type safety
 - **Tailwind CSS** - Utility-first styling
 - **React** - UI framework
@@ -111,7 +118,7 @@ DOCUMENTATION_URL=https://docs.pulsenews.app
 - [x] User authentication & preferences (topics, sources, settings)
 - [x] Complete admin panel with database management & job monitoring
 - [x] Article URL analysis (on-demand analysis of any URL)
-- [x] **127 backend tests passing**
+- [x] Backend test suite (`cd backend && pytest`)
 
 **Frontend Systems** - Complete User Experience
 - [x] Modern landing page with hero section
@@ -127,7 +134,7 @@ DOCUMENTATION_URL=https://docs.pulsenews.app
 - [x] Performance monitoring and system health dashboard
 - [x] React Query for optimized data fetching and caching
 - [x] List virtualization components for large datasets
-- [x] **107 frontend tests passing**
+- [x] Frontend type checking, linting and build run in CI
 
 **Challenge System**
 - [x] Weekly viewpoint engagement tracking
@@ -180,12 +187,11 @@ Pulse/
 │   │   └── main.py        # Application entry
 │   ├── alembic/          # Database migrations
 │   ├── scripts/           # Utility scripts
-│   └── tests/             # Backend tests (127 passing)
-├── frontend/               # Next.js application
-│   ├── src/app/          # App router pages (including admin panel)
+│   └── tests/             # Backend tests (pytest)
+├── frontend/               # Vite + TanStack Start application
+│   ├── src/routes/       # File-based routes (including admin panel)
 │   ├── src/components/    # Reusable components
-│   ├── src/lib/           # API client and utilities
-│   └── __tests__/         # Frontend tests (107 passing)
+│   └── src/lib/           # API client and utilities
 ├── docs/                 # Organized documentation
 │   ├── architecture/       # System design docs
 │   ├── api/              # API documentation
@@ -262,7 +268,7 @@ curl -X POST http://localhost:8000/admin/scrape
 ## 🔗 Quick Links
 
 - **Interactive API Docs**: http://localhost:8000/docs
-- **Frontend Dev Server**: http://localhost:3000
+- **Frontend Dev Server**: http://localhost:8080
 - **Complete Documentation**: [docs/](docs/)
 - **AI Assistant Guide**: [llm-instructions.md](llm-instructions.md)
 - **Project Changelog**: [CHANGELOG.md](CHANGELOG.md)

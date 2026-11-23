@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import type { Article } from "@/lib/types";
+import { toLeanScore, type LeanValue } from "@/lib/utils";
 import { LeanMeter, SentimentDot, VerifiedBadge, FrameworkChip } from "@/components/Signals";
 import { Link2 } from "lucide-react";
 
@@ -31,13 +32,7 @@ function AnalyzePage() {
     const frameworks = Array.isArray(raw.frameworks) ? raw.frameworks : [];
     const stats = Array.isArray(raw.statistics) ? raw.statistics : [];
 
-    const rawPoliticalLean = analysis.political_lean;
-    const politicalLean =
-      typeof rawPoliticalLean === "number"
-        ? rawPoliticalLean
-        : typeof rawPoliticalLean === "string"
-          ? Number(rawPoliticalLean)
-          : undefined;
+    const politicalLean = toLeanScore(analysis.political_lean as LeanValue);
 
     return {
       id: (raw.id as string | number | undefined) ?? "temp",
@@ -52,7 +47,7 @@ function AnalyzePage() {
       sentiment_score:
         typeof analysis.sentiment_score === "number" ? analysis.sentiment_score : undefined,
       sentiment: typeof analysis.sentiment === "string" ? analysis.sentiment : undefined,
-      political_lean: Number.isFinite(politicalLean) ? politicalLean : undefined,
+      political_lean: politicalLean,
       has_verified_stats: stats.length > 0,
       frameworks: frameworks.map((f) => {
         const row = (f as Record<string, unknown>) ?? {};

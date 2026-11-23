@@ -8,11 +8,20 @@ from sqlmodel import Session, create_engine, SQLModel
 from sqlmodel.pool import StaticPool
 from app.models import (
     User, Source, Article, ArticleAnalysis, Topic, UserTopicPreference,
-    UserSourceSubscription, PoliticalLean, ProcessingStatus
+    UserSourceSubscription, PoliticalLean, ProcessingStatus,
+    Newsletter, NewsletterArticle
 )
 from app.services.newsletter_service import _generate_newsletter_for_user
 from app.utils.auth import hash_password
-from datetime import datetime
+from datetime import datetime, timedelta
+
+
+@pytest.fixture
+def subscribed_to_all(session):
+    """Subscribe the test user to every source (newsletters require subscriptions)."""
+    for source_id in (1, 2, 3):
+        session.add(UserSourceSubscription(user_id=1, source_id=source_id, subscribed=True))
+    session.commit()
 
 
 @pytest.fixture(name="session")
@@ -102,26 +111,16 @@ def session_fixture():
 class TestNewsletterSourceFiltering:
     """Tests for source-based filtering in newsletter"""
 
-    def test_newsletter_includes_all_sources_when_no_subscriptions(self, session: Session):
-        """Test that newsletter includes all sources when user has no subscriptions"""
+    def test_newsletter_skipped_when_no_subscriptions(self, session: Session):
+        """Newsletters only use explicitly subscribed sources; none means no newsletter."""
         user = session.get(User, 1)
-
-        # Add topic preference
-        pref = UserTopicPreference(
-            user_id=1,
-            topic_id=1,
-            priority_level=5,
-            include_in_newsletter=True,
-            articles_per_topic=5
-        )
-        session.add(pref)
+        session.add(UserTopicPreference(
+            user_id=1, topic_id=1, priority_level=5,
+            include_in_newsletter=True, articles_per_topic=5
+        ))
         session.commit()
 
-        result = _generate_newsletter_for_user(user, session)
-
-        assert result is not None
-        # Should include articles from all sources
-        assert len(result["article_ids"]) > 0
+        assert _generate_newsletter_for_user(user, session) is None
 
     def test_newsletter_filters_by_subscribed_sources(self, session: Session):
         """Test that newsletter only includes articles from subscribed sources"""
@@ -194,6 +193,10 @@ class TestNewsletterSourceFiltering:
 
 class TestNewsletterArticleOrdering:
     """Tests for article ordering based on user preferences"""
+
+    @pytest.fixture(autouse=True)
+    def _subscriptions(self, subscribed_to_all):
+        pass
 
     def test_newsletter_orders_good_news_first(self, session: Session):
         """Test that articles are ordered by positive sentiment first"""
@@ -326,6 +329,10 @@ class TestNewsletterArticleOrdering:
 class TestNewsletterArticlesPerTopic:
     """Tests for articles_per_topic_default setting"""
 
+    @pytest.fixture(autouse=True)
+    def _subscriptions(self, subscribed_to_all):
+        pass
+
     def test_newsletter_respects_articles_per_topic_limit(self, session: Session):
         """Test that newsletter limits articles based on user preference"""
         user = session.get(User, 1)
@@ -433,3 +440,50 @@ class TestNewsletterCombinedPreferences:
         articles_map = {article.id: analysis.sentiment_score for article, analysis in articles_with_analysis}
         sentiments = [articles_map[aid] for aid in article_ids]
         assert sentiments == sorted(sentiments, reverse=True)
+
+
+class TestNewsletterFreshness:
+    """Newsletters should not resend old or previously delivered articles."""
+
+    @pytest.fixture(autouse=True)
+    def _subscriptions(self, subscribed_to_all):
+        pass
+
+    def test_excludes_articles_already_sent_to_user(self, session: Session):
+        user = session.get(User, 1)
+        newsletter = Newsletter(user_id=1, subject="Earlier", sent_at=datetime.utcnow())
+        session.add(newsletter)
+        session.flush()
+        for article_id in (1, 2, 3):
+            session.add(NewsletterArticle(newsletter_id=newsletter.id, article_id=article_id))
+        session.commit()
+
+        result = _generate_newsletter_for_user(user, session)
+
+        assert result is not None
+        assert not {1, 2, 3} & set(result["article_ids"])
+
+    def test_unsent_newsletter_does_not_exclude_articles(self, session: Session):
+        user = session.get(User, 1)
+        newsletter = Newsletter(user_id=1, subject="Failed send", sent_at=None)
+        session.add(newsletter)
+        session.flush()
+        session.add(NewsletterArticle(newsletter_id=newsletter.id, article_id=1))
+        session.commit()
+
+        user.articles_per_topic_default = 10
+        result = _generate_newsletter_for_user(user, session)
+
+        assert 1 in result["article_ids"]
+
+    def test_excludes_articles_older_than_lookback(self, session: Session):
+        user = session.get(User, 1)
+        old = session.get(Article, 1)
+        old.scraped_at = datetime.utcnow() - timedelta(days=30)
+        session.add(old)
+        session.commit()
+
+        user.articles_per_topic_default = 10
+        result = _generate_newsletter_for_user(user, session)
+
+        assert 1 not in result["article_ids"]

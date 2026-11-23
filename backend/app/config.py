@@ -80,6 +80,7 @@ class Settings(BaseSettings):
     newsletter_send_hour: int = 7  # 7 AM
     max_articles_per_newsletter: int = 5
     max_frameworks_per_newsletter: int = 3
+    newsletter_lookback_days: int = 7  # Only consider recently published/scraped articles
 
     # Admin Panel Configuration
     admin_token: Optional[str] = None
