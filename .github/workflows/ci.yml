@@ -53,9 +53,7 @@ jobs:
 
       - name: Run tests
         # Previously this step ended in `|| echo ...`, which hid that test collection was
-        # failing and zero tests ran. Failures are now reported honestly; the step stays
-        # non-blocking until the remaining stale test modules are brought up to date.
-        continue-on-error: true
+        # failing and zero tests ran. Test failures now fail the build.
         working-directory: backend
         env:
           DATABASE_URL: postgresql://postgres:testpassword@localhost:5432/test_db
